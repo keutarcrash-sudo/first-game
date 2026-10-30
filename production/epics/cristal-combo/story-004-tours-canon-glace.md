@@ -58,15 +58,17 @@
 
 ## Files
 
-- `src/towers/tower_placer.gd`
+- `src/towers/tower_stats.gd`
+- `src/towers/tower.gd`
 - `src/towers/cannon_tower.gd`
-- `src/towers/cannon_tower.tscn`
 - `src/towers/frost_tower.gd`
-- `src/towers/frost_tower.tscn`
-- `assets/data/towers` (format choisi à l'implémentation)
-- `tests/integration/cristal-combo/tours_test.gd`
-
----
+- `src/towers/tower_placer.gd`
+- `src/enemies/enemy.gd`
+- `src/hero/hero_bullet.gd`
+- `src/ui/crystal_hud.gd`
+- `src/game/main.gd`
+- `src/game/main.tscn`
+- `assets/data/towers.json`
 
 ## QA Test Cases
 

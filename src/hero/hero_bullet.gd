@@ -22,11 +22,18 @@ var _travelled := 0.0
 ## direction (a normalised vector). The bullet is freed as soon as it leaves
 ## [param arena_rect]. Call before adding the bullet to the tree.
 func setup(stats: HeroStats, direction: Vector2, arena_rect: Rect2) -> void:
+	configure(stats.bullet_damage, stats.bullet_speed, stats.bullet_max_range, stats.bullet_radius, direction, arena_rect)
+
+
+## Sets the values directly (used by the cannon tower, story 004): [param hit_damage],
+## [param speed] in pixels per second, [param max_range] and [param radius] in pixels,
+## a normalised [param direction], freed on leaving [param arena_rect]. Call before adding the bullet to the tree.
+func configure(hit_damage: float, speed: float, max_range: float, radius: float, direction: Vector2, arena_rect: Rect2) -> void:
 	_arena_rect = arena_rect
-	damage = stats.bullet_damage
-	_velocity = direction * stats.bullet_speed
-	_max_range = stats.bullet_max_range
-	_radius = stats.bullet_radius
+	damage = hit_damage
+	_velocity = direction * speed
+	_max_range = max_range
+	_radius = radius
 
 
 func _ready() -> void:

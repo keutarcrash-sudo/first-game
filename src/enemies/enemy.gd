@@ -13,7 +13,11 @@ signal died
 const COLOR := Color(1.0, 0.35, 0.3)
 const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at full HP.
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
+const SLOWED_TINT := Color(0.3, 0.55, 1.0)
+const SLOWED_TINT_AMOUNT := 0.6  # 0 = no tint, 1 = fully blue.
 
+var _slow_factor := 1.0  # Speed fraction in effect this frame.
+var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
 var _crystal: Crystal
 var _target: Vector2
 var _touch_distance_sq: float
@@ -53,7 +57,14 @@ func _physics_process(delta: float) -> void:
 	# An enemy killed this frame (queued for deletion) must not hurt the crystal.
 	if is_queued_for_deletion():
 		return
-	position = position.move_toward(_target, _speed * delta)
+	# The slow is only what the towers asked for since the last frame: when no
+	# tower refreshes it, it ends here, together with the blue tint.
+	var was_slowed: bool = is_slowed()
+	_slow_factor = _requested_slow_factor
+	_requested_slow_factor = 1.0
+	if is_slowed() != was_slowed:
+		queue_redraw()
+	position = position.move_toward(_target, _speed * _slow_factor * delta)
 	if position.distance_squared_to(_target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
 		queue_free()
@@ -61,7 +72,23 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	var shade: float = lerpf(DAMAGED_DARKEN, 1.0, _hp / _max_hp)
-	draw_circle(Vector2.ZERO, _radius, Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade))
+	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
+	if is_slowed():
+		color = color.lerp(SLOWED_TINT, SLOWED_TINT_AMOUNT)
+	draw_circle(Vector2.ZERO, _radius, color)
+
+
+## Asks for a slow to [param factor] (a fraction of normal speed, 0.45 = 45 %)
+## for the next physics step only. Towers call it every physics frame while the
+## enemy is in range; several callers do not stack, the lowest factor wins.
+func apply_slow(factor: float) -> void:
+	_requested_slow_factor = minf(_requested_slow_factor, factor)
+
+
+## True while a tower is slowing this enemy (as of this enemy's last physics
+## step). Meant to be read by other effects, such as the cannon combo.
+func is_slowed() -> bool:
+	return _slow_factor < 1.0
 
 
 ## Removes [param amount] hit points; the enemy is freed at zero.

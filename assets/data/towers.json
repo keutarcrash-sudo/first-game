@@ -1,0 +1,18 @@
+{
+	"cannon": {
+		"cost": 50,
+		"range": 250.0,
+		"radius": 18.0,
+		"damage": 10.0,
+		"fire_interval": 0.8,
+		"bullet_speed": 500.0,
+		"bullet_radius": 5.0,
+		"bullet_max_range": 400.0
+	},
+	"frost": {
+		"cost": 50,
+		"range": 150.0,
+		"radius": 18.0,
+		"slow_factor": 0.45
+	}
+}

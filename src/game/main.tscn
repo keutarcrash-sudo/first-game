@@ -5,17 +5,23 @@
 [ext_resource type="PackedScene" path="res://src/crystal/crystal.tscn" id="3_crystal"]
 [ext_resource type="Script" path="res://src/waves/wave_spawner.gd" id="4_spawner"]
 [ext_resource type="Script" path="res://src/ui/crystal_hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://src/towers/tower_placer.gd" id="6_placer"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_main")
 
 [node name="Crystal" parent="." instance=ExtResource("3_crystal")]
 
+[node name="Towers" type="Node2D" parent="."]
+
 [node name="Enemies" type="Node2D" parent="."]
 
 [node name="Bullets" type="Node2D" parent="."]
 
 [node name="Hero" parent="." instance=ExtResource("2_hero")]
+
+[node name="TowerPlacer" type="Node2D" parent="."]
+script = ExtResource("6_placer")
 
 [node name="WaveSpawner" type="Node" parent="."]
 script = ExtResource("4_spawner")

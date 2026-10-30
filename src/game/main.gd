@@ -8,13 +8,17 @@ const STATS_PATH := "res://assets/data/hero_stats.json"
 const DEFENCE_PATH := "res://assets/data/defence_stats.json"
 const WAVES_PATH := "res://assets/data/waves.json"
 const ECONOMY_PATH := "res://assets/data/economy.json"
+const TOWERS_PATH := "res://assets/data/towers.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
 const BORDER_WIDTH := 4.0
 
 var _arena_rect: Rect2
 var _cycle: WaveCycle
+var _state: GameState
 
+@onready var _towers: Node2D = $Towers
+@onready var _placer: TowerPlacer = $TowerPlacer
 @onready var _hero: Hero = $Hero
 @onready var _bullets: Node2D = $Bullets
 @onready var _enemies: Node2D = $Enemies
@@ -28,9 +32,11 @@ func _ready() -> void:
 	var defence: DefenceStats = DefenceStats.load_from_file(DEFENCE_PATH)
 	var curve: WaveCurve = WaveCurve.load_from_file(WAVES_PATH)
 	var economy: EconomyStats = EconomyStats.load_from_file(ECONOMY_PATH)
-	if stats == null or defence == null or curve == null or economy == null:
+	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
+	if stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
+		_placer.queue_free()
 		return
 	_arena_rect = Rect2((get_viewport_rect().size - stats.arena_size) / 2.0, stats.arena_size)
 	_hero.setup(stats, _arena_rect, _bullets)
@@ -40,10 +46,14 @@ func _ready() -> void:
 	_hero.global_position = _crystal.global_position + Vector2(0.0, defence.crystal_radius + stats.hero_radius + defence.hero_start_gap)
 	_hud.bind(_crystal)
 	_crystal.destroyed.connect(_on_crystal_destroyed)
-	var state := GameState.new(economy.starting_gold)
+	_state = GameState.new(economy.starting_gold)
 	_cycle = WaveCycle.new()
-	_cycle.setup(state, _spawner, economy)
-	_hud.bind_game_state(state)
+	_cycle.setup(_state, _spawner, economy)
+	_hud.bind_game_state(_state)
+	_placer.setup(towers, _state, _arena_rect, _crystal, _towers, _enemies, _bullets)
+	_hud.bind_tower_build(towers)
+	_hud.tower_kind_chosen.connect(_placer.select_kind)
+	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
 	_spawner.setup(curve, defence, _arena_rect, _crystal, _enemies)
 	queue_redraw()
 

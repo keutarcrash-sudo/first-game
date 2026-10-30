@@ -5,6 +5,18 @@
 class_name CrystalHud
 extends CanvasLayer
 
+## Emitted when the player clicks one of the two tower buttons (build phase).
+signal tower_kind_chosen(kind: TowerStats.Kind)
+
+const BUTTON_FONT_SIZE := 22
+const BUTTON_SIZE := Vector2(220.0, 44.0)
+const BUTTON_SPACING := 16
+const BUTTON_BOTTOM_MARGIN := 70.0
+const BUTTON_SELECTED_COLOR := Color(1.0, 0.9, 0.35)
+const MESSAGE_FONT_SIZE := 28
+const MESSAGE_BOTTOM_MARGIN := 124.0
+const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
+const MESSAGE_SECONDS := 1.0
 const HP_FONT_SIZE := 20
 const DEFEAT_FONT_SIZE := 56
 const INFO_FONT_SIZE := 20
@@ -21,9 +33,15 @@ var _defeat_label: Label
 var _info_label: Label
 var _prompt_label: Label
 var _state: GameState
+var _build_box: HBoxContainer
+var _cannon_button: Button
+var _frost_button: Button
+var _message_label: Label
+var _message_timer: Timer
 
 
 func _ready() -> void:
+	_build_tower_ui()
 	_hp_label = Label.new()
 	_hp_label.position = HP_POSITION
 	_hp_label.add_theme_font_size_override(&"font_size", HP_FONT_SIZE)
@@ -53,6 +71,68 @@ func _ready() -> void:
 	add_child(_defeat_label)
 
 
+func _build_tower_ui() -> void:
+	_build_box = HBoxContainer.new()
+	_build_box.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_build_box.offset_top = -(BUTTON_BOTTOM_MARGIN + BUTTON_SIZE.y)
+	_build_box.offset_bottom = -BUTTON_BOTTOM_MARGIN
+	_build_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_build_box.add_theme_constant_override(&"separation", BUTTON_SPACING)
+	_build_box.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Only the buttons take clicks, not the whole strip.
+	_build_box.visible = false
+	add_child(_build_box)
+	var group := ButtonGroup.new()
+	_cannon_button = _make_tower_button(group, TowerStats.Kind.CANNON)
+	_frost_button = _make_tower_button(group, TowerStats.Kind.FROST)
+	_cannon_button.button_pressed = true  # The cannon is selected by default.
+	_message_label = Label.new()
+	_message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_message_label.offset_bottom = -MESSAGE_BOTTOM_MARGIN
+	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_message_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_message_label.add_theme_font_size_override(&"font_size", MESSAGE_FONT_SIZE)
+	_message_label.add_theme_color_override(&"font_color", MESSAGE_COLOR)
+	_message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_message_label.visible = false
+	add_child(_message_label)
+	_message_timer = Timer.new()
+	_message_timer.one_shot = true
+	_message_timer.wait_time = MESSAGE_SECONDS
+	_message_timer.timeout.connect(_message_label.hide)
+	add_child(_message_timer)
+
+
+func _make_tower_button(group: ButtonGroup, kind: TowerStats.Kind) -> Button:
+	var button := Button.new()
+	button.toggle_mode = true
+	button.button_group = group
+	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused button must not react to it.
+	button.custom_minimum_size = BUTTON_SIZE
+	button.add_theme_font_size_override(&"font_size", BUTTON_FONT_SIZE)
+	button.add_theme_color_override(&"font_pressed_color", BUTTON_SELECTED_COLOR)
+	button.add_theme_color_override(&"font_hover_pressed_color", BUTTON_SELECTED_COLOR)
+	button.pressed.connect(_on_tower_button_pressed.bind(kind))
+	_build_box.add_child(button)
+	return button
+
+
+func _on_tower_button_pressed(kind: TowerStats.Kind) -> void:
+	tower_kind_chosen.emit(kind)
+
+
+## Writes the tower prices on the two build buttons.
+func bind_tower_build(stats: TowerStats) -> void:
+	_cannon_button.text = "Canon — %d or" % stats.cannon_cost
+	_frost_button.text = "Glace — %d or" % stats.frost_cost
+
+
+## Shows "Pas assez d'or" for about a second.
+func show_not_enough_gold() -> void:
+	_message_label.text = "Pas assez d'or"
+	_message_label.visible = true
+	_message_timer.start()
+
+
 ## Shows the crystal's hit points and keeps them up to date. Call after the crystal's setup.
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
@@ -80,5 +160,6 @@ func bind_game_state(state: GameState) -> void:
 func _refresh_info() -> void:
 	var building: bool = _state.phase == GameState.Phase.BUILD
 	var phase_name: String = "Construction" if building else "Combat"
+	_build_box.visible = building
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
 	_prompt_label.text = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1) if building else ""
