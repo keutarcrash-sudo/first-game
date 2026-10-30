@@ -6,6 +6,10 @@
 class_name Enemy
 extends Area2D
 
+## Emitted when hero fire brings the hit points to zero. Not emitted when the
+## enemy frees itself by touching the crystal.
+signal died
+
 const COLOR := Color(1.0, 0.35, 0.3)
 const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at full HP.
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
@@ -66,6 +70,7 @@ func take_damage(amount: float) -> void:
 		return
 	_hp -= amount
 	if _hp <= 0.0:
+		died.emit()
 		queue_free()
 	else:
 		queue_redraw()

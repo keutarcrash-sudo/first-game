@@ -10,10 +10,12 @@ extends Node
 signal wave_started(wave_number: int)
 ## Emitted when every enemy of the wave is dead or has touched the crystal.
 signal wave_finished(wave_number: int)
+## Emitted when an enemy is killed (not when one touches the crystal).
+signal enemy_killed
 
-# Transitions: WAITING -> SPAWNING (timer elapsed) -> CLEARING (all spawned)
-# -> WAITING (wave finished, via _schedule_next_wave).
-enum State { WAITING, SPAWNING, CLEARING }
+# Transitions: WAITING (first-wave countdown) -> SPAWNING (timer elapsed) ->
+# CLEARING (all spawned) -> IDLE (wave finished) -> SPAWNING (start_next_wave).
+enum State { WAITING, IDLE, SPAWNING, CLEARING }
 
 var _curve: WaveCurve
 var _stats: DefenceStats
@@ -79,6 +81,7 @@ func _spawn_enemy() -> void:
 	_alive += 1
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_border_point(), _crystal)
+	enemy.died.connect(enemy_killed.emit)
 	enemy.tree_exited.connect(_on_enemy_left)
 	_enemies_parent.add_child(enemy)
 
@@ -92,15 +95,15 @@ func _on_enemy_left() -> void:
 func _finish_wave_if_cleared() -> void:
 	if _alive > 0:
 		return
+	_state = State.IDLE
 	wave_finished.emit(_wave_number)
-	_schedule_next_wave()
 
 
-## Temporary rule until story 003 adds the build phase: the next wave starts
-## after a fixed delay. Story 003 replaces this function.
-func _schedule_next_wave() -> void:
-	_state = State.WAITING
-	_timer = _curve.delay_between_waves
+## Starts the next wave now. Ignored unless the previous wave is finished
+## (and the first-wave countdown is over), so two waves never overlap.
+func start_next_wave() -> void:
+	if _state == State.IDLE:
+		_begin_wave()
 
 
 ## A random point on the border of the spawn rectangle, uniform along its perimeter.

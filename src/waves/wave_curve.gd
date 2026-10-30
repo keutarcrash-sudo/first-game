@@ -12,8 +12,6 @@ const GROWTH_KEYS := [
 
 ## Seconds before the first wave starts.
 var first_wave_delay: float
-## Seconds between the end of a wave and the start of the next one.
-var delay_between_waves: float
 
 var _waves: Array[Dictionary] = []
 var _enemy_count_per_wave: float
@@ -33,10 +31,9 @@ static func load_from_file(path: String) -> WaveCurve:
 	if not data is Dictionary:
 		push_error("WaveCurve: '%s' is not a valid JSON object." % path)
 		return null
-	for key: String in ["first_wave_delay", "delay_between_waves"]:
-		if not _is_number(data.get(key), false):
-			push_error("WaveCurve: key '%s' in '%s' is missing or not a positive number." % [key, path])
-			return null
+	if not _is_number(data.get("first_wave_delay"), false):
+		push_error("WaveCurve: key 'first_wave_delay' in '%s' is missing or not a positive number." % path)
+		return null
 	var waves: Variant = data.get("waves")
 	if not waves is Array or waves.is_empty():
 		push_error("WaveCurve: key 'waves' in '%s' must be a non-empty list." % path)
@@ -68,7 +65,6 @@ static func load_from_file(path: String) -> WaveCurve:
 		push_error("WaveCurve: 'growth' in '%s' must make waves harder (more enemies, more HP or a faster spawn)." % path)
 		return null
 	curve.first_wave_delay = data["first_wave_delay"]
-	curve.delay_between_waves = data["delay_between_waves"]
 	curve._enemy_count_per_wave = growth["enemy_count_per_wave"]
 	curve._hp_multiplier_per_wave = growth["hp_multiplier_per_wave"]
 	curve._spawn_interval_factor = growth["spawn_interval_factor"]

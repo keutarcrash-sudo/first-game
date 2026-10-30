@@ -1,12 +1,12 @@
 # Story 003: Cycle combat / construction, or gagné à chaque kill
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-30
 
 ## Context
 
@@ -45,6 +45,7 @@
 - Aucun ADR à ce niveau de rigueur. Règles : `.claude/docs/coding-standards.md`.
 - La logique du cycle et de l'or doit rester séparée de l'affichage pour pouvoir être testée seule.
 - Consulter `docs/engine-reference/godot/` avant d'utiliser une API.
+- **Décision (2026-10-30, choisie par l'utilisateur) :** la phase de construction se termine uniquement quand le joueur appuie sur la touche Espace (action `start_wave`) ; il n'y a pas de minuteur. La première vague démarre seule après `first_wave_delay`.
 
 ---
 
@@ -59,13 +60,17 @@
 
 ## Files
 
+- `src/game/economy_stats.gd`
 - `src/game/game_state.gd`
 - `src/game/wave_cycle.gd`
-- `src/ui/hud.gd`
-- `assets/data/economy` (format choisi à l'implémentation)
-- `tests/unit/cristal-combo/cycle_economie_test.gd`
-
----
+- `src/game/main.gd`
+- `src/waves/wave_spawner.gd`
+- `src/waves/wave_curve.gd`
+- `src/enemies/enemy.gd`
+- `src/ui/crystal_hud.gd`
+- `assets/data/economy.json`
+- `assets/data/waves.json`
+- `project.godot`
 
 ## QA Test Cases
 
