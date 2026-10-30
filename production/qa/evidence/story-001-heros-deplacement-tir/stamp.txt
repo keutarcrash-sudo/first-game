@@ -1,0 +1,8 @@
+Reviewed-Content-Hash: project.godot b3b0ac6307a99b17db5d338a80aa5d5d9fe3e2bc
+Reviewed-Content-Hash: src/game/main.gd c36a9c83ab46df37884dba499bba6f0d0767dba5
+Reviewed-Content-Hash: src/game/main.tscn 695230ba07eb64cfbbb735edee07c6b0d10a2d5a
+Reviewed-Content-Hash: src/hero/hero.gd 7062361800e5efac7fb42e9b936fc5fae668af5d
+Reviewed-Content-Hash: src/hero/hero.tscn 00c4fcd47b058b080d2c7d9021a2d4167da757af
+Reviewed-Content-Hash: src/hero/hero_bullet.gd c023dc3dcabc03b12da93355457c56c21b43fa53
+Reviewed-Content-Hash: src/hero/hero_stats.gd 32637250f4ee34b6e504a0f4049a52395faa7814
+Reviewed-Content-Hash: assets/data/hero_stats.json da5947beecc218fcefbaa0c2dad5a888717a52d4
