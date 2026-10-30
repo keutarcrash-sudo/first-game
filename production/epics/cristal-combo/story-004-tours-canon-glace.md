@@ -1,7 +1,7 @@
 # Story 004: Tours canon et glace posées au clic
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: L
@@ -90,3 +90,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-003-cycle-combat-construction-or.md`
 - Unlocks: `production/epics/cristal-combo/story-005-systeme-procs.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-30
+**Criteria**: 8/8 passing (AC-7 data file checked by looking at `assets/data/towers.json`; AC-1 to AC-6 and AC-8 confirmed by the user at `/story-done`, AC-1 and AC-8 also visible in the retained screenshot). The "not enough gold" refusal also closed story 003's AC-7.
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. Choices by the implementer: towers are built in code (no `cannon_tower.tscn` / `frost_tower.tscn`), plus a small shared `Tower` base class. Contract for story 005: `Enemy.is_slowed() -> bool`; the cannon holds the target in `CannonTower._fire(target)` and `HeroBullet.configure(...)` takes the damage. Polish ideas: range rings of all towers are always drawn (cluttered with many towers); frost towers are close in colour to the hero.
+**Test Evidence**: waived at qa.level minimal; retained screenshot `production/qa/evidence/story-004-tours-canon-glace/construction-vague6-tours.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; build phase at wave 6 with 8 cannon towers, 7 frost towers, the two tower buttons and the placement preview.
+**Reviewed by**: self, no independent review

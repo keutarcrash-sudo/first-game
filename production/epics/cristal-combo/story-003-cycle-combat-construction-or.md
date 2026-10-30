@@ -101,4 +101,5 @@
 **Deviations**: None. Scope not checked: no uncommitted changes to compare. Cosmetic: the "Vague / Or / Phase" HUD line overlaps the arena border. Decision recorded: the build phase ends only on Space (no timer).
 **Test Evidence**: waived at qa.level minimal; retained screenshot `production/qa/evidence/story-003-cycle-combat-construction-or/phase-construction-vague3.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; build phase captured at wave 3 ("Vague : 3  Or : 280  Phase : Construction", prompt "Construction — Espace : lancer la vague 4", no enemies on screen).
 **Reviewed by**: self, no independent review
+**Update (2026-10-30, at story 004 close)**: AC-7 verified in the build — buying a tower without enough gold is refused with "Pas assez d'or" and the gold is unchanged (confirmed by the user). 9/9 passing.
 
