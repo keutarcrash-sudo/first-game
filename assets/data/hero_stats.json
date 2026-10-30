@@ -1,0 +1,11 @@
+{
+	"hero_speed": 260.0,
+	"hero_radius": 16.0,
+	"fire_rate": 4.0,
+	"bullet_damage": 10.0,
+	"bullet_speed": 700.0,
+	"bullet_max_range": 600.0,
+	"bullet_radius": 5.0,
+	"arena_width": 1200.0,
+	"arena_height": 660.0
+}

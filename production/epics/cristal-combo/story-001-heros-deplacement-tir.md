@@ -62,13 +62,13 @@
 ## Files
 
 - `project.godot`
+- `src/game/main.gd`
+- `src/game/main.tscn`
 - `src/hero/hero.gd`
 - `src/hero/hero.tscn`
 - `src/hero/hero_bullet.gd`
-- `assets/data/hero_stats` (format choisi à l'implémentation : Resource `.tres` ou JSON)
-- `export_presets.cfg`
-
----
+- `src/hero/hero_stats.gd`
+- `assets/data/hero_stats.json`
 
 ## QA Test Cases
 

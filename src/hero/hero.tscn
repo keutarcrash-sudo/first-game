@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/hero/hero.gd" id="1_hero"]
+
+[node name="Hero" type="CharacterBody2D"]
+script = ExtResource("1_hero")
