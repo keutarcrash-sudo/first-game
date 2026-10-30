@@ -1,0 +1,11 @@
+Reviewed-Content-Hash: src/towers/tower_stats.gd b06ae131dd6c73cb945e358709fb60ccb963fb04
+Reviewed-Content-Hash: src/towers/tower.gd 0bdcb7dd3d0a553b0fb6a479242aed068f41194f
+Reviewed-Content-Hash: src/towers/cannon_tower.gd 49cd52e5356fe74a8ae9d44b64eeec5b4ae2016b
+Reviewed-Content-Hash: src/towers/frost_tower.gd c4803d22ce7dfc33175da4424cfdabe9afc60420
+Reviewed-Content-Hash: src/towers/tower_placer.gd c43f570de13608c28161b5128bfb2cf41d211edb
+Reviewed-Content-Hash: src/enemies/enemy.gd bf94ebacf909a526ce9c87c647299af4e4fc32bc
+Reviewed-Content-Hash: src/hero/hero_bullet.gd 32e0b7e02dce1ebf3e5750a1c86c35d40a5d0b46
+Reviewed-Content-Hash: src/ui/crystal_hud.gd a8315b9d68a29670c57dfcd396b7173aaa0e4e4d
+Reviewed-Content-Hash: src/game/main.gd f81696e3d6fca69e3c26187290b4ca6980b969e3
+Reviewed-Content-Hash: src/game/main.tscn aae795ccab37e8807e58198a0b7b2de993b4f4fb
+Reviewed-Content-Hash: assets/data/towers.json 4122cdda90fe3b985d64033afd06f00d318788db
