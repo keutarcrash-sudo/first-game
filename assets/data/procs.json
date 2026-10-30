@@ -1,0 +1,11 @@
+{
+	"combos": [
+		{
+			"id": "frost_cannon",
+			"display_name": "Glace + Canon",
+			"source": "cannon",
+			"requires_state": "slowed",
+			"damage_multiplier": 3.0
+		}
+	]
+}

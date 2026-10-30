@@ -91,6 +91,15 @@ func is_slowed() -> bool:
 	return _slow_factor < 1.0
 
 
+## True while this enemy carries [param state]. Other effects (see [ProcRules])
+## read states through this. To add a state, add a case to the match below.
+func has_state(state: StringName) -> bool:
+	match state:
+		&"slowed":
+			return is_slowed()
+	return false
+
+
 ## Removes [param amount] hit points; the enemy is freed at zero.
 func take_damage(amount: float) -> void:
 	if is_queued_for_deletion():

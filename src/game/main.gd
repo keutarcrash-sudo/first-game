@@ -9,6 +9,7 @@ const DEFENCE_PATH := "res://assets/data/defence_stats.json"
 const WAVES_PATH := "res://assets/data/waves.json"
 const ECONOMY_PATH := "res://assets/data/economy.json"
 const TOWERS_PATH := "res://assets/data/towers.json"
+const PROCS_PATH := "res://assets/data/procs.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
 const BORDER_WIDTH := 4.0
@@ -33,13 +34,14 @@ func _ready() -> void:
 	var curve: WaveCurve = WaveCurve.load_from_file(WAVES_PATH)
 	var economy: EconomyStats = EconomyStats.load_from_file(ECONOMY_PATH)
 	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
-	if stats == null or defence == null or curve == null or economy == null or towers == null:
+	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
+	if rules == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
 		return
 	_arena_rect = Rect2((get_viewport_rect().size - stats.arena_size) / 2.0, stats.arena_size)
-	_hero.setup(stats, _arena_rect, _bullets)
+	_hero.setup(stats, _arena_rect, _bullets, rules)
 	_crystal.global_position = _arena_rect.get_center()
 	_crystal.setup(defence)
 	# The hero starts below the crystal, not on top of it.
@@ -50,7 +52,7 @@ func _ready() -> void:
 	_cycle = WaveCycle.new()
 	_cycle.setup(_state, _spawner, economy)
 	_hud.bind_game_state(_state)
-	_placer.setup(towers, _state, _arena_rect, _crystal, _towers, _enemies, _bullets)
+	_placer.setup(towers, _state, _arena_rect, _crystal, _towers, _enemies, _bullets, rules)
 	_hud.bind_tower_build(towers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)

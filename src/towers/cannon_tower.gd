@@ -11,12 +11,14 @@ var _stats: TowerStats
 var _enemies: Node2D
 var _bullets: Node2D
 var _arena_rect: Rect2
+var _rules: ProcRules
 var _cooldown := 0.0
 
 
 ## Sets the tuning values, the node holding the enemies, the node the shots are
-## added to, and the arena the shots must stay in. Call before adding the tower to the tree.
-func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect2) -> void:
+## added to, the arena the shots must stay in, and the combo rules (source [code]&"cannon"[/code]). Call before adding the tower to the tree.
+func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect2, rules: ProcRules) -> void:
+	_rules = rules
 	_stats = stats
 	_enemies = enemies
 	_bullets = bullets
@@ -60,5 +62,6 @@ func _fire(target: Enemy) -> void:
 		_stats.cannon_damage, _stats.cannon_bullet_speed, _stats.cannon_bullet_max_range,
 		_stats.cannon_bullet_radius, direction, _arena_rect
 	)
+	bullet.set_proc_source(&"cannon", _rules)
 	_bullets.add_child(bullet)
 	bullet.global_position = global_position

@@ -13,15 +13,17 @@ const HERO_LAYER := 1
 var _stats: HeroStats
 var _bullet_parent: Node
 var _arena_rect: Rect2
+var _rules: ProcRules
 var _min_position: Vector2
 var _max_position: Vector2
 var _aim_direction := Vector2.RIGHT
 var _fire_cooldown := 0.0
 
 
-## Gives the hero its tuning values, the arena it must stay in, and the node
-## its projectiles are added to. Call once, before the first physics frame.
-func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node) -> void:
+## Gives the hero its tuning values, the arena it must stay in, the node
+## its projectiles are added to, and the combo rules its shots use (source [code]&"hero"[/code]). Call once, before the first physics frame.
+func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: ProcRules) -> void:
+	_rules = rules
 	_stats = stats
 	_bullet_parent = bullet_parent
 	_arena_rect = arena_rect
@@ -66,5 +68,6 @@ func _draw() -> void:
 func _fire() -> void:
 	var bullet := HeroBullet.new()
 	bullet.setup(_stats, _aim_direction, _arena_rect)
+	bullet.set_proc_source(&"hero", _rules)
 	_bullet_parent.add_child(bullet)
 	bullet.global_position = global_position

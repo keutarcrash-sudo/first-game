@@ -1,12 +1,12 @@
 # Story 005: Système de procs, avec le premier combo glace + canon
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-30
 
 ## Context
 
@@ -44,6 +44,8 @@
 - Aucun ADR à ce niveau de rigueur. Règles : `.claude/docs/coding-standards.md` (valeurs de jeu dans des données, fonctions publiques testables).
 - Si ce combo n'est pas amusant à jouer, tout le jeu est à repenser (voir le brief) : le faire jouer à l'utilisateur dès que possible.
 - Consulter `docs/engine-reference/godot/` avant d'utiliser une API.
+- **Règle de cumul (décidée le 2026-10-30) :** les bonus s'additionnent, ils ne se multiplient pas. Multiplicateur total = 1 + Σ (multiplicateur_i − 1) sur les combos déclenchés ; par exemple ×3 et ×2 ensemble donnent ×4, pas ×6. Aucun combo déclenché = exactement ×1. Implémentée dans `ProcRules.resolve()`.
+- **Moment d'application :** au moment de l'impact du projectile (pas au tir). Les projectiles portent une étiquette de source (`cannon`, `hero`). Ajouter un combo = ajouter une entrée dans `assets/data/procs.json` ; ajouter un état = un cas dans `Enemy.has_state()`.
 
 ---
 
@@ -57,12 +59,15 @@
 
 ## Files
 
-- `src/procs/status_effects.gd`
 - `src/procs/proc_rules.gd`
-- `assets/data/procs` (format choisi à l'implémentation)
-- `tests/unit/cristal-combo/procs_test.gd`
-
----
+- `src/procs/proc_effect.gd`
+- `src/enemies/enemy.gd`
+- `src/hero/hero_bullet.gd`
+- `src/hero/hero.gd`
+- `src/towers/cannon_tower.gd`
+- `src/towers/tower_placer.gd`
+- `src/game/main.gd`
+- `assets/data/procs.json`
 
 ## QA Test Cases
 

@@ -21,13 +21,15 @@ var _crystal: Crystal
 var _towers: Node2D
 var _enemies: Node2D
 var _bullets: Node2D
+var _rules: ProcRules
 var _kind := TowerStats.Kind.CANNON
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
 ## the crystal to keep clear, and the nodes holding the towers, the enemies and the
-## bullets. Call once, before the first frame.
-func setup(stats: TowerStats, state: GameState, arena_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D) -> void:
+## bullets, and the combo rules handed to cannon shots. Call once, before the first frame.
+func setup(stats: TowerStats, state: GameState, arena_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules) -> void:
+	_rules = rules
 	_stats = stats
 	_state = state
 	_arena_rect = arena_rect
@@ -98,7 +100,7 @@ func _place(spot: Vector2) -> void:
 	var tower: Tower
 	if _kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
-		cannon.setup(_stats, _enemies, _bullets, _arena_rect)
+		cannon.setup(_stats, _enemies, _bullets, _arena_rect, _rules)
 		tower = cannon
 	else:
 		var frost := FrostTower.new()

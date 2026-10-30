@@ -16,6 +16,8 @@ var _max_range: float
 var _radius: float
 var _arena_rect: Rect2
 var _travelled := 0.0
+var _source: StringName
+var _rules: ProcRules
 
 
 ## Sets damage, speed, range and size from [param stats], and the flight
@@ -23,6 +25,13 @@ var _travelled := 0.0
 ## [param arena_rect]. Call before adding the bullet to the tree.
 func setup(stats: HeroStats, direction: Vector2, arena_rect: Rect2) -> void:
 	configure(stats.bullet_damage, stats.bullet_speed, stats.bullet_max_range, stats.bullet_radius, direction, arena_rect)
+
+
+## Sets the damage source tag (for example [code]&"cannon"[/code]) and the combo
+## rules applied at impact. Call before adding the bullet to the tree.
+func set_proc_source(source: StringName, rules: ProcRules) -> void:
+	_source = source
+	_rules = rules
 
 
 ## Sets the values directly (used by the cannon tower, story 004): [param hit_damage],
@@ -65,5 +74,23 @@ func _on_hit(target: Node2D) -> void:
 	if is_queued_for_deletion():
 		return
 	if target.has_method(&"take_damage"):
-		target.call(&"take_damage", damage)
+		var dealt: float = damage
+		var enemy := target as Enemy
+		if _rules != null and enemy != null:
+			# Resolved now, at impact: the state is the one the enemy has this instant.
+			var proc: ProcRules.Result = _rules.resolve(_source, enemy.has_state)
+			if not proc.combo_ids.is_empty():
+				dealt *= proc.multiplier
+				_show_effect(enemy, proc.multiplier)
+		target.call(&"take_damage", dealt)
 	queue_free()
+
+
+func _show_effect(enemy: Enemy, multiplier: float) -> void:
+	var parent := get_parent() as Node2D
+	if parent == null:
+		return
+	var effect := ProcEffect.new()
+	effect.setup(parent.to_local(enemy.global_position), multiplier)
+	# Deferred: this runs inside a physics signal, where the tree must not change.
+	parent.add_child.call_deferred(effect)
