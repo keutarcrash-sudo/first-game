@@ -1,12 +1,12 @@
 # Story 001: Héros déplacé en ZQSD, tir automatique vers la souris
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Core
 > **Type**: Visual/Feel
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-30
 
 ## Context
 
