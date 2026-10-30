@@ -1,0 +1,13 @@
+Reviewed-Content-Hash: src/crystal/crystal.gd a5647e11e13dfaab65cd4a5ddcb868529cf6e43c
+Reviewed-Content-Hash: src/crystal/crystal.tscn 8fe1ef0aa8d289507b5b1716cac4f6e0fe48a778
+Reviewed-Content-Hash: src/crystal/defence_stats.gd fa0bfa69509c24e671788179473f8f6d23d035b2
+Reviewed-Content-Hash: src/enemies/enemy.gd 262dc02fa319a07e55f1343a6c03dfb352079508
+Reviewed-Content-Hash: src/waves/wave_curve.gd d63f3acce71b32fc6978fbab389e3d4f7dc3227b
+Reviewed-Content-Hash: src/waves/wave_spawner.gd a3e93b41c52ca67eb715316179b787f7f0ca021b
+Reviewed-Content-Hash: src/ui/crystal_hud.gd 721ae2eb2708ff99f4c6dd4405ae16cb29df7f65
+Reviewed-Content-Hash: src/game/main.gd 8cc5b7404e06775410f637edc42ba889c75e5e71
+Reviewed-Content-Hash: src/game/main.tscn 2c179253634390522346f4979aba5bf9da7a67e3
+Reviewed-Content-Hash: src/hero/hero.gd 3b8069e286c7e01419eb7ff676eb83ee7ac6d5f3
+Reviewed-Content-Hash: src/hero/hero_bullet.gd ac6e92cb647eee693a5a8c7c89791cbbcf227fe1
+Reviewed-Content-Hash: assets/data/defence_stats.json 09888154f10ac04514392ab6828963d6c1d5d9e5
+Reviewed-Content-Hash: assets/data/waves.json 8a3b8ddb7a48d1ec2ad9a707f33cad30eedefa6d
