@@ -1,0 +1,15 @@
+{
+	"first_wave_delay": 2.0,
+	"delay_between_waves": 4.0,
+	"waves": [
+		{ "enemy_count": 4, "hp_multiplier": 1.0, "spawn_interval": 1.5 },
+		{ "enemy_count": 6, "hp_multiplier": 1.0, "spawn_interval": 1.2 },
+		{ "enemy_count": 8, "hp_multiplier": 1.5, "spawn_interval": 1.0 }
+	],
+	"growth": {
+		"enemy_count_per_wave": 2.0,
+		"hp_multiplier_per_wave": 0.25,
+		"spawn_interval_factor": 0.92,
+		"min_spawn_interval": 0.25
+	}
+}

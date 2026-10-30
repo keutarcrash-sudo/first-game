@@ -12,6 +12,7 @@ const HERO_LAYER := 1
 
 var _stats: HeroStats
 var _bullet_parent: Node
+var _arena_rect: Rect2
 var _min_position: Vector2
 var _max_position: Vector2
 var _aim_direction := Vector2.RIGHT
@@ -23,6 +24,7 @@ var _fire_cooldown := 0.0
 func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node) -> void:
 	_stats = stats
 	_bullet_parent = bullet_parent
+	_arena_rect = arena_rect
 	var margin := Vector2(stats.hero_radius, stats.hero_radius)
 	_min_position = arena_rect.position + margin
 	_max_position = arena_rect.end - margin
@@ -63,6 +65,6 @@ func _draw() -> void:
 
 func _fire() -> void:
 	var bullet := HeroBullet.new()
-	bullet.setup(_stats, _aim_direction)
+	bullet.setup(_stats, _aim_direction, _arena_rect)
 	_bullet_parent.add_child(bullet)
 	bullet.global_position = global_position

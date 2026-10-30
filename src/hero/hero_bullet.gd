@@ -14,12 +14,15 @@ var damage: float
 var _velocity: Vector2
 var _max_range: float
 var _radius: float
+var _arena_rect: Rect2
 var _travelled := 0.0
 
 
 ## Sets damage, speed, range and size from [param stats], and the flight
-## direction (a normalised vector). Call before adding the bullet to the tree.
-func setup(stats: HeroStats, direction: Vector2) -> void:
+## direction (a normalised vector). The bullet is freed as soon as it leaves
+## [param arena_rect]. Call before adding the bullet to the tree.
+func setup(stats: HeroStats, direction: Vector2, arena_rect: Rect2) -> void:
+	_arena_rect = arena_rect
 	damage = stats.bullet_damage
 	_velocity = direction * stats.bullet_speed
 	_max_range = stats.bullet_max_range
@@ -42,7 +45,7 @@ func _physics_process(delta: float) -> void:
 	var step: Vector2 = _velocity * delta
 	position += step
 	_travelled += step.length()
-	if _travelled >= _max_range:
+	if _travelled >= _max_range or not _arena_rect.has_point(global_position):
 		queue_free()
 
 

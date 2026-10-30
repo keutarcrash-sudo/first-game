@@ -61,13 +61,17 @@
 
 - `src/crystal/crystal.gd`
 - `src/crystal/crystal.tscn`
+- `src/crystal/defence_stats.gd`
 - `src/enemies/enemy.gd`
-- `src/enemies/enemy.tscn`
+- `src/waves/wave_curve.gd`
 - `src/waves/wave_spawner.gd`
-- `assets/data/waves` (format choisi à l'implémentation)
-- `tests/integration/cristal-combo/cristal_ennemis_vagues_test.gd`
-
----
+- `src/ui/crystal_hud.gd`
+- `src/game/main.gd`
+- `src/game/main.tscn`
+- `src/hero/hero.gd`
+- `src/hero/hero_bullet.gd`
+- `assets/data/defence_stats.json`
+- `assets/data/waves.json`
 
 ## QA Test Cases
 
