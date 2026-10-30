@@ -1,7 +1,7 @@
 # Story 002: Cristal de 100 PV, ennemis qui le ciblent, vagues croissantes
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Integration
 > **Estimate**: L
@@ -93,3 +93,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-001-heros-deplacement-tir.md`
 - Unlocks: `production/epics/cristal-combo/story-003-cycle-combat-construction-or.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-30
+**Criteria**: 9/9 passing (AC-1 and AC-7 also seen in the retained screenshot; AC-2 to AC-6, AC-8 and AC-9 confirmed by the user at `/story-done`).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. Carried forward: the crystal's defeat pauses the whole tree with no restart (story 007 must unpause or reload); wave chaining is a temporary timer in `WaveSpawner._schedule_next_wave()` that story 003 replaces with the build phase.
+**Test Evidence**: waived at qa.level minimal; retained screenshot `production/qa/evidence/story-002-cristal-ennemis-vagues/defaite-cristal-detruit.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; defeat screen captured ("Cristal : 0 / 100", "Cristal détruit", enemies frozen around the crystal).
+**Reviewed by**: self, no independent review
