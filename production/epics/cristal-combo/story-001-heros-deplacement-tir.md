@@ -1,7 +1,7 @@
 # Story 001: Héros déplacé en ZQSD, tir automatique vers la souris
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Visual/Feel
 > **Estimate**: M
@@ -90,3 +90,13 @@
 
 - Depends on: None
 - Unlocks: `production/epics/cristal-combo/story-002-cristal-ennemis-vagues.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-30
+**Criteria**: 8/9 passing. AC-7 fails in the user's eyes: projectiles are freed at their max range (600 px, `bullet_max_range`) as coded, but they cross the arena border and keep flying outside it; the user wants them stopped at the border. Impact on enemies could not be observed yet (no enemies until story 002).
+**Deviations**: Closed with AC-7 failing, by the user's explicit choice ("Clôturer quand même"). OUT OF SCOPE: 12 web-export files (`Cristal Combo.*`, ~38 MB `.wasm`) were committed at the repo root; they are build output, not in `.gitignore`. ADVISORY: aim-line length and width are constants in `hero.gd` (visual only).
+**Follow-up**: free a projectile when it leaves the arena rectangle (fold into story 002 or a small fix); remove the export files from git and ignore them.
+**Test Evidence**: `production/qa/evidence/story-001-heros-deplacement-tir-evidence.md` + `production/qa/evidence/story-001-heros-deplacement-tir/web-export-navigateur.png`
+**Reviewed by**: self, no independent review

@@ -10,7 +10,7 @@
 
 ## What Was Tested
 
-Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, lancé avec F5, puis exporté et lancé dans le navigateur (« Exécuter dans le navigateur »). L'utilisateur a confirmé que tout fonctionne : déplacement ZQSD sur clavier AZERTY, tir automatique vers la souris, héros limité à l'arène, et fonctionnement dans le navigateur.
+Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, lancé avec F5, puis exporté et lancé dans le navigateur (« Exécuter dans le navigateur »). Chaque critère de comportement a été confirmé un par un par l'utilisateur lors de `/story-done`.
 
 **Acceptance criteria covered**: AC-1 à AC-9
 
@@ -20,14 +20,14 @@ Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, la
 
 | # | Criterion (from story) | Result | Notes |
 |---|----------------------|--------|-------|
-| AC-1 | Le dossier s'ouvre dans Godot 4.7.2 et le jeu se lance avec F5 | PASS | Capture de l'éditeur reçue (scène `main` chargée, version 4.7.2.stable) ; lancement F5 confirmé par l'utilisateur |
-| AC-2 | Z, Q, S, D (AZERTY) déplacent le héros | PASS | Confirmé par l'utilisateur, dans l'éditeur et dans le navigateur |
-| AC-3 | Diagonale à la même vitesse qu'en ligne droite | PASS | Confirmé par l'utilisateur (« tout fonctionne ») |
-| AC-4 | Arrêt sans touche enfoncée | PASS | Confirmé par l'utilisateur |
-| AC-5 | Tir automatique vers le curseur, suivi en temps réel | PASS | Visible sur la capture : projectiles alignés vers la souris |
+| AC-1 | Le dossier s'ouvre dans Godot 4.7.2 et le jeu se lance avec F5 | PASS | Capture de l'éditeur (scène `main` chargée, 4.7.2.stable) ; lancement confirmé par l'utilisateur |
+| AC-2 | Z, Q, S, D (AZERTY) déplacent le héros | PASS | Confirmé par l'utilisateur à `/story-done` |
+| AC-3 | Diagonale à la même vitesse qu'en ligne droite | PASS | Confirmé par l'utilisateur à `/story-done` |
+| AC-4 | Arrêt sans touche enfoncée | PASS | Confirmé par l'utilisateur à `/story-done` |
+| AC-5 | Tir automatique vers le curseur, suivi en temps réel | PASS | Confirmé par l'utilisateur ; capture : projectiles alignés derrière le héros |
 | AC-6 | Valeurs de jeu dans un fichier de données | PASS | `assets/data/hero_stats.json` (vérifié dans le code) |
-| AC-7 | Projectiles détruits à l'impact ou à portée max | PASS | Portée max confirmée ; l'impact sera observable avec les ennemis (story 002) |
-| AC-8 | Le héros reste dans l'arène | PASS | Confirmé par l'utilisateur |
+| AC-7 | Projectiles détruits à l'impact ou à portée max | FAIL (accepté) | Le code libère le projectile à 600 px (`bullet_max_range`), mais l'utilisateur voit les projectiles traverser la bordure de l'arène et continuer ; il veut qu'ils s'arrêtent à la bordure. Impact sur ennemi : non observable avant la story 002 |
+| AC-8 | Le héros reste dans l'arène | PASS | Confirmé par l'utilisateur à `/story-done` |
 | AC-9 | Export web créé, jeu lancé dans un navigateur | PASS | Capture du jeu dans le navigateur (`localhost:8060`) |
 
 ---
@@ -43,7 +43,7 @@ Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, la
 ## Test Conditions
 
 - **Game state at start**: lancement à neuf, héros au centre de l'arène
-- **Platform / hardware**: Windows (PC de l'utilisateur), Godot 4.7.2.stable ; navigateur Chrome via « Exécuter dans le navigateur »
+- **Platform / hardware**: Windows (PC de l'utilisateur), Godot 4.7.2.stable ; Chrome via « Exécuter dans le navigateur »
 - **Framerate during test**: non mesuré ; aucun ralentissement signalé
 - **Any special setup required**: préréglage d'export « Web » et modèles d'export installés par l'utilisateur
 
@@ -51,7 +51,8 @@ Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, la
 
 ## Observations
 
-- Le préréglage d'export (`export_presets.cfg`) reste sur le PC de l'utilisateur : il est exclu de git par `.gitignore`. `commands.build` dans `project.yaml` reste à configurer.
+- AC-7 : les projectiles traversent la bordure de l'arène. À corriger (libérer le projectile quand il sort du rectangle de l'arène), dans la story 002 ou par un petit correctif.
+- Le préréglage d'export (`export_presets.cfg`) reste sur le PC de l'utilisateur (exclu de git). Les fichiers générés par l'export (`Cristal Combo.*`) ont été commités par erreur à la racine et sont à retirer de git. `commands.build` dans `project.yaml` reste à configurer.
 - La sensation de jeu (vitesse, cadence) n'a pas été évaluée en détail ; à revoir en playtest une fois les ennemis présents.
 
 ---
@@ -60,4 +61,4 @@ Le projet a été ouvert dans Godot 4.7.2 sur le PC Windows de l'utilisateur, la
 
 | Role | Name | Date | Signature |
 |------|------|------|-----------|
-| Lead (développeur solo) | keutarcrash-sudo | 2026-10-30 | « oui tout fonctionne » / « ça marche aussi dans le navigateur » (validation donnée dans la conversation) |
+| Lead (développeur solo) | keutarcrash-sudo | 2026-10-30 | [x] Approved — avec l'exception AC-7 acceptée par l'utilisateur à la clôture |
