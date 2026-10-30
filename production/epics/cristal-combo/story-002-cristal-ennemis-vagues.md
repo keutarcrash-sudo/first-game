@@ -1,12 +1,12 @@
 # Story 002: Cristal de 100 PV, ennemis qui le ciblent, vagues croissantes
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Core
 > **Type**: Integration
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-30
 
 ## Context
 
@@ -36,6 +36,7 @@
 - [ ] Une vague est terminée quand tous ses ennemis sont morts ou ont touché le cristal.
 - [ ] Quand le cristal tombe à 0 PV, la partie s'arrête (l'écran de défaite complet est dans la story 007 ; ici, un message simple suffit).
 - [ ] Le jeu reste fluide (aucun ralentissement visible) pendant la plus grosse vague atteinte lors du test.
+- [ ] Un projectile du héros est supprimé dès qu'il sort de l'arène (ajouté à la clôture de la story 001, AC-7 : les projectiles traversaient la bordure).
 
 ---
 
