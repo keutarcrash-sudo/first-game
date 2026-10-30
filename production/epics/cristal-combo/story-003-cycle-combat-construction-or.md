@@ -1,7 +1,7 @@
 # Story 003: Cycle combat / construction, or gagné à chaque kill
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Estimate**: M
@@ -92,3 +92,13 @@
 
 - Depends on: `production/epics/cristal-combo/story-002-cristal-ennemis-vagues.md`
 - Unlocks: `production/epics/cristal-combo/story-004-tours-canon-glace.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-30
+**Criteria**: 8/9 passing. Untested criteria: AC-7 (gold never negative: `GameState.spend_gold` refuses an overspend, but nothing in the game spends gold until story 004, so it cannot be exercised in the build yet — verify it when towers are bought without enough gold).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. Cosmetic: the "Vague / Or / Phase" HUD line overlaps the arena border. Decision recorded: the build phase ends only on Space (no timer).
+**Test Evidence**: waived at qa.level minimal; retained screenshot `production/qa/evidence/story-003-cycle-combat-construction-or/phase-construction-vague3.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; build phase captured at wave 3 ("Vague : 3  Or : 280  Phase : Construction", prompt "Construction — Espace : lancer la vague 4", no enemies on screen).
+**Reviewed by**: self, no independent review
+
