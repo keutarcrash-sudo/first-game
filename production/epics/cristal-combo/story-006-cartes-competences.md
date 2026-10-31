@@ -1,7 +1,7 @@
 # Story 006: Choix d'1 compétence parmi 3 entre les vagues, avec 2 autres combos
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: UI
 > **Estimate**: M
@@ -97,3 +97,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-003-cycle-combat-construction-or.md`, `production/epics/cristal-combo/story-005-systeme-procs.md`
 - Unlocks: `production/epics/cristal-combo/story-007-mort-arbre-rejouer.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-31
+**Criteria**: 8/8 passing (AC-1 to AC-7 confirmed by the user; AC-8 checked by looking at `assets/data/cards.json` and `assets/data/procs.json`; the card screen, the "Cartes" HUD line and 7 distinct cards taken by wave 13 are visible in the retained screenshots).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. The card screen is built in code (no `card_choice_screen.tscn`), approved by the user before implementation. Content: 8 cards (5 repeatable, 3 unique), combos "Glace + Héros" and "Feu + Héros" unlocked by cards, new enemy state "burning". Polish ideas: the "Cartes" HUD line overflows onto the arena; the game looks too easy by wave 13 (2440 gold banked, crystal 90/100) — balance to revisit after story 007; the hero still moves and fires during the card choice; the frost placement preview shows the base range.
+**Test Evidence**: UI screenshots `production/qa/evidence/story-006-cartes-competences/ecran-choix-cartes.png` (3-card choice screen) and `construction-vague13-cartes.png` (build phase with the "Cartes" line). Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; choice screen "Choisis une carte" with Pillage, Canon rapide, Balles lourdes, phase "Choix d'une carte".
+**Reviewed by**: self, no independent review
