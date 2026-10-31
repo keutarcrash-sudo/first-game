@@ -1,12 +1,12 @@
 # Story 007: À la mort, arbre de compétences, sauvegarde navigateur et bouton rejouer
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Presentation
 > **Type**: UI
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-31
 
 ## Context
 
