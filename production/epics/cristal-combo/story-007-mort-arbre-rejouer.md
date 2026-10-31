@@ -58,13 +58,20 @@
 
 ## Files
 
-- `src/meta/death_screen.gd`
-- `src/meta/death_screen.tscn`
 - `src/meta/skill_tree.gd`
 - `src/meta/save_progress.gd`
-- `assets/data/skill_tree` (format choisi à l'implémentation)
-
----
+- `src/meta/death_screen.gd`
+- `assets/data/skill_tree.json`
+- `assets/data/cards.json`
+- `src/cards/card_def.gd`
+- `src/cards/card_catalog.gd`
+- `src/cards/card_pool.gd`
+- `src/cards/card_choice_screen.gd`
+- `src/crystal/crystal.gd`
+- `src/game/game_state.gd`
+- `src/game/wave_cycle.gd`
+- `src/game/main.gd`
+- `src/ui/crystal_hud.gd`
 
 ## QA Test Cases
 
