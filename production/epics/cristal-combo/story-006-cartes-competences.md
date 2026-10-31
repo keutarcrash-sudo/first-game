@@ -1,12 +1,12 @@
 # Story 006: Choix d'1 compétence parmi 3 entre les vagues, avec 2 autres combos
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Feature
 > **Type**: UI
 > **Estimate**: M
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-10-31
 
 ## Context
 
