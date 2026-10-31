@@ -15,6 +15,13 @@ const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at ful
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
 const SLOWED_TINT := Color(0.3, 0.55, 1.0)
 const SLOWED_TINT_AMOUNT := 0.6  # 0 = no tint, 1 = fully blue.
+const BURNING_TINT := Color(1.0, 0.75, 0.15)
+const BURNING_TINT_AMOUNT := 0.5  # Fill tint, used when the enemy is not also slowed (blue fill wins).
+const BURNING_RING_WIDTH := 4.0  # The orange ring is always drawn while burning, so both states stay readable together.
+const BURNING_RING_POINTS := 24
+
+var _burn_left := 0.0  # Seconds of burning remaining.
+var _burn_damage_per_second := 0.0
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
@@ -64,6 +71,15 @@ func _physics_process(delta: float) -> void:
 	_requested_slow_factor = 1.0
 	if is_slowed() != was_slowed:
 		queue_redraw()
+	if _burn_left > 0.0:
+		# Damage over time goes through take_damage (a burn kill still emits died) and triggers no combo.
+		var burn_time: float = minf(delta, _burn_left)
+		_burn_left -= burn_time
+		take_damage(_burn_damage_per_second * burn_time)
+		if is_queued_for_deletion():
+			return
+		if _burn_left <= 0.0:
+			queue_redraw()
 	position = position.move_toward(_target, _speed * _slow_factor * delta)
 	if position.distance_squared_to(_target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
@@ -75,7 +91,11 @@ func _draw() -> void:
 	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
 	if is_slowed():
 		color = color.lerp(SLOWED_TINT, SLOWED_TINT_AMOUNT)
+	elif _burn_left > 0.0:
+		color = color.lerp(BURNING_TINT, BURNING_TINT_AMOUNT)
 	draw_circle(Vector2.ZERO, _radius, color)
+	if _burn_left > 0.0:
+		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, BURNING_TINT, BURNING_RING_WIDTH)
 
 
 ## Asks for a slow to [param factor] (a fraction of normal speed, 0.45 = 45 %)
@@ -97,7 +117,21 @@ func has_state(state: StringName) -> bool:
 	match state:
 		&"slowed":
 			return is_slowed()
+		&"burning":
+			return _burn_left > 0.0
 	return false
+
+
+## Sets the enemy on fire for [param duration] seconds, taking [param damage_per_second]
+## per second. A new call refreshes the duration; it never stacks.
+func apply_burn(duration: float, damage_per_second: float) -> void:
+	if is_queued_for_deletion():
+		return
+	var was_burning: bool = _burn_left > 0.0
+	_burn_left = duration
+	_burn_damage_per_second = damage_per_second
+	if not was_burning:
+		queue_redraw()
 
 
 ## Removes [param amount] hit points; the enemy is freed at zero.

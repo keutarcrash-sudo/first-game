@@ -6,6 +6,22 @@
 			"source": "cannon",
 			"requires_state": "slowed",
 			"damage_multiplier": 3.0
+		},
+		{
+			"id": "glace_heros",
+			"display_name": "Glace + Héros",
+			"source": "hero",
+			"requires_state": "slowed",
+			"damage_multiplier": 2.0,
+			"active_at_start": false
+		},
+		{
+			"id": "feu_heros",
+			"display_name": "Feu + Héros",
+			"source": "hero",
+			"requires_state": "burning",
+			"damage_multiplier": 2.0,
+			"active_at_start": false
 		}
 	]
 }

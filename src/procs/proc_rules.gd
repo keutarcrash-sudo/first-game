@@ -16,6 +16,7 @@ class Result extends RefCounted:
 	var combo_ids: Array[String] = []
 
 var _combos: Array[Dictionary] = []
+var _inactive: Dictionary = {}  # Ids of combos not unlocked yet.
 
 
 ## Finds the combos that apply to damage coming from [param source] on a target
@@ -28,6 +29,8 @@ func resolve(source: StringName, has_state: Callable) -> Result:
 	var result := Result.new()
 	var bonus := 0.0
 	for combo: Dictionary in _combos:
+		if _inactive.has(combo["id"]):
+			continue
 		if StringName(combo["source"]) != source:
 			continue
 		if not has_state.call(StringName(combo["requires_state"])):
@@ -37,6 +40,20 @@ func resolve(source: StringName, has_state: Callable) -> Result:
 	if not result.combo_ids.is_empty():
 		result.multiplier = 1.0 + bonus
 	return result
+
+
+## Switches on the combo [param combo_id] if it was loaded with
+## [code]"active_at_start": false[/code]. Does nothing for an active or unknown id.
+func activate(combo_id: String) -> void:
+	_inactive.erase(combo_id)
+
+
+## True if a combo with [param combo_id] exists in the loaded file, active or not.
+func has_combo(combo_id: String) -> bool:
+	for combo: Dictionary in _combos:
+		if combo["id"] == combo_id:
+			return true
+	return false
 
 
 ## Reads and validates the JSON file at [param path] (an object with a "combos"
@@ -74,5 +91,12 @@ static func load_from_file(path: String) -> ProcRules:
 			push_error("ProcRules: key 'combos[%d].id' in '%s' is a duplicate ('%s')." % [i, path, combo["id"]])
 			return null
 		seen[combo["id"]] = true
+		# Optional key, true when absent: false means a card must unlock the combo.
+		if combo.has("active_at_start"):
+			if not combo["active_at_start"] is bool:
+				push_error("ProcRules: key 'combos[%d].active_at_start' in '%s' must be true or false (got %s)." % [i, path, combo["active_at_start"]])
+				return null
+			if not combo["active_at_start"]:
+				rules._inactive[combo["id"]] = true
 		rules._combos.append(combo)
 	return rules

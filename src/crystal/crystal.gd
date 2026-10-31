@@ -38,6 +38,14 @@ func take_damage(amount: float) -> void:
 		destroyed.emit()
 
 
+## Gives back [param amount] hit points, never above [member max_hp]. Ignored once the crystal is destroyed.
+func heal(amount: float) -> void:
+	if current_hp <= 0.0:
+		return
+	current_hp = minf(current_hp + amount, max_hp)
+	health_changed.emit(current_hp, max_hp)
+
+
 func _draw() -> void:
 	var points := PackedVector2Array([
 		Vector2(0.0, -radius), Vector2(radius * 0.8, 0.0),

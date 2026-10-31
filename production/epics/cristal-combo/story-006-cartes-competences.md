@@ -57,13 +57,25 @@
 
 ## Files
 
+- `src/cards/card_def.gd`
+- `src/cards/card_catalog.gd`
+- `src/cards/player_modifiers.gd`
 - `src/cards/card_pool.gd`
 - `src/cards/card_choice_screen.gd`
-- `src/cards/card_choice_screen.tscn`
-- `assets/data/cards` (format choisi à l'implémentation)
-- `assets/data/procs` (combos ajoutés)
-
----
+- `assets/data/cards.json`
+- `assets/data/procs.json`
+- `src/procs/proc_rules.gd`
+- `src/game/game_state.gd`
+- `src/game/wave_cycle.gd`
+- `src/game/main.gd`
+- `src/enemies/enemy.gd`
+- `src/hero/hero.gd`
+- `src/hero/hero_bullet.gd`
+- `src/towers/cannon_tower.gd`
+- `src/towers/frost_tower.gd`
+- `src/towers/tower_placer.gd`
+- `src/crystal/crystal.gd`
+- `src/ui/crystal_hud.gd`
 
 ## QA Test Cases
 

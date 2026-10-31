@@ -18,6 +18,8 @@ var _arena_rect: Rect2
 var _travelled := 0.0
 var _source: StringName
 var _rules: ProcRules
+var _burn_duration := 0.0
+var _burn_damage_per_second := 0.0
 
 
 ## Sets damage, speed, range and size from [param stats], and the flight
@@ -32,6 +34,13 @@ func setup(stats: HeroStats, direction: Vector2, arena_rect: Rect2) -> void:
 func set_proc_source(source: StringName, rules: ProcRules) -> void:
 	_source = source
 	_rules = rules
+
+
+## Makes the bullet set its target burning at impact (story 006). Burning is not
+## a bullet hit: it triggers no combo. Call before adding the bullet to the tree.
+func set_burn(duration: float, damage_per_second: float) -> void:
+	_burn_duration = duration
+	_burn_damage_per_second = damage_per_second
 
 
 ## Sets the values directly (used by the cannon tower, story 004): [param hit_damage],
@@ -83,6 +92,9 @@ func _on_hit(target: Node2D) -> void:
 				dealt *= proc.multiplier
 				_show_effect(enemy, proc.multiplier)
 		target.call(&"take_damage", dealt)
+		# After the hit, so this bullet's own combo ignores its burn; apply_burn ignores an enemy the hit killed.
+		if enemy != null and _burn_duration > 0.0:
+			enemy.apply_burn(_burn_duration, _burn_damage_per_second)
 	queue_free()
 
 

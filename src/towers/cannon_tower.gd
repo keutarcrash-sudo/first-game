@@ -12,12 +12,14 @@ var _enemies: Node2D
 var _bullets: Node2D
 var _arena_rect: Rect2
 var _rules: ProcRules
+var _modifiers: PlayerModifiers
 var _cooldown := 0.0
 
 
 ## Sets the tuning values, the node holding the enemies, the node the shots are
-## added to, the arena the shots must stay in, and the combo rules (source [code]&"cannon"[/code]). Call before adding the tower to the tree.
-func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect2, rules: ProcRules) -> void:
+## added to, the arena the shots must stay in, the combo rules (source [code]&"cannon"[/code]), and the card modifiers, read at every shot (fire rate, damage, burn). Call before adding the tower to the tree.
+func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect2, rules: ProcRules, modifiers: PlayerModifiers) -> void:
+	_modifiers = modifiers
 	_rules = rules
 	_stats = stats
 	_enemies = enemies
@@ -36,7 +38,7 @@ func _physics_process(delta: float) -> void:
 	if target == null:
 		return
 	_fire(target)
-	_cooldown = _stats.cannon_fire_interval
+	_cooldown = _stats.cannon_fire_interval * _modifiers.cannon_interval_factor()
 
 
 func _find_nearest_enemy() -> Enemy:
@@ -59,9 +61,10 @@ func _fire(target: Enemy) -> void:
 		direction = Vector2.RIGHT
 	var bullet := HeroBullet.new()
 	bullet.configure(
-		_stats.cannon_damage, _stats.cannon_bullet_speed, _stats.cannon_bullet_max_range,
+		_stats.cannon_damage * _modifiers.damage_multiplier(), _stats.cannon_bullet_speed, _stats.cannon_bullet_max_range,
 		_stats.cannon_bullet_radius, direction, _arena_rect
 	)
 	bullet.set_proc_source(&"cannon", _rules)
+	bullet.set_burn(_modifiers.burn_duration(), _modifiers.burn_damage_per_second())
 	_bullets.add_child(bullet)
 	bullet.global_position = global_position

@@ -21,6 +21,7 @@ const HP_FONT_SIZE := 20
 const DEFEAT_FONT_SIZE := 56
 const INFO_FONT_SIZE := 20
 const INFO_POSITION := Vector2(40.0, 30.0)
+const CARDS_POSITION := Vector2(40.0, 58.0)
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
@@ -38,6 +39,8 @@ var _cannon_button: Button
 var _frost_button: Button
 var _message_label: Label
 var _message_timer: Timer
+var _cards_label: Label
+var _modifiers: PlayerModifiers
 
 
 func _ready() -> void:
@@ -52,6 +55,11 @@ func _ready() -> void:
 	_info_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_info_label.add_theme_color_override(&"font_color", TEXT_COLOR)
 	add_child(_info_label)
+	_cards_label = Label.new()
+	_cards_label.position = CARDS_POSITION
+	_cards_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
+	_cards_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
+	add_child(_cards_label)
 	_prompt_label = Label.new()
 	_prompt_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_prompt_label.offset_bottom = -PROMPT_BOTTOM_MARGIN
@@ -157,9 +165,25 @@ func bind_game_state(state: GameState) -> void:
 	_refresh_info()
 
 
+## Shows the cards taken and their stacks, and keeps the line up to date (story 006).
+func bind_modifiers(modifiers: PlayerModifiers) -> void:
+	_modifiers = modifiers
+	modifiers.changed.connect(_refresh_cards)
+	_refresh_cards()
+
+
+func _refresh_cards() -> void:
+	var labels: PackedStringArray = _modifiers.owned_labels()
+	_cards_label.text = "" if labels.is_empty() else "Cartes : %s" % ", ".join(labels)
+
+
 func _refresh_info() -> void:
 	var building: bool = _state.phase == GameState.Phase.BUILD
-	var phase_name: String = "Construction" if building else "Combat"
+	var phase_name: String = "Combat"
+	if building:
+		phase_name = "Construction"
+	elif _state.phase == GameState.Phase.CARD_CHOICE:
+		phase_name = "Choix d'une carte"
 	_build_box.visible = building
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
 	_prompt_label.text = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1) if building else ""

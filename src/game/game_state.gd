@@ -11,7 +11,8 @@ signal phase_changed(phase: Phase)
 ## Emitted when the current wave number changes.
 signal wave_changed(wave_number: int)
 
-enum Phase { COMBAT, BUILD }
+## CARD_CHOICE sits between a finished wave and BUILD: the player picks a card (story 006).
+enum Phase { COMBAT, BUILD, CARD_CHOICE }
 
 ## Gold owned. Never negative.
 var gold: int
@@ -52,7 +53,12 @@ func begin_combat(new_wave_number: int) -> void:
 	_set_phase(Phase.COMBAT)
 
 
-## Enters BUILD (the wave is finished).
+## Enters CARD_CHOICE (the wave is finished, a card is to be picked).
+func begin_card_choice() -> void:
+	_set_phase(Phase.CARD_CHOICE)
+
+
+## Enters BUILD (the card, if any, is chosen).
 func begin_build() -> void:
 	_set_phase(Phase.BUILD)
 
