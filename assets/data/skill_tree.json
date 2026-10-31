@@ -1,0 +1,63 @@
+{
+	"points_per_wave_completed": 2,
+	"kills_per_point": 10,
+	"nodes": [
+		{
+			"id": "cristal_renforce",
+			"display_name": "Cristal renforcé",
+			"description": "+25 PV max pour le cristal.",
+			"branch": "Cristal",
+			"cost": 10,
+			"requires": [],
+			"effects": [{ "type": "crystal_max_hp_bonus", "value": 25 }]
+		},
+		{
+			"id": "cristal_blinde",
+			"display_name": "Cristal blindé",
+			"description": "+50 PV max de plus pour le cristal.",
+			"branch": "Cristal",
+			"cost": 25,
+			"requires": ["cristal_renforce"],
+			"effects": [{ "type": "crystal_max_hp_bonus", "value": 50 }]
+		},
+		{
+			"id": "bourse_depart",
+			"display_name": "Bourse de départ",
+			"description": "Commence chaque partie avec 50 or de plus.",
+			"branch": "Départ",
+			"cost": 10,
+			"requires": [],
+			"effects": [{ "type": "starting_gold_bonus", "value": 50 }]
+		},
+		{
+			"id": "depart_en_trombe",
+			"display_name": "Départ en trombe",
+			"description": "Un choix de carte avant la vague 1.",
+			"branch": "Départ",
+			"cost": 25,
+			"requires": ["bourse_depart"],
+			"effects": [{ "type": "start_card_choice" }]
+		},
+		{
+			"id": "arsenal_feu",
+			"display_name": "Arsenal du feu",
+			"description": "Ajoute Munitions incendiaires et Frappe du brasier aux cartes possibles.",
+			"branch": "Arsenal",
+			"cost": 10,
+			"requires": [],
+			"effects": [{ "type": "unlock_cards", "card_ids": ["munitions_incendiaires", "frappe_du_brasier"] }]
+		},
+		{
+			"id": "arsenal_glace",
+			"display_name": "Arsenal de glace",
+			"description": "Ajoute Tir brisant aux cartes possibles. 4 cartes proposées à chaque tirage.",
+			"branch": "Arsenal",
+			"cost": 25,
+			"requires": ["arsenal_feu"],
+			"effects": [
+				{ "type": "unlock_cards", "card_ids": ["tir_brisant"] },
+				{ "type": "cards_offered_bonus", "value": 1 }
+			]
+		}
+	]
+}

@@ -20,6 +20,7 @@ const COMBINE_COLOR := Color(0.55, 0.9, 1.0)
 const CARD_SIZE := Vector2(280.0, 340.0)
 const CARD_PADDING := 16.0
 const CARD_SPACING := 28
+const SCREEN_SIDE_MARGIN := 40.0  # Minimum free space left and right of the row (4 cards with the skill tree bonus).
 const TEXT_SPACING := 14
 
 var _row: HBoxContainer
@@ -61,20 +62,23 @@ func _ready() -> void:
 	column.add_child(_row)
 
 
-## Shows [param cards] (one clickable card each) and waits for a click.
+## Shows [param cards] (one clickable card each) and waits for a click. Cards
+## narrow when needed so the whole row fits the screen width.
 func show_cards(cards: Array[CardDef]) -> void:
 	for child: Node in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
+	var free_width: float = get_viewport().get_visible_rect().size.x - 2.0 * SCREEN_SIDE_MARGIN - CARD_SPACING * (cards.size() - 1)
+	var card_width: float = minf(CARD_SIZE.x, free_width / cards.size())
 	for card: CardDef in cards:
-		_row.add_child(_make_card(card))
+		_row.add_child(_make_card(card, card_width))
 	visible = true
 
 
-func _make_card(card: CardDef) -> Button:
+func _make_card(card: CardDef, width: float) -> Button:
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused card must not react to it.
-	button.custom_minimum_size = CARD_SIZE
+	button.custom_minimum_size = Vector2(width, CARD_SIZE.y)
 	button.pressed.connect(_on_card_pressed.bind(card))
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)

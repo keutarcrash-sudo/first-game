@@ -46,6 +46,7 @@
 		},
 		{
 			"id": "munitions_incendiaires",
+			"locked_by_default": true,
 			"display_name": "Munitions incendiaires",
 			"description": "Les tirs des canons enflamment l'ennemi pendant 3 s (5 dégâts par seconde).",
 			"combines_with": "Frappe du brasier",
@@ -54,6 +55,7 @@
 		},
 		{
 			"id": "tir_brisant",
+			"locked_by_default": true,
 			"display_name": "Tir brisant",
 			"description": "Combo Glace + Héros : les tirs du héros font ×2 de dégâts sur les ennemis ralentis.",
 			"combines_with": "Tour de glace",
@@ -62,6 +64,7 @@
 		},
 		{
 			"id": "frappe_du_brasier",
+			"locked_by_default": true,
 			"display_name": "Frappe du brasier",
 			"description": "Combo Feu + Héros : les tirs du héros font ×2 de dégâts sur les ennemis qui brûlent.",
 			"combines_with": "Munitions incendiaires (nécessaire pour enflammer les ennemis)",

@@ -21,6 +21,10 @@ var gold: int
 var wave_number := 1
 ## Current phase. The game starts in COMBAT.
 var phase := Phase.COMBAT
+## Waves finished during this game (end-of-game points, story 007).
+var waves_completed := 0
+## Enemies killed during this game (end-of-game points, story 007).
+var kills := 0
 
 
 func _init(starting_gold: int) -> void:

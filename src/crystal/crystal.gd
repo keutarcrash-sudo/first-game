@@ -20,10 +20,12 @@ var current_hp: float
 var max_hp: float
 
 
-## Sets hit points and size from [param stats]. Call once, before the first physics frame.
-func setup(stats: DefenceStats) -> void:
+## Sets hit points and size from [param stats]; [param max_hp_bonus] (skill
+## tree, story 007) adds to the base max hit points. Starts at full health.
+## Call once, before the first physics frame.
+func setup(stats: DefenceStats, max_hp_bonus: float) -> void:
 	radius = stats.crystal_radius
-	max_hp = stats.crystal_max_hp
+	max_hp = stats.crystal_max_hp + max_hp_bonus
 	current_hp = max_hp
 	queue_redraw()
 

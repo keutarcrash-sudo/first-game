@@ -1,5 +1,6 @@
-## On-screen display: crystal hit points and the defeat message (story 002),
-## wave number, gold, phase and the build-phase prompt (story 003). Only listens
+## On-screen display: crystal hit points (story 002), wave number, gold, phase
+## and the build-phase prompt (story 003). The defeat is shown by [DeathScreen]
+## (story 007), not here. Only listens
 ## to signals; never changes game state. Extended rather than duplicated so the
 ## game keeps a single CanvasLayer.
 class_name CrystalHud
@@ -18,7 +19,6 @@ const MESSAGE_BOTTOM_MARGIN := 124.0
 const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
 const MESSAGE_SECONDS := 1.0
 const HP_FONT_SIZE := 20
-const DEFEAT_FONT_SIZE := 56
 const INFO_FONT_SIZE := 20
 const INFO_POSITION := Vector2(40.0, 30.0)
 const CARDS_POSITION := Vector2(40.0, 58.0)
@@ -27,10 +27,8 @@ const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
 const HP_POSITION := Vector2(40.0, 2.0)
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
-const DEFEAT_COLOR := Color(1.0, 0.4, 0.35)
 
 var _hp_label: Label
-var _defeat_label: Label
 var _info_label: Label
 var _prompt_label: Label
 var _state: GameState
@@ -68,15 +66,6 @@ func _ready() -> void:
 	_prompt_label.add_theme_font_size_override(&"font_size", PROMPT_FONT_SIZE)
 	_prompt_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
 	add_child(_prompt_label)
-	_defeat_label = Label.new()
-	_defeat_label.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_defeat_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_defeat_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_defeat_label.add_theme_font_size_override(&"font_size", DEFEAT_FONT_SIZE)
-	_defeat_label.add_theme_color_override(&"font_color", DEFEAT_COLOR)
-	_defeat_label.text = "Cristal détruit"
-	_defeat_label.visible = false
-	add_child(_defeat_label)
 
 
 func _build_tower_ui() -> void:
@@ -145,15 +134,10 @@ func show_not_enough_gold() -> void:
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
 	crystal.health_changed.connect(_on_health_changed)
-	crystal.destroyed.connect(_on_crystal_destroyed)
 
 
 func _on_health_changed(current_hp: float, max_hp: float) -> void:
 	_hp_label.text = "Cristal : %d / %d" % [ceili(current_hp), ceili(max_hp)]
-
-
-func _on_crystal_destroyed() -> void:
-	_defeat_label.visible = true
 
 
 ## Shows wave number, gold, phase and the build prompt, and keeps them up to date.

@@ -1,5 +1,6 @@
 ## Combat/build cycle (story 003). Wires the wave spawner's signals to the
-## [GameState]: kill gold, end-of-wave bonus, phase changes. Build phase ends
+## [GameState]: kill gold, end-of-wave bonus, phase changes, and the wave and
+## kill counts used for the end-of-game points (story 007). Build phase ends
 ## only when the player asks for the next wave ([method request_next_wave],
 ## bound to the Space bar in main.gd). Holds no UI.
 class_name WaveCycle
@@ -35,9 +36,11 @@ func _on_wave_started(wave_number: int) -> void:
 
 
 func _on_wave_finished(_wave_number: int) -> void:
+	_state.waves_completed += 1
 	_state.add_gold(_economy.gold_per_wave_bonus)
 	_state.begin_card_choice()
 
 
 func _on_enemy_killed() -> void:
+	_state.kills += 1
 	_state.add_gold(_economy.gold_per_kill + _modifiers.gold_per_kill_bonus())

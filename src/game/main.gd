@@ -1,7 +1,9 @@
 ## Arena (stories 001-003): dark background, visible arena bounds, the hero,
 ## the crystal and the wave spawner. Loads the tuning data once and hands it
 ## to each part. When the crystal is destroyed the whole tree is paused, which
-## stops spawning, enemies, bullets and the hero.
+## stops spawning, enemies, bullets and the hero, and the defeat screen opens
+## (story 007): points are added to the saved progression, the player buys
+## permanent upgrades, and « Rejouer » reloads this scene, which applies them.
 extends Node2D
 
 const STATS_PATH := "res://assets/data/hero_stats.json"
@@ -11,6 +13,8 @@ const ECONOMY_PATH := "res://assets/data/economy.json"
 const TOWERS_PATH := "res://assets/data/towers.json"
 const PROCS_PATH := "res://assets/data/procs.json"
 const CARDS_PATH := "res://assets/data/cards.json"
+const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
+const SAVE_PATH := "user://progress.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
 const BORDER_WIDTH := 4.0
@@ -20,6 +24,11 @@ var _cycle: WaveCycle
 var _state: GameState
 var _card_pool: CardPool
 var _card_screen: CardChoiceScreen
+var _skill_tree: SkillTree
+var _progress: SaveProgress
+var _death_screen: DeathScreen
+var _spawner_setup: Callable
+var _start_choice_pending := false  # True while the "Départ en trombe" card choice before wave 1 is open.
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -39,25 +48,28 @@ func _ready() -> void:
 	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
 	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
 	var catalog: CardCatalog = null if rules == null else CardCatalog.load_from_file(CARDS_PATH, rules)
-	if catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	_skill_tree = null if catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, catalog)
+	if _skill_tree == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
 		return
 	_arena_rect = Rect2((get_viewport_rect().size - stats.arena_size) / 2.0, stats.arena_size)
+	_progress = SaveProgress.load_from_file(SAVE_PATH, _skill_tree)
+	var owned: PackedStringArray = _progress.owned_ids
 	var modifiers := PlayerModifiers.new(rules)
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	_card_pool = CardPool.new(catalog, modifiers, rng)
+	_card_pool = CardPool.new(catalog, modifiers, rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned))
 	_hero.setup(stats, _arena_rect, _bullets, rules, modifiers)
 	_crystal.global_position = _arena_rect.get_center()
-	_crystal.setup(defence)
+	_crystal.setup(defence, _skill_tree.crystal_max_hp_bonus(owned))
 	# The hero starts below the crystal, not on top of it.
 	_hero.global_position = _crystal.global_position + Vector2(0.0, defence.crystal_radius + stats.hero_radius + defence.hero_start_gap)
 	_hud.bind(_crystal)
 	_crystal.destroyed.connect(_on_crystal_destroyed)
 	modifiers.heal_requested.connect(_crystal.heal)
-	_state = GameState.new(economy.starting_gold)
+	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_cycle.setup(_state, _spawner, economy, modifiers)
 	_hud.bind_game_state(_state)
@@ -70,7 +82,19 @@ func _ready() -> void:
 	_hud.bind_tower_build(towers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
-	_spawner.setup(curve, defence, _arena_rect, _crystal, _enemies)
+	_death_screen = DeathScreen.new()
+	add_child(_death_screen)
+	_death_screen.setup(_skill_tree)
+	_death_screen.node_clicked.connect(_on_upgrade_clicked)
+	_death_screen.replay_pressed.connect(_on_replay_pressed)
+	# The spawner's setup starts the first-wave countdown, so with "Départ en trombe"
+	# it waits until the opening card is chosen (see _end_card_choice).
+	_spawner_setup = _spawner.setup.bind(curve, defence, _arena_rect, _crystal, _enemies)
+	if _skill_tree.has_start_card_choice(owned):
+		_start_choice_pending = true
+		_state.begin_card_choice()
+	else:
+		_spawner_setup.call()
 	queue_redraw()
 
 
@@ -93,21 +117,55 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 		_open_card_choice.call_deferred()
 
 
-## Offers up to 3 cards, or goes straight to BUILD when none is left. Nothing is shown once the crystal is destroyed.
+## Offers the drawn cards (3, or more with the skill tree), or ends the choice at
+## once when none is left. Nothing is shown once the crystal is destroyed.
 func _open_card_choice() -> void:
 	if _state.phase != GameState.Phase.CARD_CHOICE or _crystal.current_hp <= 0.0:
 		return
 	var offer: Array[CardDef] = _card_pool.draw()
 	if offer.is_empty():
-		_state.begin_build()
+		_end_card_choice()
 		return
 	_card_screen.show_cards(offer)
 
 
 func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:
 	modifiers.take(card)
-	_state.begin_build()
+	_end_card_choice()
 
 
+## After a wave the game goes to BUILD; after the opening choice it goes to the
+## wave 1 countdown instead.
+func _end_card_choice() -> void:
+	if not _start_choice_pending:
+		_state.begin_build()
+		return
+	_start_choice_pending = false
+	_state.begin_combat(1)
+	_spawner_setup.call()
+
+
+## Stops the game, banks this game's points (saved at once) and opens the defeat
+## screen. Points use only the waves and kills counted up to this moment.
 func _on_crystal_destroyed() -> void:
 	get_tree().paused = true
+	var earned: int = _skill_tree.points_for_game(_state.waves_completed, _state.kills)
+	_progress.total_points += earned
+	_progress.save_to_file(SAVE_PATH)
+	_death_screen.open(_state.wave_number, earned, _progress)
+
+
+func _on_upgrade_clicked(upgrade_id: String) -> void:
+	var refusal: String = _skill_tree.buy(upgrade_id, _progress)
+	if not refusal.is_empty():
+		_death_screen.show_refusal(refusal)
+		return
+	_progress.save_to_file(SAVE_PATH)
+	_death_screen.refresh(_progress)
+
+
+## A fresh game: reloading the scene rebuilds the crystal (full, with the new
+## max), the gold, the wave and the card pool from the data and the saved progression.
+func _on_replay_pressed() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()

@@ -11,6 +11,8 @@ var display_name: String
 var description: String
 ## What the card works with; empty when not relevant.
 var combines_with: String
+## True when the card is only offered once the skill tree unlocks it (story 007).
+var locked_by_default := false
 ## Maximum number of times the card can be taken; -1 means unlimited.
 var max_stacks := -1
 ## Effects applied each time the card is taken: dictionaries with a "type" key

@@ -54,6 +54,14 @@ static func load_from_file(path: String, rules: ProcRules) -> CardCatalog:
 	return catalog
 
 
+## True when a card with id [param card_id] exists.
+func has_card(card_id: String) -> bool:
+	for card: CardDef in cards:
+		if card.id == card_id:
+			return true
+	return false
+
+
 static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules) -> CardDef:
 	if not raw is Dictionary:
 		push_error("CardCatalog: 'cards[%d]' in '%s' must be an object." % [index, path])
@@ -71,6 +79,11 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 		push_error("CardCatalog: key 'cards[%d].combines_with' in '%s' must be a string." % [index, path])
 		return null
 	card.combines_with = combines
+	var locked: Variant = raw.get("locked_by_default", false)
+	if not locked is bool:
+		push_error("CardCatalog: key 'cards[%d].locked_by_default' in '%s' must be true or false." % [index, path])
+		return null
+	card.locked_by_default = locked
 	var max_stacks: Variant = raw.get("max_stacks")
 	if max_stacks != null:
 		if not (max_stacks is float or max_stacks is int) or max_stacks < 1:
