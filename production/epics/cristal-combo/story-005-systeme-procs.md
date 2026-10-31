@@ -1,12 +1,12 @@
 # Story 005: Système de procs, avec le premier combo glace + canon
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Logic
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-10-30
+> **Last Updated**: 2026-10-31
 
 ## Context
 
@@ -89,3 +89,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-004-tours-canon-glace.md`
 - Unlocks: `production/epics/cristal-combo/story-006-cartes-competences.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-10-31
+**Criteria**: 7/8 passing. Untested criteria: AC-8 (automated tests for damage with and without state — not written, waived at qa.level minimal; gdUnit4 not installed; `ProcRules.resolve()` is scene-tree-free and testable as is). AC-3, AC-4 and AC-6 confirmed by the user; AC-1 and AC-2 demonstrated by the working combo; AC-5 and AC-7 checked by looking (story notes, `ProcRules.resolve` doc comment, `assets/data/procs.json`).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. Cosmetic: the combo label reads "×3.0" instead of "×3" (`String.num` formatting in `proc_effect.gd`). Core-fun check (brief build order step 2): the user found the effect very clear, the combo fun, and ×3 well balanced — the combo design holds.
+**Test Evidence**: waived at qa.level minimal (AC-8 untested); retained screenshot `production/qa/evidence/story-005-systeme-procs/combo-glace-canon.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; combo captured: purple ring around a hit enemy next to a cannon and a frost tower, magenta "×3.0" label.
+**Reviewed by**: self, no independent review
