@@ -1,12 +1,12 @@
 # Story 009: Maître du feu et Maître de l'eau
 
 > **Epic**: Cristal Combo
-> **Status**: Ready
+> **Status**: In Progress
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: —
+> **Last Updated**: 2026-11-01
 
 ## Context
 
