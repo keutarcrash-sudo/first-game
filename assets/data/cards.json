@@ -7,7 +7,12 @@
 			"description": "Les canons tirent 25 % plus vite.",
 			"combines_with": "",
 			"max_stacks": 4,
-			"effects": [{ "type": "cannon_fire_rate_bonus", "value": 0.25 }]
+			"effects": [
+				{
+					"type": "cannon_fire_rate_bonus",
+					"value": 0.25
+				}
+			]
 		},
 		{
 			"id": "balles_lourdes",
@@ -15,7 +20,12 @@
 			"description": "+30 % de dégâts sur les tirs du héros et des canons.",
 			"combines_with": "",
 			"max_stacks": 4,
-			"effects": [{ "type": "damage_bonus", "value": 0.3 }]
+			"effects": [
+				{
+					"type": "damage_bonus",
+					"value": 0.3
+				}
+			]
 		},
 		{
 			"id": "glace_profonde",
@@ -24,8 +34,15 @@
 			"combines_with": "tout ce qui exploite les ennemis ralentis",
 			"max_stacks": 3,
 			"effects": [
-				{ "type": "frost_slow_factor_mult", "value": 0.8, "min_factor": 0.2 },
-				{ "type": "frost_range_bonus", "value": 0.15 }
+				{
+					"type": "frost_slow_factor_mult",
+					"value": 0.8,
+					"min_factor": 0.2
+				},
+				{
+					"type": "frost_range_bonus",
+					"value": 0.15
+				}
 			]
 		},
 		{
@@ -34,7 +51,12 @@
 			"description": "Le cristal récupère 25 PV.",
 			"combines_with": "",
 			"max_stacks": null,
-			"effects": [{ "type": "heal_crystal", "value": 25 }]
+			"effects": [
+				{
+					"type": "heal_crystal",
+					"value": 25
+				}
+			]
 		},
 		{
 			"id": "pillage",
@@ -42,7 +64,12 @@
 			"description": "+5 or par ennemi tué.",
 			"combines_with": "",
 			"max_stacks": 4,
-			"effects": [{ "type": "gold_per_kill_bonus", "value": 5 }]
+			"effects": [
+				{
+					"type": "gold_per_kill_bonus",
+					"value": 5
+				}
+			]
 		},
 		{
 			"id": "munitions_incendiaires",
@@ -51,7 +78,13 @@
 			"description": "Les tirs des canons enflamment l'ennemi pendant 3 s (5 dégâts par seconde).",
 			"combines_with": "Frappe du brasier",
 			"max_stacks": 1,
-			"effects": [{ "type": "cannon_burn", "duration": 3.0, "damage_per_second": 5.0 }]
+			"effects": [
+				{
+					"type": "cannon_burn",
+					"duration": 3.0,
+					"damage_per_second": 5.0
+				}
+			]
 		},
 		{
 			"id": "tir_brisant",
@@ -60,7 +93,12 @@
 			"description": "Combo Glace + Héros : les tirs du héros font ×2 de dégâts sur les ennemis ralentis.",
 			"combines_with": "Tour de glace",
 			"max_stacks": 1,
-			"effects": [{ "type": "unlock_combo", "combo_id": "glace_heros" }]
+			"effects": [
+				{
+					"type": "unlock_combo",
+					"combo_id": "glace_heros"
+				}
+			]
 		},
 		{
 			"id": "frappe_du_brasier",
@@ -69,7 +107,12 @@
 			"description": "Combo Feu + Héros : les tirs du héros font ×2 de dégâts sur les ennemis qui brûlent.",
 			"combines_with": "Munitions incendiaires (nécessaire pour enflammer les ennemis)",
 			"max_stacks": 1,
-			"effects": [{ "type": "unlock_combo", "combo_id": "feu_heros" }]
+			"effects": [
+				{
+					"type": "unlock_combo",
+					"combo_id": "feu_heros"
+				}
+			]
 		},
 		{
 			"id": "carquois_profond",
@@ -78,7 +121,12 @@
 			"description": "Les flèches traversent 1 ennemi de plus.",
 			"combines_with": "",
 			"max_stacks": 3,
-			"effects": [{ "type": "pierce_bonus", "value": 1 }]
+			"effects": [
+				{
+					"type": "pierce_bonus",
+					"value": 1
+				}
+			]
 		},
 		{
 			"id": "oeil_de_faucon",
@@ -87,7 +135,12 @@
 			"description": "+10 % de chance de coup critique.",
 			"combines_with": "Marque + Canon",
 			"max_stacks": 4,
-			"effects": [{ "type": "crit_chance_bonus", "value": 0.1 }]
+			"effects": [
+				{
+					"type": "crit_chance_bonus",
+					"value": 0.1
+				}
+			]
 		},
 		{
 			"id": "fleche_lourde",
@@ -96,7 +149,12 @@
 			"description": "Les coups critiques font +0,5 × de dégâts.",
 			"combines_with": "",
 			"max_stacks": 3,
-			"effects": [{ "type": "crit_multiplier_bonus", "value": 0.5 }]
+			"effects": [
+				{
+					"type": "crit_multiplier_bonus",
+					"value": 0.5
+				}
+			]
 		},
 		{
 			"id": "marque_prolongee",
@@ -105,7 +163,110 @@
 			"description": "Les ennemis restent marqués 2 s de plus.",
 			"combines_with": "Marque + Canon",
 			"max_stacks": 3,
-			"effects": [{ "type": "mark_duration_bonus", "value": 2.0 }]
+			"effects": [
+				{
+					"type": "mark_duration_bonus",
+					"value": 2.0
+				}
+			]
+		},
+		{
+			"id": "braises_ardentes",
+			"requires_spec": "maitre_feu",
+			"display_name": "Braises ardentes",
+			"description": "La brûlure fait 2 dégâts par seconde de plus.",
+			"combines_with": "Feu + Canon",
+			"max_stacks": 4,
+			"effects": [
+				{
+					"type": "burn_dps_bonus",
+					"value": 2.0
+				}
+			]
+		},
+		{
+			"id": "longue_combustion",
+			"requires_spec": "maitre_feu",
+			"display_name": "Longue combustion",
+			"description": "La brûlure dure 1 s de plus.",
+			"combines_with": "Feu + Canon",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "burn_duration_bonus",
+					"value": 1.0
+				}
+			]
+		},
+		{
+			"id": "cadence_infernale",
+			"requires_spec": "maitre_feu",
+			"display_name": "Cadence infernale",
+			"description": "+20 % de cadence de tir.",
+			"combines_with": "",
+			"max_stacks": 4,
+			"effects": [
+				{
+					"type": "weapon_fire_rate_bonus",
+					"value": 0.2
+				}
+			]
+		},
+		{
+			"id": "jet_puissant",
+			"requires_spec": "maitre_eau",
+			"display_name": "Jet puissant",
+			"description": "+25 % de dégâts.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "damage_bonus",
+					"value": 0.25
+				}
+			]
+		},
+		{
+			"id": "trempage_durable",
+			"requires_spec": "maitre_eau",
+			"display_name": "Trempage durable",
+			"description": "Les ennemis restent trempés 2 s de plus.",
+			"combines_with": "Tour de glace",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "wet_duration_bonus",
+					"value": 2.0
+				}
+			]
+		},
+		{
+			"id": "gel_profond",
+			"requires_spec": "maitre_eau",
+			"display_name": "Gel profond",
+			"description": "Le gel dure 1 s de plus.",
+			"combines_with": "Tour de glace",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "freeze_duration_bonus",
+					"value": 1.0
+				}
+			]
+		},
+		{
+			"id": "maree",
+			"requires_spec": "maitre_eau",
+			"display_name": "Marée",
+			"description": "+20 % de cadence de tir.",
+			"combines_with": "",
+			"max_stacks": 4,
+			"effects": [
+				{
+					"type": "weapon_fire_rate_bonus",
+					"value": 0.2
+				}
+			]
 		}
 	]
 }

@@ -27,6 +27,8 @@ var _burn_damage_per_second := 0.0
 var _hits_left := 1  # Enemies this projectile can still hit.
 var _hit_ids: Dictionary = {}  # Instance ids of the targets already hit.
 var _archer: ArcherWeapon
+var _wet_duration := 0.0
+var _color := COLOR
 
 
 ## Sets the damage source tag (for example [code]&"cannon"[/code]) and the combo
@@ -41,6 +43,17 @@ func set_proc_source(source: StringName, rules: ProcRules) -> void:
 func set_burn(duration: float, damage_per_second: float) -> void:
 	_burn_duration = duration
 	_burn_damage_per_second = damage_per_second
+
+
+## Makes the bullet soak its target (state « trempé ») for [param duration] seconds
+## at impact (story 009). Call before adding the bullet to the tree.
+func set_wet(duration: float) -> void:
+	_wet_duration = duration
+
+
+## Sets the colour the projectile is drawn with (default [constant COLOR]).
+func set_color(color: Color) -> void:
+	_color = color
 
 
 ## Lets the projectile hit [param count] different enemies (at least 1) before
@@ -87,7 +100,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2.ZERO, _radius, COLOR)
+	draw_circle(Vector2.ZERO, _radius, _color)
 
 
 func _on_hit(target: Node2D) -> void:
@@ -113,6 +126,8 @@ func _on_hit(target: Node2D) -> void:
 		# After the hit, so this bullet's own combo ignores its burn or mark; both ignore an enemy the hit killed.
 		if enemy != null and _burn_duration > 0.0:
 			enemy.apply_burn(_burn_duration, _burn_damage_per_second)
+		if enemy != null and _wet_duration > 0.0:
+			enemy.apply_wet(_wet_duration)
 		if enemy != null and crit:
 			enemy.apply_mark(_archer.mark_duration())
 	_hits_left -= 1

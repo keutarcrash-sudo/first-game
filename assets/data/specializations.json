@@ -16,7 +16,48 @@
 				"crit_multiplier": 2.0,
 				"mark_duration": 4.0
 			},
-			"combo_ids": ["marque_canon"]
+			"combo_ids": [
+				"marque_canon"
+			]
+		},
+		{
+			"id": "maitre_feu",
+			"display_name": "Maître du feu",
+			"description": "Boules de feu qui enflamment les ennemis. Un ennemi qui brûle subit ×2 de dégâts des canons.",
+			"stats_line": "3 tirs/s · 9 dégâts · portée 650 · brûlure 6 dégâts/s pendant 3 s",
+			"available_at_start": false,
+			"weapon": {
+				"type": "fire_bolts",
+				"fire_rate": 3.0,
+				"damage": 9.0,
+				"range": 650.0,
+				"pierce": 1,
+				"burn_duration": 3.0,
+				"burn_damage_per_second": 6.0
+			},
+			"combo_ids": [
+				"feu_canon"
+			]
+		},
+		{
+			"id": "maitre_eau",
+			"display_name": "Maître de l'eau",
+			"description": "Jets d'eau qui trempent les ennemis. Un ennemi trempé qui entre dans la zone d'une tour de glace est gelé : immobilisé 2 s.",
+			"stats_line": "3,5 tirs/s · 8 dégâts · portée 700 · traverse 2 ennemis · trempé 5 s",
+			"available_at_start": false,
+			"weapon": {
+				"type": "water_jets",
+				"fire_rate": 3.5,
+				"damage": 8.0,
+				"range": 700.0,
+				"pierce": 2,
+				"wet_duration": 5.0
+			},
+			"freeze": {
+				"duration": 2.0,
+				"cooldown": 3.0
+			},
+			"combo_ids": []
 		}
 	]
 }

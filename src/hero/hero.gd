@@ -11,12 +11,16 @@ const AIM_COLOR := Color(0.3, 0.8, 1.0, 0.6)
 const AIM_LINE_LENGTH := 14.0
 const AIM_LINE_WIDTH := 3.0
 const HERO_LAYER := 1
+const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
+const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
 
 var _stats: HeroStats
 var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
 var _archer: ArcherWeapon
+var _elemental: ElementalWeapon
+var _bullet_color := HeroBullet.COLOR
 var _min_position: Vector2
 var _max_position: Vector2
 var _aim_direction := Vector2.RIGHT
@@ -52,7 +56,15 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 ## A new weapon type (see [constant SpecializationCatalog.WEAPON_NUMBER_KEYS])
 ## is built here from [member SpecializationDef.weapon_type].
 func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumberGenerator) -> void:
-	_archer = ArcherWeapon.new(spec.weapon, modifiers, rng)
+	match spec.weapon_type:
+		"arrows":
+			_archer = ArcherWeapon.new(spec.weapon, modifiers, rng)
+		"fire_bolts":
+			_elemental = ElementalWeapon.new(spec.weapon, modifiers)
+			_bullet_color = FIRE_BOLT_COLOR
+		"water_jets":
+			_elemental = ElementalWeapon.new(spec.weapon, modifiers)
+			_bullet_color = WATER_JET_COLOR
 	set_physics_process(true)
 
 
@@ -71,7 +83,7 @@ func _physics_process(delta: float) -> void:
 	_fire_cooldown -= delta
 	if _fire_cooldown <= 0.0:
 		_fire()
-		_fire_cooldown += 1.0 / _archer.fire_rate()
+		_fire_cooldown += 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
 	queue_redraw()
 
 
@@ -83,6 +95,16 @@ func _draw() -> void:
 
 func _fire() -> void:
 	var bullet := HeroBullet.new()
+	if _elemental != null:
+		bullet.configure(_elemental.damage(), _stats.bullet_speed, _elemental.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
+		bullet.set_proc_source(&"hero", _rules)
+		bullet.set_pierce(_elemental.pierce())
+		bullet.set_burn(_elemental.burn_duration(), _elemental.burn_damage_per_second())
+		bullet.set_wet(_elemental.wet_duration())
+		bullet.set_color(_bullet_color)
+		_bullet_parent.add_child(bullet)
+		bullet.global_position = global_position
+		return
 	bullet.configure(_archer.damage(), _stats.bullet_speed, _archer.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
 	bullet.set_proc_source(&"hero", _rules)
 	bullet.set_pierce(_archer.pierce())

@@ -30,6 +30,14 @@
 			"requires_state": "marked",
 			"damage_multiplier": 2.0,
 			"active_at_start": false
+		},
+		{
+			"id": "feu_canon",
+			"display_name": "Feu + Canon",
+			"source": "cannon",
+			"requires_state": "burning",
+			"damage_multiplier": 2.0,
+			"active_at_start": false
 		}
 	]
 }

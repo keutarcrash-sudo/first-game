@@ -25,6 +25,13 @@ var _pierce_bonus := 0
 var _crit_chance_bonus := 0.0
 var _crit_mult_bonus := 0.0
 var _mark_duration_bonus := 0.0
+var _weapon_rate_bonus := 0.0
+var _burn_dps_bonus := 0.0
+var _burn_duration_bonus := 0.0
+var _wet_duration_bonus := 0.0
+var _freeze_duration_bonus := 0.0
+var _freeze_base_duration := 0.0
+var _freeze_cooldown := 0.0
 
 
 ## [param rules] receives the combos unlocked by cards.
@@ -77,6 +84,16 @@ func take(card: CardDef) -> void:
 				_crit_mult_bonus += float(effect["value"])
 			"mark_duration_bonus":
 				_mark_duration_bonus += float(effect["value"])
+			"weapon_fire_rate_bonus":
+				_weapon_rate_bonus += float(effect["value"])
+			"burn_dps_bonus":
+				_burn_dps_bonus += float(effect["value"])
+			"burn_duration_bonus":
+				_burn_duration_bonus += float(effect["value"])
+			"wet_duration_bonus":
+				_wet_duration_bonus += float(effect["value"])
+			"freeze_duration_bonus":
+				_freeze_duration_bonus += float(effect["value"])
 	changed.emit()
 
 
@@ -133,6 +150,47 @@ func crit_multiplier_bonus() -> float:
 ## Extra seconds an enemy stays marked.
 func mark_duration_bonus() -> float:
 	return _mark_duration_bonus
+
+
+## Factor applied to the chosen specialization's weapon fire rate (story 009); the cannon is not affected.
+func weapon_fire_rate_factor() -> float:
+	return 1.0 + _weapon_rate_bonus
+
+
+## Extra burn damage per second on the specialization weapon's burn.
+func burn_dps_bonus() -> float:
+	return _burn_dps_bonus
+
+
+## Extra seconds of burning on the specialization weapon's burn.
+func burn_duration_bonus() -> float:
+	return _burn_duration_bonus
+
+
+## Extra seconds an enemy stays wet.
+func wet_duration_bonus() -> float:
+	return _wet_duration_bonus
+
+
+## Switches on the « trempé + glace = gelé » conversion (story 009): frost towers
+## freeze wet enemies for [param duration] seconds, then the enemy cannot be
+## frozen again for [param cooldown] seconds. Called once, when the chosen
+## specialization has freeze data.
+func enable_freeze(duration: float, cooldown: float) -> void:
+	_freeze_base_duration = duration
+	_freeze_cooldown = cooldown
+
+
+## Seconds a freeze lasts, card bonus included; 0 while the conversion is off.
+func freeze_duration() -> float:
+	if _freeze_base_duration <= 0.0:
+		return 0.0
+	return _freeze_base_duration + _freeze_duration_bonus
+
+
+## Seconds after a freeze during which the enemy cannot be frozen again.
+func freeze_cooldown() -> float:
+	return _freeze_cooldown
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".
