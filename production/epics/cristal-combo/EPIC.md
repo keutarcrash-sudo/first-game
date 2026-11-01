@@ -30,3 +30,13 @@ Le MVP du brief : 7 éléments, dans l'ordre de construction du brief.
 | 005 | Système de procs, avec le premier combo glace + canon | Logic | Ready | N/A |
 | 006 | Choix d'1 compétence parmi 3, avec 2 autres combos | UI | Ready | N/A |
 | 007 | À la mort, arbre de compétences, sauvegarde navigateur, rejouer | UI | Ready | N/A |
+| 008 | Système de spécialisations et Archer | Integration | Ready | N/A |
+| 009 | Maître du feu et Maître de l'eau | Integration | Ready | N/A |
+| 010 | Maître de la terre et Maître du vent | Integration | Ready | N/A |
+| 011 | Mage du temps et Gardien du cristal | Integration | Ready | N/A |
+| 012 | Berserker et Piégeur | Integration | Ready | N/A |
+| 013 | Équilibrage et finitions | UI | Ready | N/A |
+
+## Après le MVP
+
+Source : partie « Après le MVP — Spécialisations et builds » de `design/game-brief.md` ; stories 008 à 013, dans l'ordre de construction de cette partie.
