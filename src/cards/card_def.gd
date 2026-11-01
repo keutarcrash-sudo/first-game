@@ -13,6 +13,9 @@ var description: String
 var combines_with: String
 ## True when the card is only offered once the skill tree unlocks it (story 007).
 var locked_by_default := false
+## Id of the specialization this card belongs to (story 008): the card is only
+## offered when that specialization is the one chosen. Empty for every specialization.
+var requires_spec := ""
 ## Maximum number of times the card can be taken; -1 means unlimited.
 var max_stacks := -1
 ## Effects applied each time the card is taken: dictionaries with a "type" key

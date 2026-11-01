@@ -1,12 +1,12 @@
 # Story 007: À la mort, arbre de compétences, sauvegarde navigateur et bouton rejouer
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Presentation
 > **Type**: UI
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-10-31
+> **Last Updated**: 2026-11-01
 
 ## Context
 
@@ -93,3 +93,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-006-cartes-competences.md`
 - Unlocks: None
+
+---
+
+## Completion Notes
+**Completed**: 2026-11-01
+**Criteria**: 8/8 passing (AC-1 to AC-3 seen in the retained screenshot; AC-4 to AC-8 confirmed by the user, including the page-reload save test in the real web export). Not exercised in practice: the "unreadable/corrupt save" half of AC-7 (checked by reading only) and the 4-card layout of the card screen after "Arsenal de glace".
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. By design: with Cristal renforcé / blindé the crystal starts above 100 HP. The defeat screen is built in code (no `.tscn`). Minor: a very fast double-click on "Rejouer" could reload the scene twice. Web persistence of `user://` was NOT SOURCEABLE in `docs/engine-reference` but verified by the user in the web export (page reload).
+**Test Evidence**: UI screenshot `production/qa/evidence/story-007-mort-arbre-rejouer/ecran-defaite-arbre.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; defeat screen with "Vague atteinte : 3", "Points gagnés : 4  Total : 4", the 3-branch skill tree (6 linked upgrades, costs 10/25 points) and the "Rejouer" button.
+**Reviewed by**: self, no independent review

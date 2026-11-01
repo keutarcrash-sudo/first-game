@@ -1,6 +1,8 @@
 ## Hero projectile (story 001): travels in a straight line, deals [member damage]
 ## to the first enemy it touches, and is freed on impact or after
-## [member HeroStats.bullet_max_range] pixels.
+## [member HeroStats.bullet_max_range] pixels. Story 008: an Archer arrow
+## ([method set_pierce], [method set_archer]) passes through several enemies,
+## never the same one twice, and each hit may be critical and mark the enemy.
 ## Contract for story 002: enemies sit on physics layer 2 ("enemies") and
 ## implement [code]take_damage(amount: float)[/code].
 class_name HeroBullet
@@ -8,6 +10,8 @@ extends Area2D
 
 const COLOR := Color(1.0, 0.9, 0.35)
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
+const CRIT_COLOR := Color(1.0, 0.95, 0.2)
+const CRIT_EFFECT_OFFSET := Vector2(0.0, 26.0)  # Below the combo label when both show on one hit.
 
 ## Damage dealt to the target hit.
 var damage: float
@@ -20,13 +24,9 @@ var _source: StringName
 var _rules: ProcRules
 var _burn_duration := 0.0
 var _burn_damage_per_second := 0.0
-
-
-## Sets damage, speed, range and size from [param stats], and the flight
-## direction (a normalised vector). The bullet is freed as soon as it leaves
-## [param arena_rect]. Call before adding the bullet to the tree.
-func setup(stats: HeroStats, direction: Vector2, arena_rect: Rect2) -> void:
-	configure(stats.bullet_damage, stats.bullet_speed, stats.bullet_max_range, stats.bullet_radius, direction, arena_rect)
+var _hits_left := 1  # Enemies this projectile can still hit.
+var _hit_ids: Dictionary = {}  # Instance ids of the targets already hit.
+var _archer: ArcherWeapon
 
 
 ## Sets the damage source tag (for example [code]&"cannon"[/code]) and the combo
@@ -43,7 +43,19 @@ func set_burn(duration: float, damage_per_second: float) -> void:
 	_burn_damage_per_second = damage_per_second
 
 
-## Sets the values directly (used by the cannon tower, story 004): [param hit_damage],
+## Lets the projectile hit [param count] different enemies (at least 1) before
+## it is freed. Call before adding the bullet to the tree.
+func set_pierce(count: int) -> void:
+	_hits_left = maxi(count, 1)
+
+
+## Makes each hit roll a critical with [param archer]: a critical hit is
+## multiplied by its critical multiplier and marks the enemy. Call before adding the bullet to the tree.
+func set_archer(archer: ArcherWeapon) -> void:
+	_archer = archer
+
+
+## Sets the values (used by the hero's weapon and the cannon tower, story 004): [param hit_damage],
 ## [param speed] in pixels per second, [param max_range] and [param radius] in pixels,
 ## a normalised [param direction], freed on leaving [param arena_rect]. Call before adding the bullet to the tree.
 func configure(hit_damage: float, speed: float, max_range: float, radius: float, direction: Vector2, arena_rect: Rect2) -> void:
@@ -79,30 +91,40 @@ func _draw() -> void:
 
 
 func _on_hit(target: Node2D) -> void:
-	# A bullet hits one target only, even if it touches two in the same frame.
-	if is_queued_for_deletion():
+	# Once its last hit is used the bullet ignores every other target, even one
+	# touched in the same frame; a piercing arrow never hits the same enemy twice.
+	if is_queued_for_deletion() or _hit_ids.has(target.get_instance_id()):
 		return
+	_hit_ids[target.get_instance_id()] = true
 	if target.has_method(&"take_damage"):
 		var dealt: float = damage
 		var enemy := target as Enemy
+		var crit: bool = _archer != null and _archer.roll_crit()
+		if crit:
+			dealt *= _archer.crit_multiplier()
+			_show_effect(target, CRIT_EFFECT_OFFSET, "Critique ×%s" % String.num(_archer.crit_multiplier()), CRIT_COLOR)
 		if _rules != null and enemy != null:
 			# Resolved now, at impact: the state is the one the enemy has this instant.
 			var proc: ProcRules.Result = _rules.resolve(_source, enemy.has_state)
 			if not proc.combo_ids.is_empty():
 				dealt *= proc.multiplier
-				_show_effect(enemy, proc.multiplier)
+				_show_effect(target, Vector2.ZERO, "×%s" % String.num(proc.multiplier), ProcEffect.COLOR)
 		target.call(&"take_damage", dealt)
-		# After the hit, so this bullet's own combo ignores its burn; apply_burn ignores an enemy the hit killed.
+		# After the hit, so this bullet's own combo ignores its burn or mark; both ignore an enemy the hit killed.
 		if enemy != null and _burn_duration > 0.0:
 			enemy.apply_burn(_burn_duration, _burn_damage_per_second)
-	queue_free()
+		if enemy != null and crit:
+			enemy.apply_mark(_archer.mark_duration())
+	_hits_left -= 1
+	if _hits_left <= 0:
+		queue_free()
 
 
-func _show_effect(enemy: Enemy, multiplier: float) -> void:
+func _show_effect(target: Node2D, offset: Vector2, text: String, color: Color) -> void:
 	var parent := get_parent() as Node2D
 	if parent == null:
 		return
 	var effect := ProcEffect.new()
-	effect.setup(parent.to_local(enemy.global_position), multiplier)
+	effect.setup(parent.to_local(target.global_position) + offset, text, color)
 	# Deferred: this runs inside a physics signal, where the tree must not change.
 	parent.add_child.call_deferred(effect)

@@ -11,13 +11,15 @@ extends RefCounted
 enum NodeState { OWNED, AVAILABLE, LOCKED, TOO_EXPENSIVE }
 
 ## Effect types known to the code, with the numeric keys each one needs (all above 0).
-## [code]unlock_cards[/code] also needs a [code]card_ids[/code] list.
+## [code]unlock_cards[/code] also needs a [code]card_ids[/code] list,
+## [code]unlock_spec[/code] a [code]spec_id[/code] (story 008).
 const EFFECT_NUMBER_KEYS := {
 	"crystal_max_hp_bonus": ["value"],
 	"starting_gold_bonus": ["value"],
 	"start_card_choice": [],
 	"unlock_cards": [],
 	"cards_offered_bonus": ["value"],
+	"unlock_spec": [],
 }
 
 ## One upgrade of the tree, as described in the JSON file.
@@ -37,20 +39,33 @@ class Upgrade extends RefCounted:
 	## Effects: dictionaries with a "type" key and that type's values.
 	var effects: Array[Dictionary] = []
 
+## A greyed node shown on the defeat screen for content still to come (story 008).
+## It is not an upgrade: it has no cost, cannot be bought and is never saved.
+class Placeholder extends RefCounted:
+	## Branch (column) it is drawn in, below that branch's upgrades.
+	var branch: String
+	## Name shown on the node.
+	var display_name: String
+	## Text shown on the node.
+	var description: String
+
 ## Points per wave finished during the game.
 var points_per_wave_completed: int
 ## Kills needed for one point.
 var kills_per_point: int
 ## Every upgrade, in file order (a node always comes after the ones it requires).
 var upgrades: Array[Upgrade] = []
+## Greyed placeholder nodes from the optional "placeholders" list, in file order.
+var placeholders: Array[Placeholder] = []
 
 var _by_id: Dictionary = {}  # id -> Upgrade
 
 
 ## Reads and validates the JSON file at [param path]. Card ids used by
-## [code]unlock_cards[/code] must exist in [param catalog]. Returns [code]null[/code]
+## [code]unlock_cards[/code] must exist in [param catalog], specialization ids
+## used by [code]unlock_spec[/code] in [param specs]. Returns [code]null[/code]
 ## and prints an error naming the file and the faulty key if anything is wrong.
-static func load_from_file(path: String, catalog: CardCatalog) -> SkillTree:
+static func load_from_file(path: String, catalog: CardCatalog, specs: SpecializationCatalog) -> SkillTree:
 	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		push_error("SkillTree: cannot read '%s' (%s)." % [path, error_string(FileAccess.get_open_error())])
@@ -68,15 +83,30 @@ static func load_from_file(path: String, catalog: CardCatalog) -> SkillTree:
 	tree.points_per_wave_completed = roundi(data["points_per_wave_completed"])
 	tree.kills_per_point = roundi(data["kills_per_point"])
 	for i: int in data["nodes"].size():
-		var upgrade: Upgrade = _parse_upgrade(data["nodes"][i], i, path, tree, catalog)
+		var upgrade: Upgrade = _parse_upgrade(data["nodes"][i], i, path, tree, catalog, specs)
 		if upgrade == null:
 			return null
 		tree.upgrades.append(upgrade)
 		tree._by_id[upgrade.id] = upgrade
+	var raw_placeholders: Variant = data.get("placeholders", [])
+	if not raw_placeholders is Array:
+		push_error("SkillTree: key 'placeholders' in '%s' must be a list." % path)
+		return null
+	for i: int in raw_placeholders.size():
+		var raw: Variant = raw_placeholders[i]
+		for key: String in ["branch", "display_name", "description"]:
+			if not raw is Dictionary or not raw.get(key) is String or (raw[key] as String).strip_edges().is_empty():
+				push_error("SkillTree: key 'placeholders[%d].%s' in '%s' must be a non-empty string." % [i, key, path])
+				return null
+		var placeholder := Placeholder.new()
+		placeholder.branch = raw["branch"]
+		placeholder.display_name = raw["display_name"]
+		placeholder.description = raw["description"]
+		tree.placeholders.append(placeholder)
 	return tree
 
 
-static func _parse_upgrade(raw: Variant, index: int, path: String, tree: SkillTree, catalog: CardCatalog) -> Upgrade:
+static func _parse_upgrade(raw: Variant, index: int, path: String, tree: SkillTree, catalog: CardCatalog, specs: SpecializationCatalog) -> Upgrade:
 	var where: String = "nodes[%d]" % index
 	if not raw is Dictionary:
 		push_error("SkillTree: '%s' in '%s' must be an object." % [where, path])
@@ -112,13 +142,13 @@ static func _parse_upgrade(raw: Variant, index: int, path: String, tree: SkillTr
 		return null
 	for j: int in raw["effects"].size():
 		var effect: Variant = raw["effects"][j]
-		if not _is_effect_valid(effect, "%s.effects[%d]" % [where, j], path, catalog):
+		if not _is_effect_valid(effect, "%s.effects[%d]" % [where, j], path, catalog, specs):
 			return null
 		upgrade.effects.append(effect)
 	return upgrade
 
 
-static func _is_effect_valid(effect: Variant, where: String, path: String, catalog: CardCatalog) -> bool:
+static func _is_effect_valid(effect: Variant, where: String, path: String, catalog: CardCatalog, specs: SpecializationCatalog) -> bool:
 	if not effect is Dictionary or not effect.get("type") is String:
 		push_error("SkillTree: key '%s.type' in '%s' must be a string." % [where, path])
 		return false
@@ -139,6 +169,10 @@ static func _is_effect_valid(effect: Variant, where: String, path: String, catal
 			if not card_id is String or not catalog.has_card(card_id):
 				push_error("SkillTree: key '%s.card_ids' in '%s' must list ids of cards in cards.json (got %s)." % [where, path, card_id])
 				return false
+	if effect["type"] == "unlock_spec":
+		if not effect.get("spec_id") is String or not specs.has_spec(effect["spec_id"]):
+			push_error("SkillTree: key '%s.spec_id' in '%s' must be the id of a specialization in specializations.json (got %s)." % [where, path, effect.get("spec_id")])
+			return false
 	return true
 
 
@@ -223,6 +257,14 @@ func cards_offered_bonus(owned: PackedStringArray) -> int:
 	for effect: Dictionary in _owned_effects(owned, "cards_offered_bonus"):
 		total += roundi(effect["value"])
 	return total
+
+
+## Ids of the specializations that the upgrades in [param owned] make choosable.
+func unlocked_spec_ids(owned: PackedStringArray) -> PackedStringArray:
+	var ids := PackedStringArray()
+	for effect: Dictionary in _owned_effects(owned, "unlock_spec"):
+		ids.append(effect["spec_id"])
+	return ids
 
 
 func _owned_effects(owned: PackedStringArray, type: String) -> Array[Dictionary]:

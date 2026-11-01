@@ -15,6 +15,10 @@ const EFFECT_NUMBER_KEYS := {
 	"gold_per_kill_bonus": ["value"],
 	"cannon_burn": ["duration", "damage_per_second"],
 	"unlock_combo": [],
+	"pierce_bonus": ["value"],
+	"crit_chance_bonus": ["value"],
+	"crit_multiplier_bonus": ["value"],
+	"mark_duration_bonus": ["value"],
 }
 
 ## How many cards a choice screen offers.
@@ -24,9 +28,10 @@ var cards: Array[CardDef] = []
 
 
 ## Reads and validates the JSON file at [param path]. Combo ids used by
-## [code]unlock_combo[/code] must exist in [param rules]. Returns [code]null[/code]
+## [code]unlock_combo[/code] must exist in [param rules], and specialization ids
+## used by [code]requires_spec[/code] in [param specs]. Returns [code]null[/code]
 ## and prints an error naming the file and the faulty key if anything is wrong.
-static func load_from_file(path: String, rules: ProcRules) -> CardCatalog:
+static func load_from_file(path: String, rules: ProcRules, specs: SpecializationCatalog) -> CardCatalog:
 	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		push_error("CardCatalog: cannot read '%s' (%s)." % [path, error_string(FileAccess.get_open_error())])
@@ -43,7 +48,7 @@ static func load_from_file(path: String, rules: ProcRules) -> CardCatalog:
 	catalog.offered_per_choice = int(offered)
 	var seen: Dictionary = {}
 	for i: int in data["cards"].size():
-		var card: CardDef = _parse_card(data["cards"][i], i, path, rules)
+		var card: CardDef = _parse_card(data["cards"][i], i, path, rules, specs)
 		if card == null:
 			return null
 		if seen.has(card.id):
@@ -62,7 +67,7 @@ func has_card(card_id: String) -> bool:
 	return false
 
 
-static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules) -> CardDef:
+static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog) -> CardDef:
 	if not raw is Dictionary:
 		push_error("CardCatalog: 'cards[%d]' in '%s' must be an object." % [index, path])
 		return null
@@ -84,6 +89,11 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 		push_error("CardCatalog: key 'cards[%d].locked_by_default' in '%s' must be true or false." % [index, path])
 		return null
 	card.locked_by_default = locked
+	var spec_id: Variant = raw.get("requires_spec", "")
+	if not spec_id is String or (not (spec_id as String).is_empty() and not specs.has_spec(spec_id)):
+		push_error("CardCatalog: key 'cards[%d].requires_spec' in '%s' must be the id of a specialization in specializations.json (got %s)." % [index, path, spec_id])
+		return null
+	card.requires_spec = spec_id
 	var max_stacks: Variant = raw.get("max_stacks")
 	if max_stacks != null:
 		if not (max_stacks is float or max_stacks is int) or max_stacks < 1:

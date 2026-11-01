@@ -4,6 +4,8 @@
 ## every other layer and stops clicks from reaching the game. Owns no state: it
 ## emits [signal node_clicked] / [signal replay_pressed] and the caller decides,
 ## then calls [method refresh] or [method show_refusal].
+## Story 008: four columns (Cristal, Départ, Arsenal, Spécialisations) fit
+## 1280×720; the tree's placeholders are drawn greyed and take no click.
 class_name DeathScreen
 extends CanvasLayer
 
@@ -27,13 +29,13 @@ const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const POINTS_COLOR := Color(1.0, 0.9, 0.35)
 const BRANCH_COLOR := Color(0.55, 0.9, 1.0)
 const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
-const NODE_SIZE := Vector2(340.0, 132.0)
+const NODE_SIZE := Vector2(276.0, 140.0)  # 4 columns: 4 × 276 + 3 × 24 = 1176 px, inside 1280.
 const NODE_PADDING := 10.0
 const NODE_TEXT_SPACING := 4
 const NODE_BORDER_WIDTH := 3
 const NODE_CORNER_RADIUS := 6
 const NODE_HOVER_LIGHTEN := 0.12
-const COLUMN_SPACING := 44.0
+const COLUMN_SPACING := 24.0
 const ROW_SPACING := 44.0
 const BRANCH_TITLE_HEIGHT := 34.0
 const LINK_WIDTH := 4.0
@@ -64,9 +66,10 @@ func _init() -> void:
 
 
 ## Builds the screen and one node per upgrade of [param tree]. Each branch gets
-## a column (in order of first appearance) and each node a row one below its
-## deepest requirement; the layout assumes one node per branch and row. Call
-## once, after the screen is in the scene tree.
+## a column (in order of first appearance, upgrades first, then placeholders) and
+## each node a row one below its deepest requirement; the layout assumes one node
+## per branch and row. A placeholder sits one row below the last node of its
+## branch. Call once, after the screen is in the scene tree.
 func setup(tree: SkillTree) -> void:
 	_tree = tree
 	var root := Control.new()
@@ -113,6 +116,7 @@ func setup(tree: SkillTree) -> void:
 func _build_nodes() -> void:
 	var branches: Array[String] = []
 	var rows: Dictionary = {}  # upgrade id -> row; requirements come earlier in the file
+	var branch_rows: Dictionary = {}  # branch -> rows used, so a placeholder goes below its branch's nodes
 	var row_count := 0
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		if not branches.has(upgrade.branch):
@@ -121,6 +125,15 @@ func _build_nodes() -> void:
 		for required: String in upgrade.requires:
 			row = maxi(row, rows[required] + 1)
 		rows[upgrade.id] = row
+		branch_rows[upgrade.branch] = maxi(branch_rows.get(upgrade.branch, 0), row + 1)
+		row_count = maxi(row_count, row + 1)
+	var placeholder_rows: Array[int] = []
+	for placeholder: SkillTree.Placeholder in _tree.placeholders:
+		if not branches.has(placeholder.branch):
+			branches.append(placeholder.branch)
+		var row: int = branch_rows.get(placeholder.branch, 0)
+		branch_rows[placeholder.branch] = row + 1
+		placeholder_rows.append(row)
 		row_count = maxi(row_count, row + 1)
 	_tree_area.custom_minimum_size = Vector2(
 		branches.size() * NODE_SIZE.x + (branches.size() - 1) * COLUMN_SPACING,
@@ -133,27 +146,52 @@ func _build_nodes() -> void:
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		var button := Button.new()
 		button.focus_mode = Control.FOCUS_NONE
-		button.position = Vector2(
-			branches.find(upgrade.branch) * (NODE_SIZE.x + COLUMN_SPACING),
-			BRANCH_TITLE_HEIGHT + rows[upgrade.id] * (NODE_SIZE.y + ROW_SPACING))
+		button.position = _node_position(branches.find(upgrade.branch), rows[upgrade.id])
 		button.size = NODE_SIZE
 		button.pressed.connect(node_clicked.emit.bind(upgrade.id))
-		var box := VBoxContainer.new()
-		box.set_anchors_preset(Control.PRESET_FULL_RECT)
-		box.offset_left = NODE_PADDING
-		box.offset_top = NODE_PADDING
-		box.offset_right = -NODE_PADDING
-		box.offset_bottom = -NODE_PADDING
-		box.add_theme_constant_override(&"separation", NODE_TEXT_SPACING)
-		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		button.add_child(box)
-		box.add_child(_make_label(upgrade.display_name, NODE_NAME_FONT_SIZE, TEXT_COLOR, true))
-		var description: Label = _make_label(upgrade.description, NODE_TEXT_FONT_SIZE, TEXT_COLOR, false)
-		description.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		box.add_child(description)
-		box.add_child(_make_label("", NODE_TEXT_FONT_SIZE, TEXT_COLOR, true))
+		_add_node_texts(button, upgrade.display_name, upgrade.description)
 		_tree_area.add_child(button)
 		_node_buttons[upgrade.id] = button
+	for i: int in _tree.placeholders.size():
+		var placeholder: SkillTree.Placeholder = _tree.placeholders[i]
+		# A Panel, not a Button: it cannot be clicked and is never styled as buyable.
+		var panel := Panel.new()
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.position = _node_position(branches.find(placeholder.branch), placeholder_rows[i])
+		panel.size = NODE_SIZE
+		var style := StyleBoxFlat.new()
+		style.bg_color = LOCKED_COLORS[0]
+		style.border_color = LOCKED_COLORS[1]
+		style.set_border_width_all(NODE_BORDER_WIDTH)
+		style.set_corner_radius_all(NODE_CORNER_RADIUS)
+		panel.add_theme_stylebox_override(&"panel", style)
+		var labels: Array[Node] = _add_node_texts(panel, placeholder.display_name, placeholder.description).get_children()
+		for label: Node in labels:
+			(label as Label).add_theme_color_override(&"font_color", LOCKED_COLORS[2])
+		_tree_area.add_child(panel)
+
+
+func _node_position(column: int, row: int) -> Vector2:
+	return Vector2(column * (NODE_SIZE.x + COLUMN_SPACING), BRANCH_TITLE_HEIGHT + row * (NODE_SIZE.y + ROW_SPACING))
+
+
+## Adds the name, description and (empty) status labels inside [param node]; returns their box.
+func _add_node_texts(node: Control, display_name: String, description_text: String) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	box.offset_left = NODE_PADDING
+	box.offset_top = NODE_PADDING
+	box.offset_right = -NODE_PADDING
+	box.offset_bottom = -NODE_PADDING
+	box.add_theme_constant_override(&"separation", NODE_TEXT_SPACING)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	node.add_child(box)
+	box.add_child(_make_label(display_name, NODE_NAME_FONT_SIZE, TEXT_COLOR, true))
+	var description: Label = _make_label(description_text, NODE_TEXT_FONT_SIZE, TEXT_COLOR, false)
+	description.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(description)
+	box.add_child(_make_label("", NODE_TEXT_FONT_SIZE, TEXT_COLOR, true))
+	return box
 
 
 ## Shows the screen for a game that reached wave [param wave_reached] and earned

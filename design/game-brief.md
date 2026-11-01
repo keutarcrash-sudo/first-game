@@ -23,9 +23,9 @@
 ## Out of scope — not building this
 - Pas de multijoueur.
 - Pas de compte ni de sauvegarde en ligne : l'arbre est sauvegardé seulement dans le navigateur.
-- Arbre limité à environ 6 améliorations.
+- Arbre : environ 6 améliorations dans le MVP ; une branche « Spécialisations » s'y ajoute après le MVP (voir plus bas).
 - Pas de contrôles tactiles (clavier + souris uniquement).
-- Une seule carte et un seul héros.
+- Une seule carte (arène). Un seul héros, mais avec des spécialisations après le MVP (voir plus bas).
 - Pas de boss ni d'histoire.
 - Pas de sons ni de musique dans la première version.
 
@@ -41,3 +41,37 @@
 **Art & audio direction:** formes simples et colorées sur fond sombre, avec de gros effets visibles quand un combo se déclenche. Audio : pas dans la première version.
 
 **Reference game:** *Vampire Survivors* — on garde la vue de dessus, le tir automatique et la montée en puissance par choix de compétences ; on y ajoute les tours et la base à défendre.
+
+---
+
+## Après le MVP — Spécialisations et builds
+
+**Pitch :** au début de chaque partie, le joueur choisit une spécialisation pour son héros ; chacune change sa façon de combattre, crée son propre état sur les ennemis et apporte ses cartes et ses combos, pour que chaque partie soit un build différent (esprit *Risk of Rain* : on débloque de la variété plutôt que de la puissance).
+
+**Règles :**
+- Un écran de choix de spécialisation s'affiche avant la vague 1 ; une seule spécialisation par partie.
+- **Archer** est disponible dès la première partie ; les 8 autres se débloquent avec des points dans une nouvelle branche « Spécialisations » de l'arbre.
+- Chaque spécialisation a son arme ou sa façon de combattre, son état sur les ennemis, 3 ou 4 cartes à elle (proposées seulement quand elle est choisie) et au moins 2 combos avec les tours ou les états des autres.
+- Tout (spécialisations, états, cartes, combos, coûts de déblocage) est décrit dans des fichiers de données.
+
+**Les 9 spécialisations :**
+
+| Spécialisation | Façon de combattre | État | Exemple de combo |
+|---|---|---|---|
+| Archer (départ) | Flèches perçantes à longue portée, coups critiques | marqué | marqué + tours = dégâts en plus |
+| Mage du temps | Ralentit le temps autour de lui, peut figer tous les ennemis quelques secondes | figé | figé + Archer = critique garanti |
+| Berserker | Combat au corps à corps tout autour de lui, plus fort quand le cristal est en danger | saigne (dégâts dans la durée) | saigne + canons = dégâts en plus |
+| Piégeur | Pose tout seul des mines et des pièges sur le chemin des ennemis | piégé (immobilisé) | piégé + canons = ×2 |
+| Gardien du cristal | Bouclier et réparation du cristal, aura qui renforce les tours proches | affaibli (fait moins de dégâts) | affaibli près du cristal = cristal protégé |
+| Maître du feu | Tirs qui enflamment | brûle | brûle + vent = l'incendie se propage |
+| Maître de l'eau | Tirs qui trempent | trempé | trempé + glace = gelé |
+| Maître de la terre | Rochers lourds, ondes de choc | ébranlé (reçoit plus de dégâts) | trempé + ébranlé = boue (très lent) |
+| Maître du vent | Rafales qui repoussent les ennemis | déséquilibré | déséquilibré + pièges = ils tombent dedans |
+
+**Ordre de construction (après le MVP) :**
+1. Le système de spécialisations : écran de choix avant la vague 1, Archer, branche « Spécialisations » de l'arbre.
+2. Maître du feu et Maître de l'eau.
+3. Maître de la terre et Maître du vent.
+4. Mage du temps et Gardien du cristal.
+5. Berserker et Piégeur.
+6. Équilibrage (or, ennemis, prix de l'arbre) et finitions (ligne « Cartes » qui déborde, héros qui bouge pendant le choix de carte, double-clic sur « Rejouer »).

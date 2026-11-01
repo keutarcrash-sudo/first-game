@@ -19,9 +19,13 @@ const BURNING_TINT := Color(1.0, 0.75, 0.15)
 const BURNING_TINT_AMOUNT := 0.5  # Fill tint, used when the enemy is not also slowed (blue fill wins).
 const BURNING_RING_WIDTH := 4.0  # The orange ring is always drawn while burning, so both states stay readable together.
 const BURNING_RING_POINTS := 24
+const MARKED_COLOR := Color(1.0, 0.95, 0.2)  # Small yellow ring around the body (story 008).
+const MARKED_RING_GAP := 5.0  # Drawn outside the body, so it stays visible next to the burning ring.
+const MARKED_RING_WIDTH := 3.0  # Lines have no antialiasing feather since 4.7, so not thinner than this.
 
 var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
+var _mark_left := 0.0  # Seconds of « marqué » remaining (story 008).
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
@@ -80,6 +84,10 @@ func _physics_process(delta: float) -> void:
 			return
 		if _burn_left <= 0.0:
 			queue_redraw()
+	if _mark_left > 0.0:
+		_mark_left -= delta
+		if _mark_left <= 0.0:
+			queue_redraw()
 	position = position.move_toward(_target, _speed * _slow_factor * delta)
 	if position.distance_squared_to(_target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
@@ -96,6 +104,8 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, _radius, color)
 	if _burn_left > 0.0:
 		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, BURNING_TINT, BURNING_RING_WIDTH)
+	if _mark_left > 0.0:
+		draw_arc(Vector2.ZERO, _radius + MARKED_RING_GAP, 0.0, TAU, BURNING_RING_POINTS, MARKED_COLOR, MARKED_RING_WIDTH)
 
 
 ## Asks for a slow to [param factor] (a fraction of normal speed, 0.45 = 45 %)
@@ -119,6 +129,8 @@ func has_state(state: StringName) -> bool:
 			return is_slowed()
 		&"burning":
 			return _burn_left > 0.0
+		&"marked":
+			return _mark_left > 0.0
 	return false
 
 
@@ -131,6 +143,17 @@ func apply_burn(duration: float, damage_per_second: float) -> void:
 	_burn_left = duration
 	_burn_damage_per_second = damage_per_second
 	if not was_burning:
+		queue_redraw()
+
+
+## Marks the enemy for [param duration] seconds (story 008, Archer critical hit).
+## A new call refreshes the duration; it never stacks.
+func apply_mark(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	var was_marked: bool = _mark_left > 0.0
+	_mark_left = duration
+	if not was_marked:
 		queue_redraw()
 
 

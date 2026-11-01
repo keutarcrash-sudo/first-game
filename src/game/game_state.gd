@@ -12,7 +12,8 @@ signal phase_changed(phase: Phase)
 signal wave_changed(wave_number: int)
 
 ## CARD_CHOICE sits between a finished wave and BUILD: the player picks a card (story 006).
-enum Phase { COMBAT, BUILD, CARD_CHOICE }
+## SPEC_CHOICE is the specialization choice at the start of the game (story 008).
+enum Phase { COMBAT, BUILD, CARD_CHOICE, SPEC_CHOICE }
 
 ## Gold owned. Never negative.
 var gold: int
@@ -60,6 +61,11 @@ func begin_combat(new_wave_number: int) -> void:
 ## Enters CARD_CHOICE (the wave is finished, a card is to be picked).
 func begin_card_choice() -> void:
 	_set_phase(Phase.CARD_CHOICE)
+
+
+## Enters SPEC_CHOICE (start of the game, before wave 1).
+func begin_spec_choice() -> void:
+	_set_phase(Phase.SPEC_CHOICE)
 
 
 ## Enters BUILD (the card, if any, is chosen).
