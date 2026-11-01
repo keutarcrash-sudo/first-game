@@ -1,0 +1,15 @@
+Reviewed-Content-Hash: src/specs/elemental_weapon.gd acec332855dc60b82802a22e4b07d273fc4e1c31
+Reviewed-Content-Hash: src/specs/specialization_catalog.gd 9e278271f8e7f43dba48d7fbf602817072948fa3
+Reviewed-Content-Hash: src/specs/specialization_def.gd 8a5ad1eaf58c29c5722ec12fd65a4a090c755b8d
+Reviewed-Content-Hash: src/cards/card_catalog.gd 58037d0cf5e276f94c2a63d57bf2cb0bf66f27be
+Reviewed-Content-Hash: src/cards/player_modifiers.gd d5f58baf905ec4dd786c1d373da0014e8b0cac72
+Reviewed-Content-Hash: src/enemies/enemy.gd 33eb5fa676172cbfe0a79dcb570c86d77142f081
+Reviewed-Content-Hash: src/towers/frost_tower.gd b5a7da8e8b8883c6e1db9fe2fb151c2378d56803
+Reviewed-Content-Hash: src/hero/hero.gd 1b6068448754bba266f09325123fd8870cd13ca0
+Reviewed-Content-Hash: src/hero/hero_bullet.gd 405e9c6fe9b6547458d3cd384e2d57ea99b41493
+Reviewed-Content-Hash: src/game/main.gd f0588519f51df046be5ee1e511a6c35f863352b6
+Reviewed-Content-Hash: src/meta/death_screen.gd 7235d681dc9feceef9a4811dd7b47a74777bcaea
+Reviewed-Content-Hash: assets/data/specializations.json 41abc0acb3bf78b9fc08ca448a56f16d8159b3e4
+Reviewed-Content-Hash: assets/data/cards.json 5a022b719c0f2f65f0dcafa7a757a29c1a472431
+Reviewed-Content-Hash: assets/data/procs.json 97178f0869c08307482705eefa894160c1100741
+Reviewed-Content-Hash: assets/data/skill_tree.json 5944109c2b25cec91459a5703446f78ca6170ce6
