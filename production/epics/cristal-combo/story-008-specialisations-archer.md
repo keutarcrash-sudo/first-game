@@ -61,12 +61,27 @@
 
 ## Files
 
-- `src/specs/` (système de spécialisations, écran de choix)
+- `src/specs/specialization_def.gd`
+- `src/specs/specialization_catalog.gd`
+- `src/specs/archer_weapon.gd`
+- `src/specs/specialization_choice_screen.gd`
 - `assets/data/specializations.json`
-- `assets/data/cards.json`, `assets/data/procs.json`, `assets/data/skill_tree.json`
-- `src/meta/death_screen.gd`, `src/game/main.gd`, `src/hero/hero.gd`, `src/enemies/enemy.gd`
-
----
+- `assets/data/cards.json`
+- `assets/data/procs.json`
+- `assets/data/skill_tree.json`
+- `src/cards/card_catalog.gd`
+- `src/cards/card_def.gd`
+- `src/cards/card_pool.gd`
+- `src/cards/player_modifiers.gd`
+- `src/enemies/enemy.gd`
+- `src/game/game_state.gd`
+- `src/game/main.gd`
+- `src/hero/hero.gd`
+- `src/hero/hero_bullet.gd`
+- `src/meta/death_screen.gd`
+- `src/meta/skill_tree.gd`
+- `src/procs/proc_effect.gd`
+- `src/ui/crystal_hud.gd`
 
 ## QA Test Cases
 

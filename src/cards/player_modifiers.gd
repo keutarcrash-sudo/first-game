@@ -21,6 +21,10 @@ var _range_bonus := 0.0
 var _gold_bonus := 0
 var _burn_duration := 0.0
 var _burn_dps := 0.0
+var _pierce_bonus := 0
+var _crit_chance_bonus := 0.0
+var _crit_mult_bonus := 0.0
+var _mark_duration_bonus := 0.0
 
 
 ## [param rules] receives the combos unlocked by cards.
@@ -65,6 +69,14 @@ func take(card: CardDef) -> void:
 				_burn_dps = float(effect["damage_per_second"])
 			"unlock_combo":
 				_rules.activate(String(effect["combo_id"]))
+			"pierce_bonus":
+				_pierce_bonus += roundi(effect["value"])
+			"crit_chance_bonus":
+				_crit_chance_bonus += float(effect["value"])
+			"crit_multiplier_bonus":
+				_crit_mult_bonus += float(effect["value"])
+			"mark_duration_bonus":
+				_mark_duration_bonus += float(effect["value"])
 	changed.emit()
 
 
@@ -101,6 +113,26 @@ func burn_duration() -> float:
 ## Burn damage per second.
 func burn_damage_per_second() -> float:
 	return _burn_dps
+
+
+## Extra enemies an Archer arrow passes through.
+func pierce_bonus() -> int:
+	return _pierce_bonus
+
+
+## Added to the Archer's critical hit chance (0.1 = +10 %).
+func crit_chance_bonus() -> float:
+	return _crit_chance_bonus
+
+
+## Added to the Archer's critical hit damage multiplier.
+func crit_multiplier_bonus() -> float:
+	return _crit_mult_bonus
+
+
+## Extra seconds an enemy stays marked.
+func mark_duration_bonus() -> float:
+	return _mark_duration_bonus
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".

@@ -1,5 +1,5 @@
 ## On-screen display: crystal hit points (story 002), wave number, gold, phase
-## and the build-phase prompt (story 003). The defeat is shown by [DeathScreen]
+## and the build-phase prompt (story 003), the chosen specialization (story 008). The defeat is shown by [DeathScreen]
 ## (story 007), not here. Only listens
 ## to signals; never changes game state. Extended rather than duplicated so the
 ## game keeps a single CanvasLayer.
@@ -27,6 +27,9 @@ const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
 const HP_POSITION := Vector2(40.0, 2.0)
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
+const SPEC_COLOR := Color(1.0, 0.9, 0.35)
+const SPEC_RIGHT_MARGIN := 40.0
+const SPEC_TOP := 2.0
 
 var _hp_label: Label
 var _info_label: Label
@@ -39,6 +42,7 @@ var _message_label: Label
 var _message_timer: Timer
 var _cards_label: Label
 var _modifiers: PlayerModifiers
+var _spec_label: Label
 
 
 func _ready() -> void:
@@ -58,6 +62,15 @@ func _ready() -> void:
 	_cards_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_cards_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
 	add_child(_cards_label)
+	_spec_label = Label.new()
+	_spec_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_spec_label.offset_top = SPEC_TOP
+	_spec_label.offset_right = -SPEC_RIGHT_MARGIN
+	_spec_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_spec_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_spec_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
+	_spec_label.add_theme_color_override(&"font_color", SPEC_COLOR)
+	add_child(_spec_label)
 	_prompt_label = Label.new()
 	_prompt_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_prompt_label.offset_bottom = -PROMPT_BOTTOM_MARGIN
@@ -130,6 +143,11 @@ func show_not_enough_gold() -> void:
 	_message_timer.start()
 
 
+## Shows the specialization chosen for this game, top right, until the end of the game.
+func show_specialization(spec: SpecializationDef) -> void:
+	_spec_label.text = "Spécialisation : %s" % spec.display_name
+
+
 ## Shows the crystal's hit points and keeps them up to date. Call after the crystal's setup.
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
@@ -168,6 +186,8 @@ func _refresh_info() -> void:
 		phase_name = "Construction"
 	elif _state.phase == GameState.Phase.CARD_CHOICE:
 		phase_name = "Choix d'une carte"
+	elif _state.phase == GameState.Phase.SPEC_CHOICE:
+		phase_name = "Choix de la spécialisation"
 	_build_box.visible = building
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
 	_prompt_label.text = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1) if building else ""

@@ -1,6 +1,8 @@
 ## The hero (story 001, design/game-brief.md MVP feature 1): moves with the
 ## move_* actions (ZQSD as printed on an AZERTY keyboard, or arrows), stays
 ## inside the arena and fires automatically toward the mouse cursor.
+## Story 008: the weapon comes from the specialization chosen at the start of the
+## game ([method equip]); the hero neither moves nor fires before that.
 class_name Hero
 extends CharacterBody2D
 
@@ -14,17 +16,19 @@ var _stats: HeroStats
 var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
-var _modifiers: PlayerModifiers
+var _archer: ArcherWeapon
 var _min_position: Vector2
 var _max_position: Vector2
 var _aim_direction := Vector2.RIGHT
 var _fire_cooldown := 0.0
 
 
-## Gives the hero its tuning values, the arena it must stay in, the node
-## its projectiles are added to, and the combo rules its shots use (source [code]&"hero"[/code]), and the card modifiers (shot damage). Call once, before the first physics frame.
-func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: ProcRules, modifiers: PlayerModifiers) -> void:
-	_modifiers = modifiers
+## Gives the hero its tuning values (movement, size, projectile speed and size),
+## the arena it must stay in, the node its projectiles are added to, and the
+## combo rules its shots use (source [code]&"hero"[/code]). Call once, before the
+## first physics frame. The hero stays still until [method equip].
+func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: ProcRules) -> void:
+	set_physics_process(false)
 	_rules = rules
 	_stats = stats
 	_bullet_parent = bullet_parent
@@ -42,6 +46,16 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 	add_child(collision)
 
 
+## Gives the hero the weapon of [param spec] and lets it move and fire. Card
+## bonuses are read from [param modifiers] at each shot; [param rng] rolls the
+## critical hits. Call once, when the specialization is chosen.
+## A new weapon type (see [constant SpecializationCatalog.WEAPON_NUMBER_KEYS])
+## is built here from [member SpecializationDef.weapon_type].
+func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumberGenerator) -> void:
+	_archer = ArcherWeapon.new(spec.weapon, modifiers, rng)
+	set_physics_process(true)
+
+
 func _physics_process(delta: float) -> void:
 	# get_vector caps the length at 1, so diagonals are as fast as straight lines;
 	# with no key held it returns zero and the hero stops.
@@ -57,7 +71,7 @@ func _physics_process(delta: float) -> void:
 	_fire_cooldown -= delta
 	if _fire_cooldown <= 0.0:
 		_fire()
-		_fire_cooldown += 1.0 / _stats.fire_rate
+		_fire_cooldown += 1.0 / _archer.fire_rate()
 	queue_redraw()
 
 
@@ -69,8 +83,9 @@ func _draw() -> void:
 
 func _fire() -> void:
 	var bullet := HeroBullet.new()
-	bullet.setup(_stats, _aim_direction, _arena_rect)
-	bullet.damage *= _modifiers.damage_multiplier()
+	bullet.configure(_archer.damage(), _stats.bullet_speed, _archer.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
 	bullet.set_proc_source(&"hero", _rules)
+	bullet.set_pierce(_archer.pierce())
+	bullet.set_archer(_archer)
 	_bullet_parent.add_child(bullet)
 	bullet.global_position = global_position

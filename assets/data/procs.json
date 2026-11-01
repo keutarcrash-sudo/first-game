@@ -22,6 +22,14 @@
 			"requires_state": "burning",
 			"damage_multiplier": 2.0,
 			"active_at_start": false
+		},
+		{
+			"id": "marque_canon",
+			"display_name": "Marque + Canon",
+			"source": "cannon",
+			"requires_state": "marked",
+			"damage_multiplier": 2.0,
+			"active_at_start": false
 		}
 	]
 }

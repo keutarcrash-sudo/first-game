@@ -1,0 +1,22 @@
+{
+	"specializations": [
+		{
+			"id": "archer",
+			"display_name": "Archer",
+			"description": "Flèches perçantes à longue portée. Un coup critique marque l'ennemi : les canons lui font ×2 de dégâts.",
+			"stats_line": "2,5 flèches/s · 14 dégâts · portée 900 · traverse 3 ennemis · critique 20 % (×2)",
+			"available_at_start": true,
+			"weapon": {
+				"type": "arrows",
+				"fire_rate": 2.5,
+				"damage": 14.0,
+				"range": 900.0,
+				"pierce": 3,
+				"crit_chance": 0.2,
+				"crit_multiplier": 2.0,
+				"mark_duration": 4.0
+			},
+			"combo_ids": ["marque_canon"]
+		}
+	]
+}

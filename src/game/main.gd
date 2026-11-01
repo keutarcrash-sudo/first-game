@@ -4,6 +4,8 @@
 ## stops spawning, enemies, bullets and the hero, and the defeat screen opens
 ## (story 007): points are added to the saved progression, the player buys
 ## permanent upgrades, and « Rejouer » reloads this scene, which applies them.
+## Start of a game (story 008): specialization choice, then the « Départ en
+## trombe » card choice when owned, then the wave 1 countdown.
 extends Node2D
 
 const STATS_PATH := "res://assets/data/hero_stats.json"
@@ -14,6 +16,7 @@ const TOWERS_PATH := "res://assets/data/towers.json"
 const PROCS_PATH := "res://assets/data/procs.json"
 const CARDS_PATH := "res://assets/data/cards.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
+const SPECS_PATH := "res://assets/data/specializations.json"
 const SAVE_PATH := "user://progress.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
@@ -22,7 +25,13 @@ const BORDER_WIDTH := 4.0
 var _arena_rect: Rect2
 var _cycle: WaveCycle
 var _state: GameState
-var _card_pool: CardPool
+var _card_pool: CardPool  # Built once the specialization is chosen: its cards depend on it.
+var _catalog: CardCatalog
+var _specs: SpecializationCatalog
+var _spec_screen: SpecializationChoiceScreen
+var _rules: ProcRules
+var _modifiers: PlayerModifiers
+var _rng: RandomNumberGenerator
 var _card_screen: CardChoiceScreen
 var _skill_tree: SkillTree
 var _progress: SaveProgress
@@ -47,8 +56,9 @@ func _ready() -> void:
 	var economy: EconomyStats = EconomyStats.load_from_file(ECONOMY_PATH)
 	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
 	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
-	var catalog: CardCatalog = null if rules == null else CardCatalog.load_from_file(CARDS_PATH, rules)
-	_skill_tree = null if catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, catalog)
+	_specs = null if rules == null else SpecializationCatalog.load_from_file(SPECS_PATH, rules)
+	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
+	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	if _skill_tree == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
@@ -57,11 +67,12 @@ func _ready() -> void:
 	_arena_rect = Rect2((get_viewport_rect().size - stats.arena_size) / 2.0, stats.arena_size)
 	_progress = SaveProgress.load_from_file(SAVE_PATH, _skill_tree)
 	var owned: PackedStringArray = _progress.owned_ids
+	_rules = rules
 	var modifiers := PlayerModifiers.new(rules)
-	var rng := RandomNumberGenerator.new()
-	rng.randomize()
-	_card_pool = CardPool.new(catalog, modifiers, rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned))
-	_hero.setup(stats, _arena_rect, _bullets, rules, modifiers)
+	_modifiers = modifiers
+	_rng = RandomNumberGenerator.new()
+	_rng.randomize()
+	_hero.setup(stats, _arena_rect, _bullets, rules)
 	_crystal.global_position = _arena_rect.get_center()
 	_crystal.setup(defence, _skill_tree.crystal_max_hp_bonus(owned))
 	# The hero starts below the crystal, not on top of it.
@@ -87,14 +98,14 @@ func _ready() -> void:
 	_death_screen.setup(_skill_tree)
 	_death_screen.node_clicked.connect(_on_upgrade_clicked)
 	_death_screen.replay_pressed.connect(_on_replay_pressed)
-	# The spawner's setup starts the first-wave countdown, so with "Départ en trombe"
-	# it waits until the opening card is chosen (see _end_card_choice).
+	# The spawner's setup starts the first-wave countdown, so it waits until the
+	# specialization (and, with "Départ en trombe", the opening card) is chosen.
 	_spawner_setup = _spawner.setup.bind(curve, defence, _arena_rect, _crystal, _enemies)
-	if _skill_tree.has_start_card_choice(owned):
-		_start_choice_pending = true
-		_state.begin_card_choice()
-	else:
-		_spawner_setup.call()
+	_spec_screen = SpecializationChoiceScreen.new()
+	add_child(_spec_screen)
+	_spec_screen.specialization_chosen.connect(_on_spec_chosen)
+	_state.begin_spec_choice()
+	_spec_screen.show_specs(_specs.unlocked(_skill_tree.unlocked_spec_ids(owned)))
 	queue_redraw()
 
 
@@ -108,6 +119,24 @@ func _draw() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"start_wave") and _cycle != null:
 		_cycle.request_next_wave()
+
+
+## Equips the hero, switches on the specialization's combos, builds the card pool
+## for it, then goes on with the start sequence: the opening card choice when
+## owned, otherwise the wave 1 countdown.
+func _on_spec_chosen(spec: SpecializationDef) -> void:
+	var owned: PackedStringArray = _progress.owned_ids
+	for combo_id: String in spec.combo_ids:
+		_rules.activate(combo_id)
+	_hero.equip(spec, _modifiers, _rng)
+	_hud.show_specialization(spec)
+	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)
+	if _skill_tree.has_start_card_choice(owned):
+		_start_choice_pending = true
+		_state.begin_card_choice()
+		return
+	_state.begin_combat(1)
+	_spawner_setup.call()
 
 
 func _on_phase_changed(phase: GameState.Phase) -> void:

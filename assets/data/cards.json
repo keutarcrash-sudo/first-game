@@ -70,6 +70,42 @@
 			"combines_with": "Munitions incendiaires (nécessaire pour enflammer les ennemis)",
 			"max_stacks": 1,
 			"effects": [{ "type": "unlock_combo", "combo_id": "feu_heros" }]
+		},
+		{
+			"id": "carquois_profond",
+			"requires_spec": "archer",
+			"display_name": "Carquois profond",
+			"description": "Les flèches traversent 1 ennemi de plus.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [{ "type": "pierce_bonus", "value": 1 }]
+		},
+		{
+			"id": "oeil_de_faucon",
+			"requires_spec": "archer",
+			"display_name": "Œil de faucon",
+			"description": "+10 % de chance de coup critique.",
+			"combines_with": "Marque + Canon",
+			"max_stacks": 4,
+			"effects": [{ "type": "crit_chance_bonus", "value": 0.1 }]
+		},
+		{
+			"id": "fleche_lourde",
+			"requires_spec": "archer",
+			"display_name": "Flèche lourde",
+			"description": "Les coups critiques font +0,5 × de dégâts.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [{ "type": "crit_multiplier_bonus", "value": 0.5 }]
+		},
+		{
+			"id": "marque_prolongee",
+			"requires_spec": "archer",
+			"display_name": "Marque prolongée",
+			"description": "Les ennemis restent marqués 2 s de plus.",
+			"combines_with": "Marque + Canon",
+			"max_stacks": 3,
+			"effects": [{ "type": "mark_duration_bonus", "value": 2.0 }]
 		}
 	]
 }
