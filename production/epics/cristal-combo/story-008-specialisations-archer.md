@@ -1,7 +1,7 @@
 # Story 008: Système de spécialisations et Archer
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: L
@@ -103,3 +103,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-007-mort-arbre-rejouer.md`
 - Unlocks: `production/epics/cristal-combo/story-009-maitres-feu-eau.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-11-01
+**Criteria**: 9/9 passing. AC-1, AC-3 to AC-6 confirmed by the user; AC-7 and AC-8 seen in the retained screenshots; AC-9 and the data half of AC-2/AC-3/AC-6 checked by looking at `assets/data/specializations.json`, `cards.json` (`requires_spec`), `procs.json`, `skill_tree.json`. Not exercised in practice: the Archer on a first launch with no save at all (the data sets `available_at_start: true`).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. Implementer choices confirmed by play: pierce 3 = at most 3 hits per arrow; crit rolled on every hit; multipliers stack (damage × card bonus × crit × combo); crit chance capped at 100 %. Minor findings from review: an enemy killed in the same frame can still use up a pierce hit; the "Critique" cue can show on non-Enemy targets; "Acquis" nearly touches the description in the "Arsenal du feu" node; arrows still look like the old yellow bullets; `hero_stats.json` fire_rate / bullet_damage / bullet_max_range are now unused (clean up in story 013). Ideas kept for later: user's feel on the Archer not formed yet (balance in story 013).
+**Test Evidence**: waived at qa.level minimal; retained screenshots `production/qa/evidence/story-008-specialisations-archer/ecran-choix-specialisation.png` and `ecran-defaite-4-colonnes.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; spec choice screen with the Archer card and its stats line, defeat screen with 4 tree columns (Cristal, Départ, Arsenal, Spécialisations with "Bientôt"), "Spécialisation : Archer" in the HUD.
+**Reviewed by**: self, no independent review
