@@ -3,6 +3,8 @@
 ## which enemies it slowed: the enemy drops the slow by itself as soon as no
 ## tower refreshes it (see [method Enemy.apply_slow]). Slow and range are read
 ## from the card modifiers every frame (story 006), so cards act on placed towers.
+## Story 009: with the Maître de l'eau (freeze enabled in the modifiers), each wet
+## enemy in range is also offered to [method Enemy.try_freeze].
 class_name FrostTower
 extends Tower
 
@@ -31,8 +33,12 @@ func _physics_process(_delta: float) -> void:
 		attack_range = current_range
 		queue_redraw()  # The range ring follows.
 	var slow_factor: float = _modifiers.frost_slow_factor(_base_slow_factor)
+	var freeze_duration: float = _modifiers.freeze_duration()
+	var freeze_cooldown: float = _modifiers.freeze_cooldown()
 	var range_sq: float = attack_range * attack_range
 	for i: int in _enemies.get_child_count():
 		var enemy := _enemies.get_child(i) as Enemy
 		if enemy != null and global_position.distance_squared_to(enemy.global_position) <= range_sq:
 			enemy.apply_slow(slow_factor)
+			if freeze_duration > 0.0:
+				enemy.try_freeze(freeze_duration, freeze_cooldown)

@@ -4,6 +4,9 @@
 ## every other layer and stops clicks from reaching the game. Owns no state: it
 ## emits [signal node_clicked] / [signal replay_pressed] and the caller decides,
 ## then calls [method refresh] or [method show_refusal].
+## Story 009: the branch named [constant SCROLL_BRANCH] may hold up to 8 independent
+## nodes, so its column is a vertical [ScrollContainer] (mouse wheel) as tall as the
+## other columns; the other branches keep their fixed layout.
 ## Story 008: four columns (Cristal, Départ, Arsenal, Spécialisations) fit
 ## 1280×720; the tree's placeholders are drawn greyed and take no click.
 class_name DeathScreen
@@ -38,6 +41,10 @@ const NODE_HOVER_LIGHTEN := 0.12
 const COLUMN_SPACING := 24.0
 const ROW_SPACING := 44.0
 const BRANCH_TITLE_HEIGHT := 34.0
+const SCROLL_BRANCH := "Spécialisations"  # The branch laid out in a scrolling column, nodes stacked in file order.
+const SCROLLBAR_WIDTH := 16.0  # Extra width of that column for the scroll bar: 1176 + 16 = 1192 px, inside 1280.
+const SCROLL_ROW_SPACING := 14.0
+const MIN_VISIBLE_ROWS := 2  # The scrolling column is at least as tall as two rows, even if the other branches are shorter.
 const LINK_WIDTH := 4.0
 const LINK_ON_COLOR := Color(0.45, 0.95, 0.55)
 const LINK_OFF_COLOR := Color(0.3, 0.32, 0.4)
@@ -57,6 +64,8 @@ var _points_label: Label
 var _message_label: Label
 var _tree_area: Control
 var _node_buttons: Dictionary = {}  # upgrade id -> Button
+var _column_x: Array[float] = []  # Left edge of each branch column, in the tree area.
+var _scroll_content: Control  # Holds the nodes of the SCROLL_BRANCH column; null if the tree has no such branch.
 
 
 func _init() -> void:
@@ -97,7 +106,7 @@ func setup(tree: SkillTree) -> void:
 	_tree_area = Control.new()
 	_tree_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tree_area.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_tree_area.draw.connect(_draw_links)
+	_tree_area.draw.connect(_draw_links.bind(_tree_area))
 	column.add_child(_tree_area)
 	_build_nodes()
 	_message_label = _make_label("", MESSAGE_FONT_SIZE, MESSAGE_COLOR, true)
@@ -117,16 +126,19 @@ func _build_nodes() -> void:
 	var branches: Array[String] = []
 	var rows: Dictionary = {}  # upgrade id -> row; requirements come earlier in the file
 	var branch_rows: Dictionary = {}  # branch -> rows used, so a placeholder goes below its branch's nodes
-	var row_count := 0
+	var row_count := MIN_VISIBLE_ROWS  # Rows of the fixed branches only: the scrolling column never makes the screen taller.
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		if not branches.has(upgrade.branch):
 			branches.append(upgrade.branch)
-		var row := 0
-		for required: String in upgrade.requires:
-			row = maxi(row, rows[required] + 1)
+		var row: int = branch_rows.get(upgrade.branch, 0)  # Scrolling branch: stacked in file order.
+		if upgrade.branch != SCROLL_BRANCH:
+			row = 0
+			for required: String in upgrade.requires:
+				row = maxi(row, rows[required] + 1)
 		rows[upgrade.id] = row
 		branch_rows[upgrade.branch] = maxi(branch_rows.get(upgrade.branch, 0), row + 1)
-		row_count = maxi(row_count, row + 1)
+		if upgrade.branch != SCROLL_BRANCH:
+			row_count = maxi(row_count, row + 1)
 	var placeholder_rows: Array[int] = []
 	for placeholder: SkillTree.Placeholder in _tree.placeholders:
 		if not branches.has(placeholder.branch):
@@ -134,30 +146,48 @@ func _build_nodes() -> void:
 		var row: int = branch_rows.get(placeholder.branch, 0)
 		branch_rows[placeholder.branch] = row + 1
 		placeholder_rows.append(row)
-		row_count = maxi(row_count, row + 1)
-	_tree_area.custom_minimum_size = Vector2(
-		branches.size() * NODE_SIZE.x + (branches.size() - 1) * COLUMN_SPACING,
-		BRANCH_TITLE_HEIGHT + row_count * NODE_SIZE.y + (row_count - 1) * ROW_SPACING)
+		if placeholder.branch != SCROLL_BRANCH:
+			row_count = maxi(row_count, row + 1)
+	var area_height: float = BRANCH_TITLE_HEIGHT + row_count * NODE_SIZE.y + (row_count - 1) * ROW_SPACING
+	_column_x.clear()
+	var x := 0.0
+	for branch: String in branches:
+		_column_x.append(x)
+		x += NODE_SIZE.x + COLUMN_SPACING + (SCROLLBAR_WIDTH if branch == SCROLL_BRANCH else 0.0)
+	_tree_area.custom_minimum_size = Vector2(x - COLUMN_SPACING, area_height)
 	for i: int in branches.size():
 		var title: Label = _make_label(branches[i], BRANCH_FONT_SIZE, BRANCH_COLOR, true)
-		title.position = Vector2(i * (NODE_SIZE.x + COLUMN_SPACING), 0.0)
+		title.position = Vector2(_column_x[i], 0.0)
 		title.size = Vector2(NODE_SIZE.x, BRANCH_TITLE_HEIGHT)
 		_tree_area.add_child(title)
+		if branches[i] == SCROLL_BRANCH:
+			title.size.x += SCROLLBAR_WIDTH
+			var scroll := ScrollContainer.new()
+			scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			scroll.position = Vector2(_column_x[i], BRANCH_TITLE_HEIGHT)
+			scroll.size = Vector2(NODE_SIZE.x + SCROLLBAR_WIDTH, area_height - BRANCH_TITLE_HEIGHT)
+			_scroll_content = Control.new()
+			_scroll_content.mouse_filter = Control.MOUSE_FILTER_IGNORE  # The wheel reaches the scroll container.
+			var count: int = branch_rows[SCROLL_BRANCH]
+			_scroll_content.custom_minimum_size = Vector2(NODE_SIZE.x, count * NODE_SIZE.y + (count - 1) * SCROLL_ROW_SPACING)
+			_scroll_content.draw.connect(_draw_links.bind(_scroll_content))
+			scroll.add_child(_scroll_content)
+			_tree_area.add_child(scroll)
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		var button := Button.new()
 		button.focus_mode = Control.FOCUS_NONE
-		button.position = _node_position(branches.find(upgrade.branch), rows[upgrade.id])
+		button.position = _node_position(branches.find(upgrade.branch), rows[upgrade.id], upgrade.branch)
 		button.size = NODE_SIZE
 		button.pressed.connect(node_clicked.emit.bind(upgrade.id))
 		_add_node_texts(button, upgrade.display_name, upgrade.description)
-		_tree_area.add_child(button)
+		_canvas_of(upgrade.branch).add_child(button)
 		_node_buttons[upgrade.id] = button
 	for i: int in _tree.placeholders.size():
 		var placeholder: SkillTree.Placeholder = _tree.placeholders[i]
 		# A Panel, not a Button: it cannot be clicked and is never styled as buyable.
 		var panel := Panel.new()
 		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		panel.position = _node_position(branches.find(placeholder.branch), placeholder_rows[i])
+		panel.position = _node_position(branches.find(placeholder.branch), placeholder_rows[i], placeholder.branch)
 		panel.size = NODE_SIZE
 		var style := StyleBoxFlat.new()
 		style.bg_color = LOCKED_COLORS[0]
@@ -168,11 +198,19 @@ func _build_nodes() -> void:
 		var labels: Array[Node] = _add_node_texts(panel, placeholder.display_name, placeholder.description).get_children()
 		for label: Node in labels:
 			(label as Label).add_theme_color_override(&"font_color", LOCKED_COLORS[2])
-		_tree_area.add_child(panel)
+		_canvas_of(placeholder.branch).add_child(panel)
 
 
-func _node_position(column: int, row: int) -> Vector2:
-	return Vector2(column * (NODE_SIZE.x + COLUMN_SPACING), BRANCH_TITLE_HEIGHT + row * (NODE_SIZE.y + ROW_SPACING))
+## The control a node of [param branch] is added to: the scrolling content or the tree area.
+func _canvas_of(branch: String) -> Control:
+	return _scroll_content if branch == SCROLL_BRANCH else _tree_area
+
+
+## Position of a node inside [method _canvas_of]: scrolling nodes are stacked from the top of the content.
+func _node_position(column: int, row: int, branch: String) -> Vector2:
+	if branch == SCROLL_BRANCH:
+		return Vector2(0.0, row * (NODE_SIZE.y + SCROLL_ROW_SPACING))
+	return Vector2(_column_x[column], BRANCH_TITLE_HEIGHT + row * (NODE_SIZE.y + ROW_SPACING))
 
 
 ## Adds the name, description and (empty) status labels inside [param node]; returns their box.
@@ -211,6 +249,8 @@ func refresh(progress: SaveProgress) -> void:
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		_style_node(upgrade, _tree.node_state(upgrade.id, progress))
 	_tree_area.queue_redraw()
+	if _scroll_content != null:
+		_scroll_content.queue_redraw()
 
 
 ## Shows the short refusal [param message] under the tree.
@@ -248,14 +288,20 @@ func _style_node(upgrade: SkillTree.Upgrade, state: SkillTree.NodeState) -> void
 	(labels[2] as Label).add_theme_color_override(&"font_color", colors[3])
 
 
-## Draws a line from each requirement's bottom edge to the top edge of the node needing it.
-func _draw_links() -> void:
+## Draws, on [param canvas] (the tree area or the scrolling content), a line from
+## each requirement's bottom edge to the top edge of the node needing it. A link
+## between nodes that sit on different canvases is not drawn.
+func _draw_links(canvas: Control) -> void:
 	for upgrade: SkillTree.Upgrade in _tree.upgrades:
 		var target: Button = _node_buttons[upgrade.id]
+		if target.get_parent() != canvas:
+			continue
 		for required: String in upgrade.requires:
 			var source: Button = _node_buttons[required]
+			if source.get_parent() != canvas:
+				continue
 			var owned: bool = _progress != null and _progress.owned_ids.has(required)
-			_tree_area.draw_line(
+			canvas.draw_line(
 				source.position + Vector2(NODE_SIZE.x / 2.0, NODE_SIZE.y),
 				target.position + Vector2(NODE_SIZE.x / 2.0, 0.0),
 				LINK_ON_COLOR if owned else LINK_OFF_COLOR, LINK_WIDTH)

@@ -58,10 +58,21 @@
 
 ## Files
 
-- `src/specs/`, `src/enemies/enemy.gd`, `src/towers/frost_tower.gd`
-- `assets/data/specializations.json`, `assets/data/cards.json`, `assets/data/procs.json`, `assets/data/skill_tree.json`
-
----
+- `src/specs/elemental_weapon.gd`
+- `src/specs/specialization_catalog.gd`
+- `src/specs/specialization_def.gd`
+- `src/cards/card_catalog.gd`
+- `src/cards/player_modifiers.gd`
+- `src/enemies/enemy.gd`
+- `src/towers/frost_tower.gd`
+- `src/hero/hero.gd`
+- `src/hero/hero_bullet.gd`
+- `src/game/main.gd`
+- `src/meta/death_screen.gd`
+- `assets/data/specializations.json`
+- `assets/data/cards.json`
+- `assets/data/procs.json`
+- `assets/data/skill_tree.json`
 
 ## QA Test Cases
 

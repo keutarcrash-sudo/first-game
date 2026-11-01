@@ -22,10 +22,24 @@ const BURNING_RING_POINTS := 24
 const MARKED_COLOR := Color(1.0, 0.95, 0.2)  # Small yellow ring around the body (story 008).
 const MARKED_RING_GAP := 5.0  # Drawn outside the body, so it stays visible next to the burning ring.
 const MARKED_RING_WIDTH := 3.0  # Lines have no antialiasing feather since 4.7, so not thinner than this.
+const WET_TINT := Color(0.08, 0.2, 0.65)  # Darker and deeper than SLOWED_TINT, so wet and slowed read apart (story 009).
+const WET_TINT_AMOUNT := 0.55
+const WET_DROP_COLOR := Color(0.55, 0.85, 1.0)
+const WET_DROP_RADIUS := 3.0
+const WET_DROP_COUNT := 3
+const FROZEN_TINT := Color(0.88, 0.97, 1.0)  # Whitish ice look, wins over every other fill tint.
+const FROZEN_TINT_AMOUNT := 0.85
+const FROZEN_OUTLINE_COLOR := Color(0.75, 0.95, 1.0)
+const FROZEN_OUTLINE_WIDTH := 7.0  # Thick outline, clearly wider than the other rings.
 
 var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
 var _mark_left := 0.0  # Seconds of « marqué » remaining (story 008).
+
+var _wet_left := 0.0  # Seconds of « trempé » remaining (story 009).
+var _frozen_left := 0.0  # Seconds of « gelé » remaining: the enemy cannot move.
+var _freeze_cooldown_left := 0.0  # Seconds during which the enemy cannot be frozen again.
+var _freeze_cooldown_after := 0.0  # Cooldown that starts when the current freeze ends.
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
@@ -88,7 +102,20 @@ func _physics_process(delta: float) -> void:
 		_mark_left -= delta
 		if _mark_left <= 0.0:
 			queue_redraw()
-	position = position.move_toward(_target, _speed * _slow_factor * delta)
+	if _wet_left > 0.0:
+		_wet_left -= delta
+		if _wet_left <= 0.0:
+			queue_redraw()
+	# Every freeze timer only counts down here, with the physics delta: a freeze
+	# always ends by itself, whatever the towers do (or whether they still exist).
+	_freeze_cooldown_left = maxf(_freeze_cooldown_left - delta, 0.0)
+	if _frozen_left > 0.0:
+		_frozen_left -= delta
+		if _frozen_left <= 0.0:
+			_freeze_cooldown_left = _freeze_cooldown_after
+			queue_redraw()
+	if _frozen_left <= 0.0:
+		position = position.move_toward(_target, _speed * _slow_factor * delta)
 	if position.distance_squared_to(_target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
 		queue_free()
@@ -97,13 +124,23 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	var shade: float = lerpf(DAMAGED_DARKEN, 1.0, _hp / _max_hp)
 	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
-	if is_slowed():
+	if _frozen_left > 0.0:
+		color = color.lerp(FROZEN_TINT, FROZEN_TINT_AMOUNT)
+	elif is_slowed():
 		color = color.lerp(SLOWED_TINT, SLOWED_TINT_AMOUNT)
+	elif _wet_left > 0.0:
+		color = color.lerp(WET_TINT, WET_TINT_AMOUNT)
 	elif _burn_left > 0.0:
 		color = color.lerp(BURNING_TINT, BURNING_TINT_AMOUNT)
 	draw_circle(Vector2.ZERO, _radius, color)
 	if _burn_left > 0.0:
 		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, BURNING_TINT, BURNING_RING_WIDTH)
+	if _wet_left > 0.0:
+		for i: int in WET_DROP_COUNT:
+			var angle: float = TAU * i / WET_DROP_COUNT - PI / 2.0
+			draw_circle(Vector2.from_angle(angle) * (_radius * 0.55), WET_DROP_RADIUS, WET_DROP_COLOR)
+	if _frozen_left > 0.0:
+		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, FROZEN_OUTLINE_COLOR, FROZEN_OUTLINE_WIDTH)
 	if _mark_left > 0.0:
 		draw_arc(Vector2.ZERO, _radius + MARKED_RING_GAP, 0.0, TAU, BURNING_RING_POINTS, MARKED_COLOR, MARKED_RING_WIDTH)
 
@@ -131,6 +168,10 @@ func has_state(state: StringName) -> bool:
 			return _burn_left > 0.0
 		&"marked":
 			return _mark_left > 0.0
+		&"wet":
+			return _wet_left > 0.0
+		&"frozen":
+			return _frozen_left > 0.0
 	return false
 
 
@@ -155,6 +196,30 @@ func apply_mark(duration: float) -> void:
 	_mark_left = duration
 	if not was_marked:
 		queue_redraw()
+
+
+## Makes the enemy wet (« trempé ») for [param duration] seconds (story 009,
+## Maître de l'eau). A new call refreshes the duration; it never stacks.
+func apply_wet(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	var was_wet: bool = _wet_left > 0.0
+	_wet_left = duration
+	if not was_wet:
+		queue_redraw()
+
+
+## « trempé + glace = gelé » (story 009): if the enemy is wet, not frozen and not
+## in its freeze cooldown, freezes it (it cannot move; it can still be hit and die)
+## for [param duration] seconds, then forbids a new freeze for [param cooldown]
+## seconds. Returns [code]true[/code] when the enemy was frozen by this call.
+func try_freeze(duration: float, cooldown: float) -> bool:
+	if is_queued_for_deletion() or _wet_left <= 0.0 or _frozen_left > 0.0 or _freeze_cooldown_left > 0.0:
+		return false
+	_frozen_left = duration
+	_freeze_cooldown_after = cooldown
+	queue_redraw()
+	return true
 
 
 ## Removes [param amount] hit points; the enemy is freed at zero.

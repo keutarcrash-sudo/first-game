@@ -18,5 +18,9 @@ var available_at_start := false
 var weapon_type: String
 ## The weapon's values (the keys listed for [member weapon_type]).
 var weapon: Dictionary = {}
+## Seconds a wet enemy stays frozen in a frost tower's range with this specialization; 0 = the specialization freezes nothing (story 009).
+var freeze_duration := 0.0
+## Seconds after a freeze ends during which the enemy cannot be frozen again.
+var freeze_cooldown := 0.0
 ## Ids of the combos (procs.json) switched on when this specialization is chosen.
 var combo_ids := PackedStringArray()

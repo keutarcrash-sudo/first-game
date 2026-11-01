@@ -9,7 +9,12 @@
 			"branch": "Cristal",
 			"cost": 10,
 			"requires": [],
-			"effects": [{ "type": "crystal_max_hp_bonus", "value": 25 }]
+			"effects": [
+				{
+					"type": "crystal_max_hp_bonus",
+					"value": 25
+				}
+			]
 		},
 		{
 			"id": "cristal_blinde",
@@ -17,8 +22,15 @@
 			"description": "+50 PV max de plus pour le cristal.",
 			"branch": "Cristal",
 			"cost": 25,
-			"requires": ["cristal_renforce"],
-			"effects": [{ "type": "crystal_max_hp_bonus", "value": 50 }]
+			"requires": [
+				"cristal_renforce"
+			],
+			"effects": [
+				{
+					"type": "crystal_max_hp_bonus",
+					"value": 50
+				}
+			]
 		},
 		{
 			"id": "bourse_depart",
@@ -27,7 +39,12 @@
 			"branch": "Départ",
 			"cost": 10,
 			"requires": [],
-			"effects": [{ "type": "starting_gold_bonus", "value": 50 }]
+			"effects": [
+				{
+					"type": "starting_gold_bonus",
+					"value": 50
+				}
+			]
 		},
 		{
 			"id": "depart_en_trombe",
@@ -35,8 +52,14 @@
 			"description": "Un choix de carte avant la vague 1.",
 			"branch": "Départ",
 			"cost": 25,
-			"requires": ["bourse_depart"],
-			"effects": [{ "type": "start_card_choice" }]
+			"requires": [
+				"bourse_depart"
+			],
+			"effects": [
+				{
+					"type": "start_card_choice"
+				}
+			]
 		},
 		{
 			"id": "arsenal_feu",
@@ -45,7 +68,15 @@
 			"branch": "Arsenal",
 			"cost": 10,
 			"requires": [],
-			"effects": [{ "type": "unlock_cards", "card_ids": ["munitions_incendiaires", "frappe_du_brasier"] }]
+			"effects": [
+				{
+					"type": "unlock_cards",
+					"card_ids": [
+						"munitions_incendiaires",
+						"frappe_du_brasier"
+					]
+				}
+			]
 		},
 		{
 			"id": "arsenal_glace",
@@ -53,18 +84,50 @@
 			"description": "Ajoute Tir brisant aux cartes possibles. 4 cartes proposées à chaque tirage.",
 			"branch": "Arsenal",
 			"cost": 25,
-			"requires": ["arsenal_feu"],
+			"requires": [
+				"arsenal_feu"
+			],
 			"effects": [
-				{ "type": "unlock_cards", "card_ids": ["tir_brisant"] },
-				{ "type": "cards_offered_bonus", "value": 1 }
+				{
+					"type": "unlock_cards",
+					"card_ids": [
+						"tir_brisant"
+					]
+				},
+				{
+					"type": "cards_offered_bonus",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "spec_maitre_feu",
+			"display_name": "Maître du feu",
+			"description": "Débloque la spécialisation Maître du feu.",
+			"branch": "Spécialisations",
+			"cost": 15,
+			"requires": [],
+			"effects": [
+				{
+					"type": "unlock_spec",
+					"spec_id": "maitre_feu"
+				}
+			]
+		},
+		{
+			"id": "spec_maitre_eau",
+			"display_name": "Maître de l'eau",
+			"description": "Débloque la spécialisation Maître de l'eau.",
+			"branch": "Spécialisations",
+			"cost": 15,
+			"requires": [],
+			"effects": [
+				{
+					"type": "unlock_spec",
+					"spec_id": "maitre_eau"
+				}
 			]
 		}
 	],
-	"placeholders": [
-		{
-			"branch": "Spécialisations",
-			"display_name": "Bientôt",
-			"description": "D'autres spécialisations se débloqueront ici."
-		}
-	]
+	"placeholders": []
 }

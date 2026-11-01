@@ -9,6 +9,8 @@ const TEXT_KEYS := ["id", "display_name", "description", "stats_line"]
 ## Weapon types known to the code, with the numeric keys each one needs (all above 0).
 const WEAPON_NUMBER_KEYS := {
 	"arrows": ["fire_rate", "damage", "range", "pierce", "crit_chance", "crit_multiplier", "mark_duration"],
+	"fire_bolts": ["fire_rate", "damage", "range", "pierce", "burn_duration", "burn_damage_per_second"],
+	"water_jets": ["fire_rate", "damage", "range", "pierce", "wet_duration"],
 }
 
 ## All specializations, in file order (the order of the choice screen).
@@ -68,6 +70,19 @@ static func _parse_spec(raw: Variant, where: String, path: String, rules: ProcRu
 		push_error("SpecializationCatalog: key '%s.combo_ids' in '%s' must be a list of combo ids." % [where, path])
 		return null
 	var spec := SpecializationDef.new()
+	var freeze: Variant = raw.get("freeze")
+	if freeze != null:
+		# Optional (story 009): the « trempé + glace = gelé » conversion the frost tower applies with this specialization.
+		if not freeze is Dictionary:
+			push_error("SpecializationCatalog: key '%s.freeze' in '%s' must be an object with 'duration' and 'cooldown'." % [where, path])
+			return null
+		for key: String in ["duration", "cooldown"]:
+			var value: Variant = freeze.get(key)
+			if not (value is float or value is int) or value <= 0:
+				push_error("SpecializationCatalog: key '%s.freeze.%s' in '%s' must be a number above 0 (got %s)." % [where, key, path, value])
+				return null
+		spec.freeze_duration = float(freeze["duration"])
+		spec.freeze_cooldown = float(freeze["cooldown"])
 	for combo_id: Variant in raw["combo_ids"]:
 		if not combo_id is String or not rules.has_combo(combo_id):
 			push_error("SpecializationCatalog: key '%s.combo_ids' in '%s' must list ids of combos in procs.json (got %s)." % [where, path, combo_id])

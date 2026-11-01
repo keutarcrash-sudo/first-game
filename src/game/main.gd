@@ -128,6 +128,8 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	var owned: PackedStringArray = _progress.owned_ids
 	for combo_id: String in spec.combo_ids:
 		_rules.activate(combo_id)
+	if spec.freeze_duration > 0.0:
+		_modifiers.enable_freeze(spec.freeze_duration, spec.freeze_cooldown)
 	_hero.equip(spec, _modifiers, _rng)
 	_hud.show_specialization(spec)
 	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)

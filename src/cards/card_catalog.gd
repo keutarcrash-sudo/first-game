@@ -19,6 +19,11 @@ const EFFECT_NUMBER_KEYS := {
 	"crit_chance_bonus": ["value"],
 	"crit_multiplier_bonus": ["value"],
 	"mark_duration_bonus": ["value"],
+	"weapon_fire_rate_bonus": ["value"],
+	"burn_dps_bonus": ["value"],
+	"burn_duration_bonus": ["value"],
+	"wet_duration_bonus": ["value"],
+	"freeze_duration_bonus": ["value"],
 }
 
 ## How many cards a choice screen offers.
