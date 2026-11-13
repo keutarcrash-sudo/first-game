@@ -87,15 +87,14 @@ func _ready() -> void:
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
 	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng)
-	# The path view sits before Towers so it is drawn under them (clear_towers frees Towers' children).
+	# The path view is moved to index 0 so it is drawn under every child (crystal, Towers, ...).
 	_path_view = PathView.new()
 	add_child(_path_view)
-	move_child(_path_view, _towers.get_index())
+	move_child(_path_view, 0)
 	_path_view.setup(_state)
 	_camera = GameCamera.new()
 	add_child(_camera)
 	_camera.setup(_hero, _field_rect, _state)
-	_camera.make_current()
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
