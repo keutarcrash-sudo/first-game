@@ -43,7 +43,7 @@ var _message_timer: Timer
 var _cards_label: Label
 var _modifiers: PlayerModifiers
 var _spec_label: Label
-var _wave_preview := ""
+var _wave_preview: String = ""
 
 
 func _ready() -> void:

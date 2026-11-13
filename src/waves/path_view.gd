@@ -4,13 +4,14 @@
 class_name PathView
 extends Node2D
 
-const LINE_COLOR := Color(0.55, 0.9, 1.0, 0.5)
-const LINE_WIDTH := 6.0
-const START_RADIUS := 10.0
-const END_RADIUS := 18.0
-const END_RING_WIDTH := 5.0
-const COMBAT_ALPHA := 0.25
-const BUILD_ALPHA := 1.0
+const LINE_COLOR: Color = Color(0.55, 0.9, 1.0, 0.5)
+const LINE_WIDTH: float = 6.0
+const START_RADIUS: float = 10.0
+const END_RADIUS: float = 18.0
+const END_RING_WIDTH: float = 5.0
+## Line colour already has alpha 0.5, so 0.5 here gives an effective 0.25.
+const COMBAT_ALPHA: float = 0.5
+const BUILD_ALPHA: float = 1.0
 
 var _path: CrystalPath
 var _state: GameState

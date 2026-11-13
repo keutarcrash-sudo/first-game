@@ -3,11 +3,11 @@
 class_name CrystalPointer
 extends Control
 
-const EDGE_MARGIN := 40.0
-const ARROW_SIZE := 18.0
-const ARROW_COLOR := Color(0.55, 0.9, 1.0)
-const FONT_SIZE := 20
-const TEXT_OFFSET := Vector2(-30.0, 28.0)
+const EDGE_MARGIN: float = 40.0
+const ARROW_SIZE: float = 18.0
+const ARROW_COLOR: Color = Color(0.55, 0.9, 1.0)
+const FONT_SIZE: int = 20
+const TEXT_OFFSET: Vector2 = Vector2(-30.0, 28.0)
 
 var _crystal: Crystal
 
