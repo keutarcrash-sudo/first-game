@@ -1,7 +1,7 @@
 # Cristal Combo v2 — Design
 
 > **Date** : 2026-11-13
-> **Statut** : en relecture par l'utilisateur
+> **Statut** : approuvé par l'utilisateur le 2026-11-13
 > **Remplace** : le concept « arène fixe + tours permanentes » du MVP (`design/game-brief.md`)
 > **Inspirations** : Deadlock et Overwatch (skill, focus, escorte), Ember Knights (mondes, carte, mode sans fin), Clover Pit (fins multiples)
 
@@ -57,6 +57,7 @@ Ce qui ne change pas : vue de dessus uniquement (ni 1re ni 3e personne), clavier
 ### 3.2 Combat
 
 - **Le cristal avance tout seul**, à vitesse régulière (données), le long du trajet. Il ne s'arrête pas.
+- **La caméra suit le héros.** Le terrain d'une vague peut être plus grand que l'écran. Quand le cristal sort de l'écran, une flèche au bord de l'écran indique où il est, avec ses PV.
 - **Les ennemis** apparaissent pendant la vague et visent tous le cristal. Aucun ne traque le héros.
 - **Le héros** :
 
@@ -252,7 +253,8 @@ On transforme le jeu existant par étapes. Chaque étape est jouable et testée 
 
 À trancher au moment de l'étape concernée :
 
-- Taille du terrain d'une vague et caméra (l'écran suit-il le héros, le cristal, ou montre-t-il tout le trajet ?) — **étape 1**.
+- Taille du terrain d'une vague (la caméra suit le héros : décidé) — **étape 1**.
+- Pendant la préparation, comment voir tout le trajet si le terrain dépasse l'écran (vue dézoomée, ou déplacement libre de la caméra) — **étape 1**.
 - Prix et nombre des tours, nouveaux types de tours — étapes 1 et 7.
 - Contenu exact des compétences A, E, R de chaque spé — étape 3.
 - Ce que donnent le trésor et le repos, en chiffres — étape 5.

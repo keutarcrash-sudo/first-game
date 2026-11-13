@@ -1,77 +1,68 @@
 # Game Brief: Cristal Combo
 
-**One-sentence pitch:** Un jeu de défense vu du dessus où tu protèges un cristal avec ton héros et des tours, et où chaque compétence choisie réagit aux autres pour créer des combos.
+**One-sentence pitch:** Un jeu de défense vu du dessus où tu escortes un cristal à travers 4 mondes : à chaque vague tu poses des tours temporaires sur son trajet, tu désignes leurs cibles, tu esquives, tu ramasses l'or, et tes choix de build créent des combos jusqu'à la « god run ».
+
+> **Design complet :** `docs/superpowers/specs/2026-11-13-cristal-combo-v2-design.md` (approuvé le 2026-11-13). Ce brief en est le résumé ; en cas de doute, le design complet fait foi.
 
 ## Core loop
-- Combat : une vague d'ennemis attaque le cristal ; le héros se déplace (ZQSD) et tire tout seul vers le curseur de la souris.
-- Construction : entre deux vagues, dépenser l'or pour poser une tour ou un piège.
-- Choix : prendre 1 compétence parmi 3, puis affronter la vague suivante, plus dure.
-- À la mort : dépenser les points gagnés dans l'arbre de compétences, puis relancer une partie.
+- **Carte** : dans chaque monde, choisir son prochain lieu parmi 2 ou 3 (vague, magasin, trésor, repos, mini-boss), jusqu'au boss du monde.
+- **Préparation d'une vague** : on voit le trajet du cristal et les types et nombres d'ennemis à venir ; on pose des tours le long du trajet avec son or. Espace lance la vague.
+- **Combat** : le cristal avance seul ; le héros (ZQSD, tir automatique vers la souris) désigne au clic gauche la cible des tours, utilise ses compétences (clic droit, A, E, R) et ses objets actifs (1, 2), esquive les attaques annoncées et va ramasser l'or tombé au sol.
+- **Fin de vague** : les tours disparaissent, l'or non dépensé reste, choix d'une carte parmi 3.
+- **À la fin de la partie** : dépenser ses points dans l'arbre de déblocages, puis relancer.
 
 ## Player goal & fail state — what "working" looks like
-- Tenir le plus de vagues possible. La partie est perdue quand le cristal tombe à 0 PV. Chaque partie rapporte des points, donc même une défaite rend plus fort pour la suivante.
+- Amener le cristal au bout du monde 4 dans le meilleur état possible. La fin dépend des PV du cristal à l'arrivée et des fragments cachés trouvés ; la meilleure ouvre un 5e monde caché.
+- La partie est perdue quand **le cristal ou le héros** tombe à 0 PV. Chaque partie rapporte des points pour l'arbre.
 
-## MVP — what must exist to be the game
-1. Héros déplacé avec ZQSD, qui tire automatiquement dans la direction de la souris.
-2. Cristal de 100 PV et ennemis qui le ciblent, par vagues croissantes.
-3. Cycle combat / construction, avec de l'or gagné à chaque kill.
-4. Deux tours posées au clic : canon et piège de glace.
-5. Choix d'1 compétence parmi 3 entre les vagues.
-6. Système de procs : au moins 3 combos entre compétences (ex. glace + canon : dégâts en plus sur les ennemis ralentis).
-7. À la mort : écran avec l'arbre de compétences (environ 6 améliorations permanentes) où dépenser les points, puis bouton rejouer.
+## Version actuelle (MVP + spécialisations, construits)
+Héros ZQSD + tir vers la souris, cristal fixe dans une arène, vagues, tours canon et glace permanentes, or automatique, choix de cartes, système de combos, arbre de déblocages sauvegardé dans le navigateur, spécialisations Archer, Maître du feu et Maître de l'eau. Le plan de construction ci-dessous transforme cette version.
+
+## Build order
+1. **Le cristal qui avance** : trajet, préparation (trajet visible + aperçu des ennemis), tours valables une vague, fin de vague à l'arrivée, caméra qui suit le héros.
+2. **Or au sol et désignation** : l'or tombe et disparaît, portée de ramassage, clic gauche pour le focus des tours.
+3. **Compétences actives** : clic droit, A, E, R pour l'Archer, le Maître du feu et le Maître de l'eau.
+4. **Danger pour le héros** : PV du héros, défaite du héros, kamikazes, artilleurs, zones annoncées, soins.
+5. **Carte du monde** : embranchements, magasin, trésor, repos.
+6. **Mini-boss et boss du monde 1** : le monde 1 est complet.
+7. **Suite** : fins et fragments, mondes 2 à 4, monde caché, mode sans fin, nouvelles spécialisations, habillage visuel.
 
 ## Out of scope — not building this
 - Pas de multijoueur.
-- Pas de compte ni de sauvegarde en ligne : l'arbre est sauvegardé seulement dans le navigateur.
-- Arbre : environ 6 améliorations dans le MVP ; une branche « Spécialisations » s'y ajoute après le MVP (voir plus bas).
+- Pas de compte ni de sauvegarde en ligne : la progression est sauvegardée seulement dans le navigateur.
 - Pas de contrôles tactiles (clavier + souris uniquement).
-- Une seule carte (arène). Un seul héros, mais avec des spécialisations après le MVP (voir plus bas).
-- Pas de boss ni d'histoire.
-- Pas de sons ni de musique dans la première version.
-
-## Build order
-1. Héros, cristal et une vague d'ennemis, pour vérifier que se déplacer et viser est agréable.
-2. Les deux tours et un premier combo (glace + canon). C'est la partie la plus risquée : si ce combo n'est pas amusant, tout le jeu est à repenser.
-3. Le choix de 3 cartes et les autres combos.
-4. L'écran de défaite avec l'arbre de compétences (progression sauvegardée dans le navigateur), puis les réglages de difficulté.
+- Pas de vue à la 1re ni à la 3e personne : vue de dessus uniquement.
+- Pas d'ennemis qui traquent le héros : tous visent le cristal.
+- Pas de sons ni de musique pour l'instant.
+- Pas d'histoire racontée au-delà des textes de fin.
 
 ---
-**Who it's for / what they feel:** les joueurs de jeux « une partie de plus » qui aiment trouver une combinaison trop puissante, par parties de 10 à 15 minutes.
+**Who it's for / what they feel:** les joueurs qui aiment les jeux à skill (Deadlock, Overwatch) et les roguelites à builds (Ember Knights) : la satisfaction de lire la menace, de bien placer ses tours, de focus la bonne cible et de trouver un build trop fort. Un monde dure environ 8 à 12 minutes.
 
-**Art & audio direction:** formes simples et colorées sur fond sombre, avec de gros effets visibles quand un combo se déclenche. Audio : pas dans la première version.
+**Art & audio direction:** d'abord des formes simples et des lumières fortes sur fond sombre (lisibles en combat, faites par le code) ; ensuite, monde par monde, un habillage peint et élégant façon Deadlock. Audio : plus tard.
 
-**Reference game:** *Vampire Survivors* — on garde la vue de dessus, le tir automatique et la montée en puissance par choix de compétences ; on y ajoute les tours et la base à défendre.
+**Reference games:** *Deadlock* (montée en puissance pendant la partie, skill, style), *Overwatch* (escorte de convoi, focus), *Ember Knights* (mondes, carte, mode sans fin), *Clover Pit* (fins multiples).
 
 ---
 
-## Après le MVP — Spécialisations et builds
-
-**Pitch :** au début de chaque partie, le joueur choisit une spécialisation pour son héros ; chacune change sa façon de combattre, crée son propre état sur les ennemis et apporte ses cartes et ses combos, pour que chaque partie soit un build différent (esprit *Risk of Rain* : on débloque de la variété plutôt que de la puissance).
+## Spécialisations
 
 **Règles :**
-- Un écran de choix de spécialisation s'affiche avant la vague 1 ; une seule spécialisation par partie.
-- **Archer** est disponible dès la première partie ; les 8 autres se débloquent avec des points dans une nouvelle branche « Spécialisations » de l'arbre.
-- Chaque spécialisation a son arme ou sa façon de combattre, son état sur les ennemis, 3 ou 4 cartes à elle (proposées seulement quand elle est choisie) et au moins 2 combos avec les tours ou les états des autres.
-- Tout (spécialisations, états, cartes, combos, coûts de déblocage) est décrit dans des fichiers de données.
+- Un écran de choix s'affiche avant le départ ; une seule spécialisation par partie.
+- **Archer** est disponible dès la première partie ; les autres se débloquent dans la branche « Spécialisations » de l'arbre.
+- Chaque spécialisation a son arme, son état sur les ennemis, ses compétences actives (clic droit, A, E, R), ses cartes et ses combos.
+- Tout est décrit dans des fichiers de données.
 
-**Les 9 spécialisations :**
+**Les 9 spécialisations :** Archer, Maître du feu et Maître de l'eau sont construits. Les 6 autres reviennent à l'étape 7 du plan, adaptées au nouveau jeu (compétences actives, tours temporaires) ; les idées ci-dessous servent de point de départ.
 
 | Spécialisation | Façon de combattre | État | Exemple de combo |
 |---|---|---|---|
 | Archer (départ) | Flèches perçantes à longue portée, coups critiques | marqué | marqué + tours = dégâts en plus |
-| Mage du temps | Ralentit le temps autour de lui, peut figer tous les ennemis quelques secondes | figé | figé + Archer = critique garanti |
-| Berserker | Combat au corps à corps tout autour de lui, plus fort quand le cristal est en danger | saigne (dégâts dans la durée) | saigne + canons = dégâts en plus |
-| Piégeur | Pose tout seul des mines et des pièges sur le chemin des ennemis | piégé (immobilisé) | piégé + canons = ×2 |
-| Gardien du cristal | Bouclier et réparation du cristal, aura qui renforce les tours proches | affaibli (fait moins de dégâts) | affaibli près du cristal = cristal protégé |
-| Maître du feu | Tirs qui enflamment | brûle | brûle + vent = l'incendie se propage |
+| Maître du feu | Tirs qui enflamment | brûle | brûle + canon = dégâts en plus |
 | Maître de l'eau | Tirs qui trempent | trempé | trempé + glace = gelé |
-| Maître de la terre | Rochers lourds, ondes de choc | ébranlé (reçoit plus de dégâts) | trempé + ébranlé = boue (très lent) |
-| Maître du vent | Rafales qui repoussent les ennemis | déséquilibré | déséquilibré + pièges = ils tombent dedans |
-
-**Ordre de construction (après le MVP) :**
-1. Le système de spécialisations : écran de choix avant la vague 1, Archer, branche « Spécialisations » de l'arbre.
-2. Maître du feu et Maître de l'eau.
-3. Maître de la terre et Maître du vent.
-4. Mage du temps et Gardien du cristal.
-5. Berserker et Piégeur.
-6. Équilibrage (or, ennemis, prix de l'arbre) et finitions (ligne « Cartes » qui déborde, héros qui bouge pendant le choix de carte, double-clic sur « Rejouer »).
+| Mage du temps | Ralentit le temps autour de lui, peut figer les ennemis | figé | figé + coup critique garanti |
+| Berserker | Combat au corps à corps autour de lui, plus fort quand le cristal est en danger | saigne | saigne + canons = dégâts en plus |
+| Piégeur | Pose des mines et des pièges sur le chemin des ennemis | piégé | piégé + canons = ×2 |
+| Gardien du cristal | Bouclier et réparation du cristal, aura qui renforce les tours proches | affaibli | affaibli près du cristal = cristal protégé |
+| Maître de la terre | Rochers lourds, ondes de choc | ébranlé | trempé + ébranlé = boue |
+| Maître du vent | Rafales qui repoussent les ennemis | déséquilibré | brûle + vent = l'incendie se propage |
