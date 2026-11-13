@@ -1,4 +1,4 @@
-## Tuning values for the hero, its projectiles and the arena (story 001,
+## Tuning values for the hero, its projectiles and the field (story 001,
 ## design/game-brief.md MVP feature 1). Loaded once from a JSON file;
 ## every value is required and must be a positive number.
 class_name HeroStats
@@ -24,7 +24,7 @@ var bullet_speed: float
 var bullet_max_range: float
 ## Projectile radius, in pixels (collision and drawing).
 var bullet_radius: float
-## Arena size, in pixels.
+## Field size, in pixels.
 var arena_size: Vector2
 
 

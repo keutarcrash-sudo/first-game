@@ -5,7 +5,10 @@
 ## (story 007): points are added to the saved progression, the player buys
 ## permanent upgrades, and « Rejouer » reloads this scene, which applies them.
 ## Start of a game (story 008): specialization choice, then the « Départ en
-## trombe » card choice when owned, then the wave 1 countdown.
+## trombe » card choice when owned, then the build phase of wave 1.
+## Step 1 flow: build (zoomed-out camera, the wave's crystal path shown, towers
+## placed) -> Space -> the crystal travels the path while enemies attack ->
+## it arrives: leftovers and towers are cleared, card choice, next build.
 extends Node2D
 
 const STATS_PATH := "res://assets/data/hero_stats.json"
@@ -22,7 +25,7 @@ const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
 const BORDER_WIDTH := 4.0
 
-var _arena_rect: Rect2
+var _field_rect: Rect2
 var _cycle: WaveCycle
 var _state: GameState
 var _card_pool: CardPool  # Built once the specialization is chosen: its cards depend on it.
@@ -36,8 +39,8 @@ var _card_screen: CardChoiceScreen
 var _skill_tree: SkillTree
 var _progress: SaveProgress
 var _death_screen: DeathScreen
-var _spawner_setup: Callable
-var _start_choice_pending := false  # True while the "Départ en trombe" card choice before wave 1 is open.
+var _path_view: PathView
+var _camera: GameCamera
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -64,7 +67,7 @@ func _ready() -> void:
 		_crystal.queue_free()
 		_placer.queue_free()
 		return
-	_arena_rect = Rect2((get_viewport_rect().size - stats.arena_size) / 2.0, stats.arena_size)
+	_field_rect = Rect2(Vector2.ZERO, stats.arena_size)
 	_progress = SaveProgress.load_from_file(SAVE_PATH, _skill_tree)
 	var owned: PackedStringArray = _progress.owned_ids
 	_rules = rules
@@ -72,8 +75,8 @@ func _ready() -> void:
 	_modifiers = modifiers
 	_rng = RandomNumberGenerator.new()
 	_rng.randomize()
-	_hero.setup(stats, _arena_rect, _bullets, rules)
-	_crystal.global_position = _arena_rect.get_center()
+	_hero.setup(stats, _field_rect, _bullets, rules)
+	_crystal.global_position = _field_rect.get_center()
 	_crystal.setup(defence, _skill_tree.crystal_max_hp_bonus(owned))
 	# The hero starts below the crystal, not on top of it.
 	_hero.global_position = _crystal.global_position + Vector2(0.0, defence.crystal_radius + stats.hero_radius + defence.hero_start_gap)
@@ -82,14 +85,26 @@ func _ready() -> void:
 	modifiers.heal_requested.connect(_crystal.heal)
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
-	_cycle.setup(_state, _spawner, economy, modifiers)
+	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
+	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng)
+	# The path view sits before Towers so it is drawn under them (clear_towers frees Towers' children).
+	_path_view = PathView.new()
+	add_child(_path_view)
+	move_child(_path_view, _towers.get_index())
+	_path_view.setup(_state)
+	_camera = GameCamera.new()
+	add_child(_camera)
+	_camera.setup(_hero, _field_rect, _state)
+	_camera.make_current()
+	_cycle.wave_prepared.connect(_on_wave_prepared)
+	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
 	_card_screen.card_chosen.connect(_on_card_chosen.bind(modifiers))
 	_state.phase_changed.connect(_on_phase_changed)
-	_placer.setup(towers, _state, _arena_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers)
+	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers)
 	_hud.bind_tower_build(towers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
@@ -98,9 +113,6 @@ func _ready() -> void:
 	_death_screen.setup(_skill_tree)
 	_death_screen.node_clicked.connect(_on_upgrade_clicked)
 	_death_screen.replay_pressed.connect(_on_replay_pressed)
-	# The spawner's setup starts the first-wave countdown, so it waits until the
-	# specialization (and, with "Départ en trombe", the opening card) is chosen.
-	_spawner_setup = _spawner.setup.bind(curve, defence, _arena_rect, _crystal, _enemies)
 	_spec_screen = SpecializationChoiceScreen.new()
 	add_child(_spec_screen)
 	_spec_screen.specialization_chosen.connect(_on_spec_chosen)
@@ -110,8 +122,8 @@ func _ready() -> void:
 
 
 func _draw() -> void:
-	draw_rect(_arena_rect, FLOOR_COLOR)
-	draw_rect(_arena_rect, BORDER_COLOR, false, BORDER_WIDTH)
+	draw_rect(_field_rect, FLOOR_COLOR)
+	draw_rect(_field_rect, BORDER_COLOR, false, BORDER_WIDTH)
 
 
 ## Space launches the next wave during the build phase. This node stops
@@ -123,7 +135,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Equips the hero, switches on the specialization's combos, builds the card pool
 ## for it, then goes on with the start sequence: the opening card choice when
-## owned, otherwise the wave 1 countdown.
+## owned, otherwise the build phase of wave 1.
 func _on_spec_chosen(spec: SpecializationDef) -> void:
 	var owned: PackedStringArray = _progress.owned_ids
 	for combo_id: String in spec.combo_ids:
@@ -134,11 +146,9 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	_hud.show_specialization(spec)
 	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)
 	if _skill_tree.has_start_card_choice(owned):
-		_start_choice_pending = true
 		_state.begin_card_choice()
 		return
-	_state.begin_combat(1)
-	_spawner_setup.call()
+	_state.begin_build()
 
 
 func _on_phase_changed(phase: GameState.Phase) -> void:
@@ -165,15 +175,20 @@ func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:
 	_end_card_choice()
 
 
-## After a wave the game goes to BUILD; after the opening choice it goes to the
-## wave 1 countdown instead.
+## Both after a wave and after the opening choice the game goes to BUILD.
 func _end_card_choice() -> void:
-	if not _start_choice_pending:
-		_state.begin_build()
-		return
-	_start_choice_pending = false
-	_state.begin_combat(1)
-	_spawner_setup.call()
+	_state.begin_build()
+
+
+## Shows the prepared wave's path and its preview text.
+func _on_wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath) -> void:
+	_path_view.show_path(path)
+	_hud.show_wave_preview(wave_number, enemy_count)
+
+
+## The crystal arrived: the towers do not carry over to the next wave.
+func _on_wave_finished(_wave_number: int) -> void:
+	_placer.clear_towers()
 
 
 ## Stops the game, banks this game's points (saved at once) and opens the defeat
