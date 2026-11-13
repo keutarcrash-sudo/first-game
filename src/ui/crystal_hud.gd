@@ -43,6 +43,7 @@ var _message_timer: Timer
 var _cards_label: Label
 var _modifiers: PlayerModifiers
 var _spec_label: Label
+var _wave_preview := ""
 
 
 func _ready() -> void:
@@ -152,10 +153,20 @@ func show_specialization(spec: SpecializationDef) -> void:
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
 	crystal.health_changed.connect(_on_health_changed)
+	var pointer := CrystalPointer.new()
+	add_child(pointer)
+	pointer.setup(crystal)
 
 
 func _on_health_changed(current_hp: float, max_hp: float) -> void:
 	_hp_label.text = "Cristal : %d / %d" % [ceili(current_hp), ceili(max_hp)]
+
+
+## Replaces the build prompt with the preview of the coming wave (call on each entry into BUILD).
+func show_wave_preview(wave_number: int, enemy_count: int) -> void:
+	_wave_preview = "Vague %d : %d ennemis — place tes tours, puis Espace" % [wave_number, enemy_count]
+	if _state != null:
+		_refresh_info()
 
 
 ## Shows wave number, gold, phase and the build prompt, and keeps them up to date.
@@ -190,4 +201,7 @@ func _refresh_info() -> void:
 		phase_name = "Choix de la spécialisation"
 	_build_box.visible = building
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
-	_prompt_label.text = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1) if building else ""
+	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1)
+	if _wave_preview != "":
+		prompt = _wave_preview
+	_prompt_label.text = prompt if building else ""
