@@ -10,5 +10,10 @@
 		"hp_multiplier_per_wave": 0.25,
 		"spawn_interval_factor": 0.92,
 		"min_spawn_interval": 0.25
+	},
+	"path": {
+		"segment_length": 160.0,
+		"max_turn_degrees": 50.0,
+		"margin": 120.0
 	}
 }
