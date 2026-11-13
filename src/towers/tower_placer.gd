@@ -2,7 +2,7 @@
 ## BUILD phase a left click in the arena places the selected tower at the
 ## cursor when the spot is valid and the gold suffices. Also draws a small
 ## preview of the tower (and its range) under the cursor. Placed towers are
-## children of the towers node and stay for the whole game.
+## children of the towers node; towers last one wave ([method clear_towers]).
 class_name TowerPlacer
 extends Node2D
 
@@ -16,7 +16,7 @@ const RING_POINTS := 48
 
 var _stats: TowerStats
 var _state: GameState
-var _arena_rect: Rect2
+var _field_rect: Rect2
 var _crystal: Crystal
 var _towers: Node2D
 var _enemies: Node2D
@@ -29,18 +29,24 @@ var _kind := TowerStats.Kind.CANNON
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
 ## the crystal to keep clear, and the nodes holding the towers, the enemies and the
 ## bullets, the combo rules handed to cannon shots, and the card modifiers handed to every tower (shared, never copied). Call once, before the first frame.
-func setup(stats: TowerStats, state: GameState, arena_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules, modifiers: PlayerModifiers) -> void:
+func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules, modifiers: PlayerModifiers) -> void:
 	_modifiers = modifiers
 	_rules = rules
 	_stats = stats
 	_state = state
-	_arena_rect = arena_rect
+	_field_rect = field_rect
 	_crystal = crystal
 	_towers = towers
 	_enemies = enemies
 	_bullets = bullets
 	state.phase_changed.connect(_on_phase_changed)
 	_on_phase_changed(state.phase)
+
+
+## Frees every placed tower (towers last one wave).
+func clear_towers() -> void:
+	for child: Node in _towers.get_children():
+		child.queue_free()
 
 
 ## Chooses the type of tower the next click places. The cannon is selected by default.
@@ -85,7 +91,7 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 
 ## A spot is valid when the tower body is fully inside the arena and overlaps neither the crystal nor a placed tower.
 func _is_spot_valid(spot: Vector2, radius: float) -> bool:
-	if not _arena_rect.grow(-radius).has_point(spot):
+	if not _field_rect.grow(-radius).has_point(spot):
 		return false
 	var crystal_gap: float = _crystal.radius + radius
 	if spot.distance_squared_to(_crystal.global_position) < crystal_gap * crystal_gap:
@@ -102,7 +108,7 @@ func _place(spot: Vector2) -> void:
 	var tower: Tower
 	if _kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
-		cannon.setup(_stats, _enemies, _bullets, _arena_rect, _rules, _modifiers)
+		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers)
 		tower = cannon
 	else:
 		var frost := FrostTower.new()

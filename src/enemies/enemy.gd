@@ -1,4 +1,4 @@
-## Enemy (story 002): walks straight to the crystal. Sits on physics layer 2
+## Enemy (story 002): walks straight to the crystal, wherever it is now. Sits on physics layer 2
 ## ("enemies") so hero bullets hit it, and implements [method take_damage].
 ## Contact with the crystal is tested here, by distance, on every physics
 ## frame: an enemy never depends on a one-shot signal, so it cannot get stuck
@@ -44,7 +44,6 @@ var _freeze_cooldown_after := 0.0  # Cooldown that starts when the current freez
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
 var _crystal: Crystal
-var _target: Vector2
 var _touch_distance_sq: float
 var _contact_damage: float
 var _speed: float
@@ -56,7 +55,6 @@ var _max_hp: float
 ## Sets stats, hit points ([param hp]), spawn position and target. Call before adding the enemy to the tree.
 func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Crystal) -> void:
 	_crystal = crystal
-	_target = crystal.global_position
 	_contact_damage = stats.enemy_contact_damage
 	_speed = stats.enemy_speed
 	_radius = stats.enemy_radius
@@ -114,9 +112,11 @@ func _physics_process(delta: float) -> void:
 		if _frozen_left <= 0.0:
 			_freeze_cooldown_left = _freeze_cooldown_after
 			queue_redraw()
+	# The crystal moves, so the target is read again every frame.
+	var target: Vector2 = _crystal.global_position
 	if _frozen_left <= 0.0:
-		position = position.move_toward(_target, _speed * _slow_factor * delta)
-	if position.distance_squared_to(_target) <= _touch_distance_sq:
+		position = position.move_toward(target, _speed * _slow_factor * delta)
+	if position.distance_squared_to(target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
 		queue_free()
 
