@@ -51,6 +51,9 @@ static func load_from_file(path: String) -> WaveCurve:
 			if not _is_number(wave.get(key), false):
 				push_error("WaveCurve: key '%s' of 'waves[%d]' in '%s' is missing or not a positive number." % [key, i, path])
 				return null
+		if roundi(wave["enemy_count"]) < 1:
+			push_error("WaveCurve: key 'enemy_count' of 'waves[%d]' in '%s' must round to at least 1." % [i, path])
+			return null
 		curve._waves.append({
 			"enemy_count": roundi(wave["enemy_count"]),
 			"hp_multiplier": float(wave["hp_multiplier"]),
