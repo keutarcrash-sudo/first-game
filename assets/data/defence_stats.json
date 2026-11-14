@@ -1,12 +1,12 @@
 {
 	"crystal_max_hp": 100.0,
 	"crystal_radius": 28.0,
-	"enemy_base_hp": 30.0,
+	"enemy_base_hp": 40.0,
 	"enemy_speed": 90.0,
 	"enemy_contact_damage": 10.0,
 	"enemy_radius": 16.0,
 	"spawn_margin": 10.0,
 	"hero_start_gap": 40.0,
 	"crystal_speed": 55.0,
-	"spawn_distance": 700.0
+	"spawn_distance": 450.0
 }
