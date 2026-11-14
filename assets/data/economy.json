@@ -1,5 +1,7 @@
 {
 	"starting_gold": 100,
-	"gold_per_kill": 10,
-	"gold_per_wave_bonus": 50
+	"gold_per_kill": 15,
+	"gold_lifetime": 10.0,
+	"gold_blink_time": 3.0,
+	"pickup_radius": 70.0
 }

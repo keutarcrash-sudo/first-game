@@ -86,7 +86,13 @@ func _ready() -> void:
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
-	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng)
+	# The gold field sits just before Enemies, so coins are drawn under the enemies.
+	var gold_field := GoldField.new()
+	add_child(gold_field)
+	move_child(gold_field, _enemies.get_index())
+	gold_field.setup(_state, _hero, economy)
+	_spawner.wave_finished.connect(func(_wave_number: int) -> void: gold_field.clear())
+	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng, gold_field)
 	# The path view is moved to index 0 so it is drawn under every child (crystal, Towers, ...).
 	_path_view = PathView.new()
 	add_child(_path_view)

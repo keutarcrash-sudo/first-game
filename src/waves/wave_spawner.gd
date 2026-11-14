@@ -10,7 +10,7 @@ signal wave_started(wave_number: int)
 ## Emitted once per wave, when the crystal arrives at the end of its path.
 signal wave_finished(wave_number: int)
 ## Emitted when an enemy is killed (not when one touches the crystal or is freed at the end of the wave).
-signal enemy_killed
+signal enemy_killed(position: Vector2)
 
 # Transitions: IDLE -> SPAWNING (start_wave) -> TRAVELLING (all spawned) -> IDLE (crystal arrived).
 # The crystal arriving ends the wave from SPAWNING or TRAVELLING.
@@ -78,7 +78,7 @@ func _spawn_enemy() -> void:
 	_to_spawn -= 1
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
-	enemy.died.connect(enemy_killed.emit)
+	enemy.died.connect(func() -> void: enemy_killed.emit(enemy.global_position))
 	_enemies_parent.add_child(enemy)
 
 

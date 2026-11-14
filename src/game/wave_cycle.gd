@@ -1,5 +1,6 @@
 ## Combat/build cycle (story 003, étape 1). Wires the wave spawner's signals to
-## the [GameState]: kill gold, end-of-wave bonus, phase changes, and the wave and
+## the [GameState]: kill gold (dropped on the ground in the [GoldField], not given
+## directly; no end-of-wave bonus), phase changes, and the wave and
 ## kill counts used for the end-of-game points (story 007). At every BUILD phase
 ## it prepares the next wave's crystal path; the build phase ends only when the
 ## player asks for the next wave ([method request_next_wave]). Holds no UI.
@@ -12,6 +13,7 @@ signal wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath)
 var _state: GameState
 var _spawner: WaveSpawner
 var _economy: EconomyStats
+var _gold_field: GoldField
 var _modifiers: PlayerModifiers
 var _curve: WaveCurve
 var _crystal: Crystal
@@ -26,7 +28,8 @@ var _prepared_wave := 0
 ## leads to CARD_CHOICE; whoever shows the cards then calls
 ## [method GameState.begin_build]. If the game is already in BUILD, the first
 ## wave is prepared now. Call once.
-func setup(state: GameState, spawner: WaveSpawner, economy: EconomyStats, modifiers: PlayerModifiers, curve: WaveCurve, crystal: Crystal, field_rect: Rect2, rng: RandomNumberGenerator) -> void:
+func setup(state: GameState, spawner: WaveSpawner, economy: EconomyStats, modifiers: PlayerModifiers, curve: WaveCurve, crystal: Crystal, field_rect: Rect2, rng: RandomNumberGenerator, gold_field: GoldField) -> void:
+	_gold_field = gold_field
 	_modifiers = modifiers
 	_state = state
 	_spawner = spawner
@@ -72,10 +75,9 @@ func _on_wave_started(wave_number: int) -> void:
 
 func _on_wave_finished(_wave_number: int) -> void:
 	_state.waves_completed += 1
-	_state.add_gold(_economy.gold_per_wave_bonus)
 	_state.begin_card_choice()
 
 
-func _on_enemy_killed() -> void:
+func _on_enemy_killed(position: Vector2) -> void:
 	_state.kills += 1
-	_state.add_gold(_economy.gold_per_kill + _modifiers.gold_per_kill_bonus())
+	_gold_field.drop(position, _economy.gold_per_kill + _modifiers.gold_per_kill_bonus())
