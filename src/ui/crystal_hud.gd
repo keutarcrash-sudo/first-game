@@ -15,7 +15,7 @@ const BUTTON_SPACING := 16
 const BUTTON_BOTTOM_MARGIN := 70.0
 const BUTTON_SELECTED_COLOR := Color(1.0, 0.9, 0.35)
 const MESSAGE_FONT_SIZE := 28
-const MESSAGE_BOTTOM_MARGIN := 124.0
+const MESSAGE_BOTTOM_MARGIN := 186.0  # Above the ability bar.
 const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
 const MESSAGE_SECONDS := 1.0
 const HP_FONT_SIZE := 20
@@ -135,6 +135,13 @@ func _on_tower_button_pressed(kind: TowerStats.Kind) -> void:
 func bind_tower_build(stats: TowerStats) -> void:
 	_cannon_button.text = "Canon — %d or" % stats.cannon_cost
 	_frost_button.text = "Glace — %d or" % stats.frost_cost
+
+
+## Shows the four ability boxes of [param caster], above the tower buttons.
+func bind_abilities(caster: AbilityCaster) -> void:
+	var bar := AbilityBar.new()
+	add_child(bar)
+	bar.setup(caster)
 
 
 ## Shows "Pas assez d'or" for about a second.

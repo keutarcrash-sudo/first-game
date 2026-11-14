@@ -68,6 +68,16 @@ func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumbe
 	set_physics_process(true)
 
 
+## The Archer's weapon, or [code]null[/code] for another specialization (or before [method equip]).
+func archer_weapon() -> ArcherWeapon:
+	return _archer
+
+
+## The elemental weapon (fire or water), or [code]null[/code] for another specialization (or before [method equip]).
+func elemental_weapon() -> ElementalWeapon:
+	return _elemental
+
+
 func _physics_process(delta: float) -> void:
 	# get_vector caps the length at 1, so diagonals are as fast as straight lines;
 	# with no key held it returns zero and the hero stops.
