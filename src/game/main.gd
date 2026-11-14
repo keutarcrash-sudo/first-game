@@ -20,6 +20,7 @@ const PROCS_PATH := "res://assets/data/procs.json"
 const CARDS_PATH := "res://assets/data/cards.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
+const ABILITIES_PATH := "res://assets/data/abilities.json"
 const SAVE_PATH := "user://progress.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
@@ -41,6 +42,8 @@ var _progress: SaveProgress
 var _death_screen: DeathScreen
 var _path_view: PathView
 var _camera: GameCamera
+var _ability_catalog: AbilityCatalog
+var _caster: AbilityCaster
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -61,8 +64,9 @@ func _ready() -> void:
 	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
 	_specs = null if rules == null else SpecializationCatalog.load_from_file(SPECS_PATH, rules)
 	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
+	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
-	if _skill_tree == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -119,6 +123,10 @@ func _ready() -> void:
 	_hud.bind_tower_build(towers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
+	_caster = AbilityCaster.new()
+	add_child(_caster)
+	_caster.setup(_state, _hero, _enemies, _bullets, _field_rect, modifiers, rules)
+	_hud.bind_abilities(_caster)
 	_death_screen = DeathScreen.new()
 	add_child(_death_screen)
 	_death_screen.setup(_skill_tree)
@@ -154,6 +162,7 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	if spec.freeze_duration > 0.0:
 		_modifiers.enable_freeze(spec.freeze_duration, spec.freeze_cooldown)
 	_hero.equip(spec, _modifiers, _rng)
+	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)
 	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)
 	if _skill_tree.has_start_card_choice(owned):

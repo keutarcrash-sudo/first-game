@@ -95,6 +95,16 @@ Chaque vague demande donc une ligne de tours plus longue, pour plus d'ennemis, a
 
 ---
 
+### 3.5 Compétences actives des spécialisations (validé le 2026-11-14)
+
+| Spé | Clic droit | A | E | R (ultime) |
+|---|---|---|---|---|
+| Archer | **Flèche perforante** : ligne droite qui traverse tout, dégâts ×3, marque les ennemis touchés (6 s) | **Roulade** : saut dans la direction du mouvement, la flèche suivante est critique (5 s) | **Pluie de flèches** : zone sous la souris criblée 3 s (12 s) | **Œil du chasseur** : 8 s, ennemis à l'écran marqués, tous les tirs critiques (60 s) |
+| Maître du feu | **Boule de feu** : explose en zone et enflamme (5 s) | **Bond enflammé** : saut qui laisse une traînée de flammes (6 s) | **Mur de feu** : ligne de flammes 4 s qui enflamme ceux qui la traversent (12 s) | **Météore** : énorme explosion sous la souris après 1 s d'annonce (60 s) |
+| Maître de l'eau | **Vague** : cône devant le héros qui repousse et trempe (6 s) | **Glissade** : saut qui trempe les ennemis sur le passage (6 s) | **Flaque** : zone 5 s qui trempe et ralentit ; près d'une tour de glace, gèle (12 s) | **Raz-de-marée** : ennemis à l'écran trempés puis gelés 2 s (60 s) |
+
+Recharges entre parenthèses (données). Déblocage pendant la partie : clic droit dès le départ ; A, E puis R proposés comme choix de fin de vague après les vagues 2, 4 et 6 (le R passera après le premier boss quand les boss existeront). Construction en deux morceaux : **3a** (système, affichage des touches et recharges, clic droit des 3 spés) puis **3b** (A, E, R et leur déblocage).
+
 ## 4. Économie et progression pendant une partie
 
 ### 4.1 L'or
