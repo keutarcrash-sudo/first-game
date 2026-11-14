@@ -231,6 +231,7 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 		return false
 	_frozen_left = duration
 	_freeze_cooldown_after = cooldown
+	_push_left = 0.0  # A frozen enemy stops dead, even mid-push.
 	queue_redraw()
 	return true
 
@@ -254,8 +255,11 @@ func push(offset: Vector2, duration: float, bounds: Rect2 = Rect2()) -> void:
 func _move_pushed(step: Vector2) -> void:
 	var target: Vector2 = global_position + step
 	if _push_bounds.has_area():
-		target.x = clampf(target.x, _push_bounds.position.x, _push_bounds.end.x)
-		target.y = clampf(target.y, _push_bounds.position.y, _push_bounds.end.y)
+		# Shrunk by the radius so the whole body stays in the field.
+		var inner: Rect2 = _push_bounds.grow(-_radius)
+		if inner.has_area():
+			target.x = clampf(target.x, inner.position.x, inner.end.x)
+			target.y = clampf(target.y, inner.position.y, inner.end.y)
 	global_position = target
 
 

@@ -85,6 +85,13 @@ func _explode() -> void:
 	if _exploded or is_queued_for_deletion():
 		return
 	_exploded = true
+	# The last step may have overshot the range or left the field: put the blast back inside.
+	if _travelled > _range and _velocity != Vector2.ZERO:
+		global_position -= _velocity.normalized() * (_travelled - _range)
+	if _field_rect.has_area():
+		global_position = Vector2(
+			clampf(global_position.x, _field_rect.position.x, _field_rect.end.x),
+			clampf(global_position.y, _field_rect.position.y, _field_rect.end.y))
 	_velocity = Vector2.ZERO
 	if _enemies != null:
 		for child: Node in _enemies.get_children():
