@@ -41,6 +41,10 @@ var _frozen_left := 0.0  # Seconds of « gelé » remaining: the enemy cannot mo
 var _freeze_cooldown_left := 0.0  # Seconds during which the enemy cannot be frozen again.
 var _freeze_cooldown_after := 0.0  # Cooldown that starts when the current freeze ends.
 
+var _push_left := 0.0  # Seconds of push remaining (étape 3a, Vague).
+var _push_velocity := Vector2.ZERO  # Pixels per second added to the walk while pushed.
+var _push_bounds := Rect2()  # Global rect the pushed enemy stays in; no area = unbounded.
+
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
 var _crystal: Crystal
@@ -112,6 +116,10 @@ func _physics_process(delta: float) -> void:
 		if _frozen_left <= 0.0:
 			_freeze_cooldown_left = _freeze_cooldown_after
 			queue_redraw()
+	if _push_left > 0.0:
+		var push_time: float = minf(delta, _push_left)
+		_push_left -= push_time
+		_move_pushed(_push_velocity * push_time)
 	# The crystal moves, so the target is read again every frame.
 	var target: Vector2 = _crystal.global_position
 	if _frozen_left <= 0.0:
@@ -225,6 +233,30 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 	_freeze_cooldown_after = cooldown
 	queue_redraw()
 	return true
+
+
+## Shoves the enemy by [param offset] pixels, spread over [param duration] seconds, on top
+## of its walk (étape 3a, Vague). Does nothing while frozen. A new push replaces the
+## current one. While pushed, the position stays inside [param bounds] (a global rect)
+## unless it has no area, in which case it is not limited.
+func push(offset: Vector2, duration: float, bounds: Rect2 = Rect2()) -> void:
+	if is_queued_for_deletion() or _frozen_left > 0.0:
+		return
+	_push_bounds = bounds
+	if duration <= 0.0:
+		_push_left = 0.0
+		_move_pushed(offset)
+		return
+	_push_velocity = offset / duration
+	_push_left = duration
+
+
+func _move_pushed(step: Vector2) -> void:
+	var target: Vector2 = global_position + step
+	if _push_bounds.has_area():
+		target.x = clampf(target.x, _push_bounds.position.x, _push_bounds.end.x)
+		target.y = clampf(target.y, _push_bounds.position.y, _push_bounds.end.y)
+	global_position = target
 
 
 ## Removes [param amount] hit points; the enemy is freed at zero.

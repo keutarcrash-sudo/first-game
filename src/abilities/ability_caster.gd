@@ -92,6 +92,34 @@ func _cast(def: AbilityDef) -> void:
 	match def.type:
 		"piercing_arrow":
 			_cast_piercing_arrow(def)
+		"fireball":
+			_cast_fireball(def)
+		"water_wave":
+			_cast_water_wave(def)
+
+
+func _direction_to_mouse() -> Vector2:
+	var to_mouse: Vector2 = _hero.get_global_mouse_position() - _hero.global_position
+	return to_mouse.normalized() if to_mouse != Vector2.ZERO else Vector2.RIGHT
+
+
+func _cast_fireball(def: AbilityDef) -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	var burn_duration: float = weapon.burn_duration() if weapon != null else 0.0
+	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
+	var fireball := Fireball.new()
+	fireball.setup(def, _direction_to_mouse(), _field_rect, _enemies, float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps)
+	_bullets.add_child(fireball)
+	fireball.global_position = _hero.global_position
+
+
+func _cast_water_wave(def: AbilityDef) -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	var wet_duration: float = weapon.wet_duration() if weapon != null else 0.0
+	var wave := WaterWave.new()
+	wave.setup(def, _direction_to_mouse(), _enemies, float(def.values["damage"]) * _modifiers.damage_multiplier(), wet_duration, _field_rect)
+	_bullets.add_child(wave)
+	wave.global_position = _hero.global_position
 
 
 func _cast_piercing_arrow(def: AbilityDef) -> void:
