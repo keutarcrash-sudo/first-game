@@ -6,6 +6,6 @@
 	"bullet_speed": 700.0,
 	"bullet_max_range": 600.0,
 	"bullet_radius": 5.0,
-	"arena_width": 1200.0,
-	"arena_height": 660.0
+	"arena_width": 2400.0,
+	"arena_height": 1600.0
 }

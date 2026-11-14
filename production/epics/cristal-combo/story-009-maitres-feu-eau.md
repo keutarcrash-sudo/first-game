@@ -1,12 +1,12 @@
 # Story 009: Maître du feu et Maître de l'eau
 
 > **Epic**: Cristal Combo
-> **Status**: In Progress
+> **Status**: Complete
 > **Layer**: Feature
 > **Type**: Integration
 > **Estimate**: L
 > **Manifest Version**: N/A (minimal — no control manifest)
-> **Last Updated**: 2026-11-01
+> **Last Updated**: 2026-11-07
 
 ## Context
 
@@ -94,3 +94,12 @@
 
 - Depends on: `production/epics/cristal-combo/story-008-specialisations-archer.md`
 - Unlocks: `production/epics/cristal-combo/story-010-maitres-terre-vent.md`
+
+---
+
+## Completion Notes
+**Completed**: 2026-11-07
+**Criteria**: 8/8 passing. AC-1 to AC-6 and AC-8 confirmed by the user (AC-1, AC-3, AC-4 and the cards of AC-6 also visible in the retained screenshots); AC-7 checked by looking at `specializations.json` (maitre_feu fire_bolts, maitre_eau water_jets + freeze 2 s / cooldown 3 s), `cards.json` (3 fire + 4 water cards with `requires_spec`), `procs.json` (`feu_canon`), `skill_tree.json` (two `unlock_spec` nodes, 15 points).
+**Deviations**: None. Scope not checked: no uncommitted changes to compare. The « Bientôt » placeholder was removed from `skill_tree.json`. Open points: mouse-wheel scrolling of the « Spécialisations » column not yet verified (2 nodes do not need to scroll); « Jet puissant » reuses `damage_bonus` so it also boosts cannons and hero damage — decide in story 013.
+**Test Evidence**: waived at qa.level minimal; retained screenshots `production/qa/evidence/story-009-maitres-feu-eau/defaite-specialisations-feu-eau.png` and `maitre-eau-ennemi-gele.png`. Run result: OBSERVED — game launched by the user on Windows/Godot 4.7.2; defeat screen with Maître du feu (owned) and Maître de l'eau (15 points) in the « Spécialisations » column; a Maître de l'eau game with wet (purple) enemies and a frozen enemy inside a frost tower's range.
+**Reviewed by**: self, no independent review

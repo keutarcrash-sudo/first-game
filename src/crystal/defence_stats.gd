@@ -8,6 +8,7 @@ const REQUIRED_KEYS := [
 	"crystal_max_hp", "crystal_radius",
 	"enemy_base_hp", "enemy_speed", "enemy_contact_damage", "enemy_radius",
 	"spawn_margin", "hero_start_gap",
+	"crystal_speed", "spawn_distance",
 ]
 
 ## Crystal hit points at the start of the game.
@@ -27,6 +28,11 @@ var enemy_radius: float
 var spawn_margin: float
 ## Free space in pixels between the crystal and the hero's starting position.
 var hero_start_gap: float
+## Crystal travelling speed along its path, in pixels per second. Keep it
+## below enemy_speed so the enemies can catch up with the crystal.
+var crystal_speed: float
+## Distance in pixels, measured along the crystal's path, at which enemies spawn.
+var spawn_distance: float
 
 
 ## Reads and validates the JSON file at [param path]. Returns [code]null[/code]
@@ -57,4 +63,6 @@ static func load_from_file(path: String) -> DefenceStats:
 	stats.enemy_radius = data["enemy_radius"]
 	stats.spawn_margin = data["spawn_margin"]
 	stats.hero_start_gap = data["hero_start_gap"]
+	stats.crystal_speed = data["crystal_speed"]
+	stats.spawn_distance = data["spawn_distance"]
 	return stats
