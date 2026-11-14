@@ -14,5 +14,8 @@
 		"range": 150.0,
 		"radius": 18.0,
 		"slow_factor": 0.45
+	},
+	"designation": {
+		"click_margin": 12.0
 	}
 }

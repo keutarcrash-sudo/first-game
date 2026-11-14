@@ -145,6 +145,11 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, _radius + MARKED_RING_GAP, 0.0, TAU, BURNING_RING_POINTS, MARKED_COLOR, MARKED_RING_WIDTH)
 
 
+## Body radius in pixels.
+func radius() -> float:
+	return _radius
+
+
 ## Asks for a slow to [param factor] (a fraction of normal speed, 0.45 = 45 %)
 ## for the next physics step only. Towers call it every physics frame while the
 ## enemy is in range; several callers do not stack, the lowest factor wins.

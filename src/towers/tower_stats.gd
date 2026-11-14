@@ -15,6 +15,7 @@ const CANNON_KEYS := [
 	"bullet_speed", "bullet_radius", "bullet_max_range",
 ]
 const FROST_KEYS := ["cost", "range", "radius", "slow_factor"]
+const DESIGNATION_KEYS := ["click_margin"]
 
 ## Cannon price, in gold.
 var cannon_cost: int
@@ -40,6 +41,8 @@ var frost_range: float
 var frost_radius: float
 ## Fraction of normal speed kept by a slowed enemy, in ]0, 1].
 var frost_slow_factor: float
+## Extra distance in pixels around an enemy's body within which a left click designates it.
+var designation_click_margin: float
 
 
 ## Price in gold of a tower of [param kind].
@@ -70,7 +73,8 @@ static func load_from_file(path: String) -> TowerStats:
 		return null
 	var cannon: Dictionary = _read_section(data, "cannon", CANNON_KEYS, path)
 	var frost: Dictionary = _read_section(data, "frost", FROST_KEYS, path)
-	if cannon.is_empty() or frost.is_empty():
+	var designation: Dictionary = _read_section(data, "designation", DESIGNATION_KEYS, path)
+	if cannon.is_empty() or frost.is_empty() or designation.is_empty():
 		return null
 	if frost["slow_factor"] > 1.0:
 		push_error("TowerStats: key 'frost.slow_factor' in '%s' must be at most 1 (got %s)." % [path, frost["slow_factor"]])
@@ -88,6 +92,7 @@ static func load_from_file(path: String) -> TowerStats:
 	stats.frost_range = frost["range"]
 	stats.frost_radius = frost["radius"]
 	stats.frost_slow_factor = frost["slow_factor"]
+	stats.designation_click_margin = designation["click_margin"]
 	return stats
 
 
