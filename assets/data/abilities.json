@@ -1,0 +1,10 @@
+{
+	"abilities": [
+		{ "id": "fleche_perforante", "spec_id": "archer", "slot": "primary", "display_name": "Flèche perforante", "cooldown": 6.0,
+		  "type": "piercing_arrow", "values": { "damage": 42.0, "speed": 1100.0, "range": 1200.0, "radius": 9.0 } },
+		{ "id": "boule_de_feu", "spec_id": "maitre_feu", "slot": "primary", "display_name": "Boule de feu", "cooldown": 5.0,
+		  "type": "fireball", "values": { "damage": 30.0, "explosion_radius": 110.0, "speed": 600.0, "range": 700.0, "radius": 10.0 } },
+		{ "id": "vague", "spec_id": "maitre_eau", "slot": "primary", "display_name": "Vague", "cooldown": 6.0,
+		  "type": "water_wave", "values": { "damage": 12.0, "angle_degrees": 70.0, "range": 260.0, "push_distance": 140.0, "push_duration": 0.2 } }
+	]
+}
