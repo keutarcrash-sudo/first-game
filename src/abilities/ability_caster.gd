@@ -16,6 +16,13 @@ const ACTIONS := {
 
 const ARROW_RAIN_COLOR := Color(1.0, 0.95, 0.6)
 const PUDDLE_COLOR := Color(0.55, 0.85, 1.0)
+const HUNTER_EYE_COLOR := Color(1.0, 0.9, 0.1)
+const HUNTER_EYE_RING_GAP := 8.0  # Pixels between the hero's body and the yellow outline.
+const HUNTER_EYE_RING_WIDTH := 3.0
+const HUNTER_EYE_RING_POINTS := 32
+const TIDAL_FLASH_COLOR := Color(0.55, 0.85, 1.0, 0.6)
+const TIDAL_FLASH_DURATION := 0.3
+const HERO_RING_FALLBACK_RADIUS := 16.0
 
 var _state: GameState
 var _hero: Hero
@@ -29,6 +36,9 @@ var _cooldowns: Dictionary = {}  # { slot: seconds left }
 var _unlocked: Dictionary = {}  # { slot: true } for the slots that can be cast
 var _wet_dash_radius := 0.0  # > 0 while a dash_wet jump is in progress.
 var _wet_dash_done: Dictionary = {}  # { enemy instance id: true } already soaked by this jump
+var _eye_left := 0.0  # Seconds of Œil du chasseur remaining; 0 = not active.
+var _eye_ring: Node2D  # Yellow outline around the hero while the eye is active.
+var _meteors: Array[Meteor] = []  # Announced or exploding meteors, freed when COMBAT ends.
 
 
 ## Gives the caster what the abilities need: [param bullets] is where projectiles are
@@ -98,6 +108,11 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 			_hero.dash_finished.disconnect(connection["callable"])
 	_wet_dash_radius = 0.0
 	_wet_dash_done.clear()
+	_end_hunter_eye()
+	for meteor: Meteor in _meteors:
+		if is_instance_valid(meteor):
+			meteor.queue_free()
+	_meteors.clear()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -121,6 +136,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	if _wet_dash_radius > 0.0:
 		_soak_near_hero()
+	if _eye_left > 0.0:
+		_tick_hunter_eye(delta)
 	if _state == null or _state.phase != GameState.Phase.COMBAT:
 		return
 	var changed := false
@@ -150,6 +167,18 @@ func _cast(def: AbilityDef) -> void:
 			_cast_fire_wall(def)
 		"puddle":
 			_cast_puddle(def)
+		"dash_crit":
+			_cast_dash_crit(def)
+		"dash_fire_trail":
+			_cast_dash_fire_trail(def)
+		"dash_wet":
+			_cast_dash_wet(def)
+		"hunter_eye":
+			_cast_hunter_eye(def)
+		"meteor":
+			_cast_meteor(def)
+		"tidal_wave":
+			_cast_tidal_wave(def)
 
 
 ## The mouse position brought back to [param max_range] from the hero, then into the field
@@ -320,3 +349,102 @@ func _cast_piercing_arrow(def: AbilityDef) -> void:
 	arrow.setup(def, direction, _field_rect, float(def.values["damage"]) * _modifiers.damage_multiplier(), mark)
 	_bullets.add_child(arrow)
 	arrow.global_position = _hero.global_position
+
+
+## Enemies alive inside the rectangle the camera shows now (the viewport rectangle
+## brought back to world space by the inverse canvas transform).
+func _enemies_on_screen() -> Array[Enemy]:
+	var result: Array[Enemy] = []
+	if _enemies == null or not is_inside_tree():
+		return result
+	var viewport := get_viewport()
+	var screen_rect: Rect2 = viewport.get_canvas_transform().affine_inverse() * viewport.get_visible_rect()
+	for child: Node in _enemies.get_children():
+		var enemy := child as Enemy
+		if enemy != null and not enemy.is_queued_for_deletion() and screen_rect.has_point(enemy.global_position):
+			result.append(enemy)
+	return result
+
+
+## Œil du chasseur: every normal shot is critical and every enemy on screen stays marked
+## for [code]duration[/code] seconds. Casting again restarts the timer.
+func _cast_hunter_eye(def: AbilityDef) -> void:
+	var weapon: ArcherWeapon = _hero.archer_weapon()
+	if weapon != null:
+		weapon.set_always_crit(true)
+	_eye_left = float(def.values["duration"])
+	if _eye_ring == null or not is_instance_valid(_eye_ring):
+		_eye_ring = Node2D.new()
+		_eye_ring.draw.connect(_draw_eye_ring)
+		_hero.add_child(_eye_ring)
+	_mark_on_screen()
+
+
+func _draw_eye_ring() -> void:
+	_eye_ring.draw_arc(Vector2.ZERO, HERO_RING_FALLBACK_RADIUS + HUNTER_EYE_RING_GAP, 0.0, TAU, HUNTER_EYE_RING_POINTS, HUNTER_EYE_COLOR, HUNTER_EYE_RING_WIDTH)
+
+
+func _tick_hunter_eye(delta: float) -> void:
+	if _state == null or _state.phase != GameState.Phase.COMBAT:
+		_end_hunter_eye()
+		return
+	_eye_left -= delta
+	if _eye_left <= 0.0:
+		_end_hunter_eye()
+		return
+	_mark_on_screen()
+
+
+## Marks the enemies on screen for the time the eye has left (refreshed every frame).
+func _mark_on_screen() -> void:
+	for enemy: Enemy in _enemies_on_screen():
+		enemy.apply_mark(_eye_left)
+
+
+func _end_hunter_eye() -> void:
+	_eye_left = 0.0
+	if _hero != null:
+		var weapon: ArcherWeapon = _hero.archer_weapon()
+		if weapon != null:
+			weapon.set_always_crit(false)
+	if _eye_ring != null and is_instance_valid(_eye_ring):
+		_eye_ring.queue_free()
+	_eye_ring = null
+
+
+func _cast_meteor(def: AbilityDef) -> void:
+	var radius: float = float(def.values["radius"])
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	var burn_duration: float = weapon.burn_duration() if weapon != null else 0.0
+	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
+	var meteor := Meteor.new()
+	meteor.setup(radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps, _enemies)
+	_bullets.add_child(meteor)
+	meteor.global_position = _target_point(float(def.values["max_range"]), radius)
+	meteor.tree_exited.connect(_meteors.erase.bind(meteor))
+	_meteors.append(meteor)
+
+
+## Raz-de-marée: soaks then freezes every enemy on screen, with a short light-blue flash.
+func _cast_tidal_wave(def: AbilityDef) -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	var wet_duration: float = weapon.wet_duration() if weapon != null else 0.0
+	var freeze_duration: float = float(def.values["freeze_duration"])
+	for enemy: Enemy in _enemies_on_screen():
+		enemy.apply_wet(wet_duration)
+		enemy.force_freeze(freeze_duration)
+	_flash_screen()
+
+
+## A full-screen colour that fades out, on its own CanvasLayer (screen space).
+func _flash_screen() -> void:
+	var layer := CanvasLayer.new()
+	var rect := ColorRect.new()
+	rect.color = TIDAL_FLASH_COLOR
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(rect)
+	add_child(layer)
+	var tween := layer.create_tween()
+	tween.tween_property(rect, "modulate:a", 0.0, TIDAL_FLASH_DURATION)
+	tween.tween_callback(layer.queue_free)

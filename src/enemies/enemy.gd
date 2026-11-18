@@ -236,6 +236,19 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 	return true
 
 
+## Freezes the enemy for [param duration] seconds whatever its freeze cooldown or
+## wetness (étape 3b, Raz-de-marée); same look and rules as [method try_freeze]. A
+## freeze already running is only extended, never shortened. The cooldown that
+## follows the freeze is left unchanged.
+func force_freeze(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	_frozen_left = maxf(_frozen_left, duration)
+	_freeze_cooldown_left = 0.0
+	_push_left = 0.0
+	queue_redraw()
+
+
 ## Shoves the enemy by [param offset] pixels, spread over [param duration] seconds, on top
 ## of its walk (étape 3a, Vague). Does nothing while frozen. A new push replaces the
 ## current one. While pushed, the position stays inside [param bounds] (a global rect)
