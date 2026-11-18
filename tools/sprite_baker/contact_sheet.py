@@ -26,30 +26,35 @@ def main() -> None:
             continue
         with open(path, encoding="utf-8") as f:
             sheet = json.load(f)
-        cw, ch = sheet["cell"]
         dirs = sheet["directions"]
-        cols = []
+        cols = []  # (label, image, frame, cw, ch, ax, ay)
         for name, anim in sheet["animations"].items():
             img = Image.open(os.path.join(SPRITES, item, anim["file"])).convert("RGBA")
+            cw, ch = anim.get("cell", sheet["cell"])
+            ax, ay = anim.get("anchor", sheet["anchor"])
             n = anim["frames"]
             for fi in sorted({0, n // 2, n - 1}):
-                cols.append((name + " " + str(fi), img, fi))
-        w = LABEL_W + cw * len(cols)
-        h = TITLE_H + ch * dirs
+                cols.append((name + " " + str(fi), img, fi, cw, ch, ax, ay))
+        # hauteur de ligne : les ancrages de toutes les colonnes tombent sur la meme ligne
+        top = max(c[6] for c in cols)
+        row_h = top + max(c[4] - c[6] for c in cols)
+        w = LABEL_W + sum(c[3] for c in cols)
+        h = TITLE_H + row_h * dirs
         sec = Image.new("RGBA", (w, h), BG)
         d = ImageDraw.Draw(sec)
         d.text((4, 4), item, fill=(255, 255, 255, 255))
-        for ci, (label, img, fi) in enumerate(cols):
-            x = LABEL_W + ci * cw
+        x = LABEL_W
+        for ci, (label, img, fi, cw, ch, ax, ay) in enumerate(cols):
             d.text((x + 4, 4 + 8 * (ci % 2)), label, fill=(255, 226, 59, 255))
             for k in range(dirs):
                 cell = img.crop((fi * cw, k * ch, (fi + 1) * cw, (k + 1) * ch))
-                sec.alpha_composite(cell, (x, TITLE_H + k * ch))
-                # repere d'ancrage
-                ax, ay = sheet["anchor"]
-                d.point((x + ax, TITLE_H + k * ch + ay), fill=(255, 0, 0, 255))
+                oy = TITLE_H + k * row_h + top - ay
+                sec.alpha_composite(cell, (x, oy))
+                # repere d'ancrage (position de jeu)
+                d.point((x + ax, TITLE_H + k * row_h + top), fill=(255, 0, 0, 255))
+            x += cw
         for k in range(dirs):
-            d.text((10, TITLE_H + k * ch + ch // 2), str(k), fill=(255, 255, 255, 255))
+            d.text((10, TITLE_H + k * row_h + row_h // 2), str(k), fill=(255, 255, 255, 255))
         sections.append(sec)
     width = max(s.width for s in sections)
     height = sum(s.height for s in sections)
