@@ -1,7 +1,7 @@
 # Passe graphique 1 — Néon pop : Design
 
 > **Date** : 2026-11-18
-> **Statut** : en relecture par l'utilisateur
+> **Statut** : approuvé par l'utilisateur le 2026-11-18 (« partons là-dessus pour l'instant »), après l'essai de la fabrique https://claude.ai/artifact/99ZfLAAZtsfi5tmssEG3NX
 > **Contexte** : l'étape 4 du design v2 (danger pour le héros) est mise en pause à la demande de l'utilisateur, qui veut explorer l'univers graphique.
 > **Design de référence du jeu** : `docs/superpowers/specs/2026-11-13-cristal-combo-v2-design.md`
 
@@ -25,7 +25,8 @@ Ce qui compte pour l'utilisateur :
 - **Tremblement d'écran et arrêt sur image** : à ajouter.
 - **Personnages 3D gratuits** plutôt que dessin par le code ou IA payante : pack *Ultimate Animated Character Pack* de Quaternius (fourni par l'utilisateur) et *Tower Defense Kit* de Kenney (fourni, licence CC0 lue dans son `License.txt`).
 - **Rendu validé** sur l'aperçu https://claude.ai/artifact/VyRY9yZ1tZ3qdvZ6trBJrS (personnages recolorés néon, aplats en 3 tons, contour noir, halo au sol).
-- **Caméra « tout à fait de dessus »** (verticale), choisie parmi trois angles.
+- **Caméra inclinée (environ 50°)**. La vue « tout à fait de dessus » a d'abord été choisie, puis abandonnée après l'essai de la fabrique : de pile au-dessus, les héros ne montraient que leur chapeau. Vue en biais validée par l'utilisateur.
+- **Cristal et tour de glace fabriqués sur mesure** (formes 3D simples générées par la fabrique) : le cristal et la tour à cristaux du pack Kenney ne ressemblaient à rien ; versions sur mesure validées (gemme cyan à facettes sur un chariot à phares ; socle Kenney violet + pic de glace + anneau de givre).
 - **Approche C** (voir section 3).
 - **Ne garder que les fichiers utilisés** des packs.
 
@@ -35,7 +36,7 @@ Ce qui compte pour l'utilisateur :
 |---|---|---|---|
 | A. Jeu en 3D | Monde 3D, caméra fixe au-dessus | Fidèle à l'aperçu, animations fluides | Réécriture d'une grande partie du code (déplacements, collisions, tirs, zones, caméra), plus lourd en navigateur |
 | B. 3D dans le jeu 2D | Chaque personnage 2D contient une petite vue 3D | Peu de code changé | Très lent avec beaucoup d'ennemis, surtout en navigateur |
-| **C. 3D → images 2D (choisie)** | Photographier chaque modèle d'en haut, avec le rendu néon BD, image par image pour chaque animation ; le jeu 2D affiche ces planches et les fait pivoter | Le code de jeu reste en 2D, léger, personnages animés et cohérents, fabrication automatique | Changer d'angle de caméra demande de refaire les images (accepté : vue de dessus définitive) |
+| **C. 3D → images 2D (choisie)** | Photographier chaque modèle en biais (environ 50°), avec le rendu néon BD, image par image pour chaque animation et chacune des 8 directions ; le jeu 2D affiche l'image de la direction la plus proche | Le code de jeu reste en 2D, léger, personnages animés, détaillés et cohérents, fabrication automatique | 8 fois plus d'images (toujours légères) ; changer d'angle demande de relancer la fabrique |
 
 ## 4. Objectifs
 
@@ -90,13 +91,16 @@ Les modèles Kenney n'ont pas de matériaux par couleur : ils lisent leurs coule
 
 Fichiers gardés (format GLB uniquement) :
 
-- **Tours** : `tower-round-bottom-a`, `tower-round-middle-a`, `tower-round-top-a`, `tower-square-bottom-a`, `tower-square-middle-a`, `tower-square-top-a`, `tower-round-crystals`.
-- **Armes de tour** : `weapon-cannon`, `weapon-turret`, `weapon-ballista`, `weapon-catapult`.
-- **Cristal** : `detail-crystal-large`, `detail-crystal`.
+- **Canon** : socle `tower-round-bottom-a` + `tower-round-middle-a`, arme `weapon-cannon`.
+- **Socle de la tour de glace** : `tower-square-bottom-a` + `tower-square-middle-a` (le haut est fabriqué sur mesure).
 - **Ennemis volants pour plus tard** : `enemy-ufo-a` à `enemy-ufo-d`.
 - `Textures/colormap.png` et `License.txt`.
 
-Écartés : tuiles, neige, arbres, rochers, terre, structures en bois, sélecteurs, munitions.
+**Recolorage** : chaque pièce reçoit sa propre version néon de la palette (teinte unique par pièce, gris → violet foncé) : socles violets, arme du canon orange.
+
+**Fabriqués sur mesure par la fabrique** (formes 3D simples, même rendu) : le **cristal** (grande gemme cyan à facettes avec deux éclats, sur un chariot orange à roues et phares jaunes) et le **haut de la tour de glace** (grand pic de glace blanc-cyan, petits éclats, anneau de givre).
+
+Écartés : tuiles, neige, arbres, rochers, terre, cristaux, toits, autres armes, structures en bois, sélecteurs, munitions.
 
 ### 8.3 Polices
 
@@ -108,9 +112,9 @@ Bangers (titres, onomatopées) et Bungee (chiffres, nombres) depuis Google Fonts
 
 - Programme Node.js qui ouvre une page dans Chromium sans écran (Playwright, déjà installé dans la session) et y charge three.js (version 0.147, installée par npm dans `tools/sprite_baker/`, pas depuis un CDN).
 - Une **recette** JSON (`tools/sprite_baker/recipes.json`) décrit chaque image à fabriquer : modèle source, palette (par matériau pour Quaternius, image de palette pour Kenney), animations, nombre d'images par seconde, taille de case.
-- Rendu : caméra **orthographique verticale** (de dessus), aplats en 3 tons, contour noir épais, fond transparent ; le modèle regarde vers la **droite** (+X) dans l'image, pour que le jeu n'ait qu'à faire pivoter l'image vers l'angle visé.
+- Rendu : caméra **orthographique inclinée d'environ 50°**, aplats en 3 tons, contour noir épais, fond transparent. Chaque animation est photographiée dans **8 directions** (tous les 45°, la direction 0 regardant vers la droite de l'écran). Point d'ancrage de chaque image : les pieds (ou la base) de l'objet.
 - Sortie, par élément : une planche PNG par animation (cases alignées sur une ligne) et un fichier JSON de description (taille de case, nombre d'images, images par seconde, boucle ou non, point d'ancrage) dans `assets/sprites/<élément>/`.
-- Les tours sont rendues en **deux images** : le socle (fixe) et l'arme (qui pivote vers la cible), plus une petite variation de tir si utile. Le cristal est une image fixe.
+- Le **canon** est rendu tour + arme assemblés, dans les 8 directions de l'arme ; la **tour de glace** est une image fixe (son anneau peut tourner en jeu) ; le **cristal** est une image fixe.
 - Lancement documenté dans `tools/sprite_baker/README.md` ; le résultat est commité, la fabrique n'est relancée que pour changer une couleur ou ajouter une animation.
 
 ### 9.2 Où vont les fichiers
@@ -123,11 +127,11 @@ Bangers (titres, onomatopées) et Bungee (chiffres, nombres) depuis Google Fonts
 ### 9.3 Dans le jeu
 
 - **Personnages animés** : un composant d'affichage lit le JSON d'une planche et anime les images. Le héros joue *course* quand il bouge et *repos* sinon, *tir* au moment d'un tir (par-dessus la course), *roulade* pendant un saut, *coup reçu* quand il est touché (prévu pour l'étape 4), *mort* à la défaite. L'ennemi joue *course* en marchant, *frappe* au contact du cristal, *coup reçu* quand il prend des dégâts.
-- **Orientation** : l'image du héros pivote vers la souris ; celle de l'ennemi vers sa direction de marche.
+- **Orientation** : le jeu affiche, parmi les 8 directions, celle la plus proche de la souris (héros) ou de la direction de marche (ennemi) ; les images ne pivotent pas.
 - **Mort des ennemis** : l'ennemi est retiré du jeu comme aujourd'hui (logique inchangée), et une **image de mort** séparée joue l'animation de mort à sa place puis disparaît ; elle n'a aucun effet sur le jeu.
 - **États** : les marques actuelles (brûle, trempé, gelé, marqué, ralenti, cible désignée) restent dessinées **par-dessus** l'image, adaptées au style (contour noir, couleurs néon) pour rester lisibles.
-- **Tours** : socle fixe + arme qui pivote vers sa cible (canon) ou tourne doucement (glace) ; halo de couleur au sol.
-- **Cristal** : image du cristal Kenney qui flotte légèrement, halo cyan qui pulse.
+- **Tours** : le canon affiche la direction la plus proche de sa cible ; la tour de glace est fixe ; halo de couleur au sol.
+- **Cristal** : image du chariot à cristal, halo cyan qui pulse.
 - **Sol et trajet** : fond violet nuit avec trame de points (motif répété), trajet bordé de noir avec pointillés cyan lumineux, comme la maquette C.
 - **Effets de sorts** : les explosions (Boule de feu, Météore) et les zones gardent leurs formes actuelles mais au style néon pop ; les grosses explosions ajoutent une **étoile** remplie de points et une **onomatopée** (« BOUM ! », « POW ! ») ; les coups critiques affichent « CRIT ! ».
 - **Affichage** : lettres de BD (Bangers / Bungee), contours noirs, cases de compétences sombres à liseré néon.
@@ -136,7 +140,7 @@ Bangers (titres, onomatopées) et Bungee (chiffres, nombres) depuis Google Fonts
 
 ### 9.4 Précisions (relecture du design)
 
-- **Caméra de la fabrique** : vraiment verticale (90°), comme la vue « tout à fait de dessus » validée sur l'aperçu. *(réponse de l'utilisateur)*
+- **Caméra de la fabrique** : inclinée d'environ 50°, 8 directions. *(réponse de l'utilisateur, après l'essai)*
 - **Taille à l'écran** *(choix de Claude)* : les zones de collision et les rayons de jeu actuels ne changent pas ; l'image d'un personnage peut déborder un peu de son rayon (de l'ordre de 2 à 2,5 fois le rayon) pour être lisible. Cases des planches entre 64 et 96 px, choisies pour rester nettes à cette taille.
 - **Performance** *(choix de Claude)* : rester fluide dans le navigateur avec une soixantaine d'ennemis à l'écran (fin de partie actuelle) ; une image animée par ennemi suffit à cette échelle.
 - **Avant le choix de spécialisation** *(choix de Claude)* : l'écran de choix couvre le terrain ; le héros affiche la planche de l'Archer par défaut et prend celle de sa spé au moment du choix. La spé ne change pas en cours de partie.
@@ -152,7 +156,8 @@ Bangers (titres, onomatopées) et Bungee (chiffres, nombres) depuis Google Fonts
 - Taille exacte des cases des planches (de l'ordre de 128 px) et nombre d'images par seconde, tant que le résultat reste net et léger.
 - Répartition du travail en étapes et en fichiers, structure du composant d'animation.
 - Valeurs précises du tremblement et de l'arrêt sur image (à régler en partie).
-- Composition exacte des tours à partir des pièces Kenney gardées, et couleurs de la palette Kenney néon, dans l'esprit de la maquette C (canon orange, glace cyan, socles violet foncé).
+- Réglage fin des couleurs et des proportions du cristal, des tours et des personnages, dans l'esprit de l'essai validé (le rose des socles peut être adouci vers le violet).
+- Le code de l'essai de la fabrique (spike) est gardé comme référence dans `docs/superpowers/spikes/2026-11-18-sprite-baker-spike.html` (+ `-run.js`) ; il sera réécrit proprement dans `tools/sprite_baker/`.
 
 ## 11. Questions ouvertes
 

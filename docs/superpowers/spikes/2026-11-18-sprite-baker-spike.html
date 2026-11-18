@@ -1,0 +1,140 @@
+<!doctype html><html><head><meta charset="utf-8"></head><body>
+<script src="three.min.js"></script><script src="GLTFLoader.js"></script><script src="OutlineEffect.js"></script>
+<script>
+// Spike: renders models straight from above with a neon comic look into sprite sheets.
+const CELL = 96;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setSize(CELL, CELL); renderer.setPixelRatio(2); renderer.outputEncoding = THREE.sRGBEncoding; renderer.setClearColor(0x000000, 0);
+const effect = new THREE.OutlineEffect(renderer, { defaultThickness: 0.02, defaultColor: [0, 0, 0] });
+const grad = (() => { const d = new Uint8Array([110, 185, 255]); const t = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+function scene0() { const s = new THREE.Scene(); s.add(new THREE.AmbientLight(0xffffff, 0.6)); const d = new THREE.DirectionalLight(0xffffff, 0.85); d.position.set(-2, 8, -3); s.add(d); return s; }
+function cam(half) { const c = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 50); c.position.set(0, 20, 0); c.up.set(0, 0, -1); c.lookAt(0, 0, 0); return c; }
+const loader = new THREE.GLTFLoader();
+const load = (f) => new Promise((ok, ko) => loader.load(f, ok, undefined, ko));
+function toonify(root, colors) {
+  root.traverse((o) => { if (!o.isMesh) return; o.frustumCulled = false; const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const nm = mats.map((m) => { const col = colors && colors[m.name] ? new THREE.Color(colors[m.name]).convertSRGBToLinear() : m.color.clone();
+      const t = new THREE.MeshToonMaterial({ color: col, gradientMap: grad, map: m.map || null }); return t; });
+    o.material = Array.isArray(o.material) ? nm : nm[0]; });
+}
+function neonPalette(img) {
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height); const p = d.data; const tmp = new THREE.Color();
+  for (let i = 0; i < p.length; i += 4) { tmp.setRGB(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255); const hsl = {}; tmp.getHSL(hsl);
+    if (hsl.s < 0.18) { tmp.setHSL(0.73, 0.55, Math.min(0.62, hsl.l * 0.75 + 0.05)); } else { tmp.setHSL(hsl.h, Math.min(1, hsl.s * 1.5 + 0.1), Math.min(0.62, hsl.l * 0.95)); }
+    p[i] = tmp.r * 255; p[i + 1] = tmp.g * 255; p[i + 2] = tmp.b * 255; }
+  x.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = false; t.encoding = THREE.sRGBEncoding; t.magFilter = THREE.NearestFilter; return t;
+}
+async function bakeCharacter(file, colors, anims, frames) {
+  const g = await load(file); const root = g.scene; toonify(root, colors);
+  const box = new THREE.Box3().setFromObject(root); const h = box.max.y - box.min.y; root.scale.setScalar(1.8 / h);
+  root.rotation.y = Math.PI / 2; // model forward (+Z) now points +X = right of the image
+  const s = scene0(); s.add(root); const c = cam(1.05); const mixer = new THREE.AnimationMixer(root); const out = {};
+  for (const name of anims) {
+    const clip = THREE.AnimationClip.findByName(g.animations, name); if (!clip) continue;
+    mixer.stopAllAction(); const a = mixer.clipAction(clip); a.play();
+    const sheet = document.createElement("canvas"); sheet.width = CELL * 2 * frames; sheet.height = CELL * 2; const sx = sheet.getContext("2d");
+    for (let f = 0; f < frames; f++) { mixer.setTime(clip.duration * f / frames); effect.render(s, c); sx.drawImage(renderer.domElement, f * CELL * 2, 0); }
+    out[name] = sheet.toDataURL("image/png");
+  }
+  return out;
+}
+async function bakeStatic(parts, half, palTex, rotY) {
+  const s = scene0(); let y = 0;
+  for (const p of parts) { const g = await load(p); const r = g.scene; r.traverse((o) => { if (o.isMesh) { o.material.map = palTex; } }); toonify(r); r.position.y = y; r.rotation.y = rotY || 0; s.add(r); const b = new THREE.Box3().setFromObject(r); y = b.max.y; }
+  effect.render(s, cam(half)); return renderer.domElement.toDataURL("image/png");
+}
+function camTilt(half, pitchDeg) { const a = pitchDeg * Math.PI / 180; const c = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 80); c.position.set(0, 20 * Math.sin(a), 20 * Math.cos(a)); c.lookAt(0, 0.8, 0); return c; }
+async function bakeDirs(file, colors, anim, pitch, dirs) {
+  const g = await load(file); const root = g.scene; toonify(root, colors);
+  const box = new THREE.Box3().setFromObject(root); root.scale.setScalar(1.8 / (box.max.y - box.min.y));
+  const s = scene0(); s.add(root); const c = camTilt(1.25, pitch); const mixer = new THREE.AnimationMixer(root);
+  const clip = THREE.AnimationClip.findByName(g.animations, anim); mixer.clipAction(clip).play(); mixer.setTime(clip.duration * 0.25);
+  const sheet = document.createElement("canvas"); sheet.width = CELL * 2 * dirs.length; sheet.height = CELL * 2; const sx = sheet.getContext("2d");
+  dirs.forEach((d, i) => { root.rotation.y = d; effect.render(s, c); sx.drawImage(renderer.domElement, i * CELL * 2, 0); });
+  return sheet.toDataURL("image/png");
+}
+function huePalette(img, targetHue, sat) {
+  const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+  const d = x.getImageData(0, 0, c.width, c.height); const p = d.data; const tmp = new THREE.Color();
+  for (let i = 0; i < p.length; i += 4) { tmp.setRGB(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255); const h = {}; tmp.getHSL(h);
+    if (h.s < 0.18) tmp.setHSL(0.74, 0.5, 0.12 + h.l * 0.38); else tmp.setHSL(targetHue, sat, 0.35 + h.l * 0.3);
+    p[i] = tmp.r * 255; p[i + 1] = tmp.g * 255; p[i + 2] = tmp.b * 255; }
+  x.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = false; t.encoding = THREE.sRGBEncoding; t.magFilter = THREE.NearestFilter; return t;
+}
+async function bakeTiltStatic(parts, palTex, half, rotYs, lookY) {
+  const s = scene0(); let y = 0; const roots = [];
+  for (let k = 0; k < parts.length; k++) { const p = parts[k]; const tex = Array.isArray(palTex) ? palTex[k] : palTex; const g = await load(p); const r = g.scene; r.traverse((o) => { if (o.isMesh) o.material.map = tex; }); toonify(r); r.position.y = y; s.add(r); roots.push(r); const b = new THREE.Box3().setFromObject(r); y = b.max.y; }
+  const a = 50 * Math.PI / 180; const c = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 80); c.position.set(0, 20 * Math.sin(a) + lookY, 20 * Math.cos(a)); c.lookAt(0, lookY, 0);
+  const sheet = document.createElement("canvas"); sheet.width = CELL * 2 * rotYs.length; sheet.height = CELL * 2; const sx = sheet.getContext("2d");
+  rotYs.forEach((ry, i) => { roots[roots.length - 1].rotation.y = ry; effect.render(s, c); sx.drawImage(renderer.domElement, i * CELL * 2, 0); });
+  return sheet.toDataURL("image/png");
+}
+window.bakeTowers = async () => {
+  const img = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = "models/Textures/colormap.png"; });
+  const orange = huePalette(img, 0.07, 1.0), cyan = huePalette(img, 0.52, 1.0), purple = huePalette(img, 0.80, 0.85);
+  const R = [Math.PI / 2, 0, -Math.PI / 2, Math.PI];
+  return {
+    tcannon: await bakeTiltStatic(["models/tower-round-bottom-a.glb", "models/tower-round-middle-a.glb", "models/weapon-cannon.glb"], [purple, purple, orange], 0.95, R, 0.55),
+    tfrost: await bakeTiltStatic(["models/tower-square-bottom-a.glb", "models/tower-square-middle-a.glb", "models/tower-round-crystals.glb"], [purple, purple, cyan], 0.95, [0], 0.55),
+    tcrystal: await bakeTiltStatic(["models/detail-crystal-large.glb"], cyan, 0.7, [0], 0.25),
+  };
+};
+function toonMat(hex, flat) { return new THREE.MeshToonMaterial({ color: new THREE.Color(hex).convertSRGBToLinear(), gradientMap: grad, flatShading: !!flat }); }
+function gem(h, r, colTop, colBot) {
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.ConeGeometry(r, h * 0.62, 6), toonMat(colTop, true)); top.position.y = h * 0.31 + h * 0.19; g.add(top);
+  const mid = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h * 0.19, 6), toonMat(colBot, true)); mid.position.y = h * 0.095 + h * 0.0; g.add(mid);
+  const bot = new THREE.Mesh(new THREE.ConeGeometry(r, h * 0.19, 6), toonMat(colBot, true)); bot.rotation.x = Math.PI; bot.position.y = -h * 0.095; g.add(bot);
+  return g;
+}
+function shot(s, half, lookY) { const a = 50 * Math.PI / 180; const c = new THREE.OrthographicCamera(-half, half, half, -half, 0.1, 80); c.position.set(0, 20 * Math.sin(a) + lookY, 20 * Math.cos(a)); c.lookAt(0, lookY, 0); effect.render(s, c); return renderer.domElement.toDataURL("image/png"); }
+window.bakeCustom = async () => {
+  const img = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = "models/Textures/colormap.png"; });
+  const purple = huePalette(img, 0.76, 0.7);
+  // Crystal convoy: faceted gem on a small cart with headlights.
+  let s = scene0(); const cart = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.28, 0.75), toonMat("#3d2a80")); body.position.y = 0.28; cart.add(body);
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(1.16, 0.08, 0.81), toonMat("#ff8a1f")); trim.position.y = 0.44; cart.add(trim);
+  [[-0.38, 0.4], [0.38, 0.4], [-0.38, -0.4], [0.38, -0.4]].forEach(([x, z]) => { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.14, 12), toonMat("#1a1036")); w.rotation.x = Math.PI / 2; w.position.set(x, 0.17, z); cart.add(w); });
+  [0.2, -0.2].forEach((z) => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), toonMat("#ffe23b")); l.position.set(0.56, 0.32, z); cart.add(l); });
+  const clamp1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.3, 0.5), toonMat("#ffe23b")); clamp1.position.set(-0.28, 0.6, 0); cart.add(clamp1);
+  const clamp2 = clamp1.clone(); clamp2.position.x = 0.28; cart.add(clamp2);
+  const g1 = gem(1.25, 0.32, "#19e3ff", "#0fa8d6"); g1.position.y = 0.72; g1.rotation.y = 0.3; cart.add(g1);
+  const g2 = gem(0.55, 0.13, "#8ff4ff", "#19e3ff"); g2.position.set(-0.32, 0.62, 0.2); g2.rotation.z = 0.5; cart.add(g2);
+  const g3 = gem(0.45, 0.11, "#8ff4ff", "#19e3ff"); g3.position.set(0.3, 0.6, -0.2); g3.rotation.z = -0.55; cart.add(g3);
+  s.add(cart); cart.rotation.y = 0.0;
+  const out = {}; out.ccart = shot(s, 1.05, 0.7);
+  // Frost tower: Kenney purple base + ice spikes + frost ring.
+  s = scene0(); let y = 0;
+  for (const p of ["models/tower-square-bottom-a.glb", "models/tower-square-middle-a.glb"]) { const g = await load(p); const r = g.scene; r.traverse((o) => { if (o.isMesh) o.material.map = purple; }); toonify(r); r.position.y = y; s.add(r); y = new THREE.Box3().setFromObject(r).max.y; }
+  const ice = new THREE.Group(); ice.position.y = y;
+  const main = gem(1.25, 0.2, "#e6fbff", "#19e3ff"); main.position.y = 0.3; ice.add(main);
+  [[0.2, 0.05, 0.4], [-0.2, 0.05, -0.45], [0.05, -0.22, 0.2], [-0.08, 0.22, -0.2]].forEach(([x, z, r]) => { const k = gem(0.5, 0.09, "#8ff4ff", "#19e3ff"); k.position.set(x, 0.12, z); k.rotation.z = r; k.rotation.x = r * 0.6; ice.add(k); });
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.035, 8, 32), toonMat("#19e3ff")); ring.rotation.x = Math.PI / 2; ring.position.y = 0.12; ice.add(ring);
+  s.add(ice); out.cfrost = shot(s, 1.05, 0.9);
+  return out;
+};
+window.bakeTilt = async () => {
+  const D = [Math.PI / 2, 0, -Math.PI / 2, Math.PI, Math.PI / 4];
+  return {
+    elf55: await bakeDirs("models/Elf.gltf", { Clothes: "#ff2bd6", Hat: "#7a1fd6", Belt: "#2a1a5e", Gold: "#ffe23b", Skin: "#f2b48a", Face: "#ffffff" }, "Run", 50, D),
+    wizard55: await bakeDirs("models/Wizard.gltf", { Clothes: "#ff8a1f", Hat: "#ff3b3b", Belt: "#2a1a5e", Gold: "#ffe23b", Hair: "#fff1d0", Skin: "#f2b48a", Face: "#ffffff" }, "Shoot_OneHanded", 50, D),
+    goblin55: await bakeDirs("models/Goblin_Male.gltf", { Skin: "#9dff3b", Pants: "#7a1fd6", Teeth: "#ffffff", Face: "#000000" }, "Run", 50, D),
+  };
+};
+window.bakeAll = async () => {
+  const img = await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = "models/Textures/colormap.png"; });
+  const pal = neonPalette(img); const res = {};
+  const H = ["Idle", "Run", "Shoot_OneHanded", "Roll"];
+  res.elf = await bakeCharacter("models/Elf.gltf", { Clothes: "#ff2bd6", Hat: "#7a1fd6", Belt: "#2a1a5e", Gold: "#ffe23b", Skin: "#f2b48a", Face: "#ffffff" }, H, 8);
+  res.wizard = await bakeCharacter("models/Wizard.gltf", { Clothes: "#ff8a1f", Hat: "#ff3b3b", Belt: "#2a1a5e", Gold: "#ffe23b", Hair: "#fff1d0", Skin: "#f2b48a", Face: "#ffffff" }, H, 8);
+  res.witch = await bakeCharacter("models/Witch.gltf", { Clothes: "#1e6bff", Hat: "#19e3ff", Belt: "#2a1a5e", Gold: "#ffffff", Hair: "#8ff4ff", Skin: "#f2b48a", Face: "#ffffff" }, H, 8);
+  res.goblin = await bakeCharacter("models/Goblin_Male.gltf", { Skin: "#9dff3b", Pants: "#7a1fd6", Teeth: "#ffffff", Face: "#000000" }, ["Run", "Death"], 8);
+  res.cannon_base = await bakeStatic(["models/tower-round-bottom-a.glb", "models/tower-round-middle-a.glb"], 0.75, pal);
+  res.cannon_gun = await bakeStatic(["models/weapon-cannon.glb"], 0.75, pal, -Math.PI / 2);
+  res.frost = await bakeStatic(["models/tower-square-bottom-a.glb", "models/tower-square-middle-a.glb", "models/tower-round-crystals.glb"], 0.75, pal);
+  res.crystal = await bakeStatic(["models/detail-crystal-large.glb"], 0.6, pal);
+  return res;
+};
+</script></body></html>
