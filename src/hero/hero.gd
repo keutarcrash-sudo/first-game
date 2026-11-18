@@ -103,6 +103,11 @@ func dash(direction: Vector2, distance: float, duration: float) -> void:
 	_dash_left = duration
 
 
+## Stops a dash in progress where the hero stands, without emitting [signal dash_finished].
+func cancel_dash() -> void:
+	_dash_left = 0.0
+
+
 ## True while a [method dash] is in progress.
 func is_dashing() -> bool:
 	return _dash_left > 0.0
@@ -158,5 +163,6 @@ func _fire() -> void:
 	bullet.set_proc_source(&"hero", _rules)
 	bullet.set_pierce(_archer.pierce())
 	bullet.set_archer(_archer)
+	bullet.set_guaranteed_crit(_archer.take_forced_crit())
 	_bullet_parent.add_child(bullet)
 	bullet.global_position = global_position

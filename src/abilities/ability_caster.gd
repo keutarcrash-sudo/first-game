@@ -7,8 +7,6 @@ extends Node
 ## Emitted when a cooldown changes its displayed second, and after a cast.
 signal cooldowns_changed
 
-const FIRE_COLOR := Color(1.0, 0.55, 0.15)
-
 const ACTIONS := {
 	&"primary": &"ability_primary",
 	&"a": &"ability_a",
@@ -40,6 +38,7 @@ func setup(state: GameState, hero: Hero, enemies: Node2D, bullets: Node2D, field
 	_field_rect = field_rect
 	_modifiers = modifiers
 	_rules = rules
+	state.phase_changed.connect(_on_phase_changed)
 
 
 ## Sets the abilities of the chosen specialization, [code]{ slot: AbilityDef }[/code].
@@ -86,12 +85,26 @@ func cooldown_left(slot: StringName) -> float:
 	return float(_cooldowns.get(slot, 0.0))
 
 
+## Leaving COMBAT cancels a jump in progress and its pending effects (flame trail, soaking).
+func _on_phase_changed(phase: GameState.Phase) -> void:
+	if phase == GameState.Phase.COMBAT:
+		return
+	if _hero != null:
+		_hero.cancel_dash()
+		for connection: Dictionary in _hero.dash_finished.get_connections():
+			_hero.dash_finished.disconnect(connection["callable"])
+	_wet_dash_radius = 0.0
+	_wet_dash_done.clear()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if _state == null or _state.phase != GameState.Phase.COMBAT:
 		return
 	for slot: StringName in ACTIONS:
 		if not event.is_action_pressed(ACTIONS[slot]):
 			continue
+		if _hero != null and _hero.is_dashing():
+			return  # No cast, no cooldown, input not consumed while jumping.
 		var def: AbilityDef = ability(slot)
 		if def == null or not is_unlocked(slot) or cooldown_left(slot) > 0.0:
 			return
@@ -160,7 +173,7 @@ func _cast_dash_fire_trail(def: AbilityDef) -> void:
 
 func _on_fire_dash_finished(start: Vector2, def: AbilityDef) -> void:
 	var zone := GroundZone.new()
-	zone.setup_segment(start, _hero.global_position, float(def.values["trail_width"]), float(def.values["trail_duration"]), FIRE_COLOR, _field_rect, _enemies)
+	zone.setup_segment(start, _hero.global_position, float(def.values["trail_width"]), float(def.values["trail_duration"]), Hero.FIRE_BOLT_COLOR, _state, _enemies)
 	zone.enemy_inside.connect(_on_trail_enemy_inside)
 	_bullets.add_child(zone)
 

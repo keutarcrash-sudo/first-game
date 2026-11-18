@@ -12,7 +12,7 @@ signal enemy_inside(enemy: Enemy, delta: float)
 const FILL_ALPHA := 0.35
 
 var _enemies: Node2D
-var _field_rect: Rect2
+var _state: GameState
 var _color: Color
 var _duration := 0.0
 var _time := 0.0
@@ -24,31 +24,34 @@ var _to := Vector2.ZERO
 
 ## Makes a disc of [param radius] centred on the zone's global position (place the
 ## zone with global_position after adding it). Lasts [param duration] seconds.
-## [param field_rect] is the field, kept for callers that clamp the centre. Call before adding to the tree.
-func setup_circle(radius: float, duration: float, color: Color, field_rect: Rect2, enemies: Node2D) -> void:
+## The zone frees itself as soon as [param state]'s phase is not COMBAT. Call before adding to the tree.
+func setup_circle(radius: float, duration: float, color: Color, state: GameState, enemies: Node2D) -> void:
 	_is_segment = false
 	_radius = radius
 	_duration = duration
 	_color = color
-	_field_rect = field_rect
+	_state = state
 	_enemies = enemies
 
 
 ## Makes a segment from [param from] to [param to] (global points) of total width
-## [param thickness]. The zone sits at [param from]. Call before adding to the tree.
-func setup_segment(from: Vector2, to: Vector2, thickness: float, duration: float, color: Color, field_rect: Rect2, enemies: Node2D) -> void:
+## [param thickness]. The zone sits at [param from]. Frees itself outside COMBAT like [method setup_circle]. Call before adding to the tree.
+func setup_segment(from: Vector2, to: Vector2, thickness: float, duration: float, color: Color, state: GameState, enemies: Node2D) -> void:
 	_is_segment = true
 	_from = from
 	_to = to
 	_radius = thickness * 0.5
 	_duration = duration
 	_color = color
-	_field_rect = field_rect
+	_state = state
 	_enemies = enemies
 	position = from
 
 
 func _physics_process(delta: float) -> void:
+	if _state != null and _state.phase != GameState.Phase.COMBAT:
+		queue_free()
+		return
 	_time += delta
 	if _enemies != null:
 		for child: Node in _enemies.get_children():
