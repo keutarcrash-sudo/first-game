@@ -18,6 +18,7 @@ var _sheet: SpriteSheet
 var _scale: float = 1.0
 var _current: StringName = &""
 var _direction: int = 0
+var _facing_angle: float = 0.0
 var _time: float = 0.0
 var _finished: bool = false
 
@@ -49,13 +50,15 @@ func _draw() -> void:
 
 
 ## Sets the sheet to draw and the on-screen height in pixels of the whole
-## root cell. Stops any running animation.
+## root cell. Stops any running animation. Keeps the last facing angle and
+## re-applies it to the new sheet's direction count.
 func setup(sheet: SpriteSheet, height_px: float) -> void:
 	_sheet = sheet
 	_scale = height_px / float(sheet.cell.y)
 	_current = &""
 	_time = 0.0
 	_finished = false
+	_direction = SpriteSheet.direction_index(_facing_angle, sheet.directions)
 	set_process(false)
 	queue_redraw()
 
@@ -71,7 +74,7 @@ func play(anim_name: StringName, restart: bool = false) -> void:
 	_current = anim_name
 	_time = 0.0
 	_finished = false
-	set_process(_sheet.loops(anim_name) and _sheet.frame_count(anim_name) > 1 or not _sheet.loops(anim_name))
+	set_process(not _sheet.loops(anim_name) or _sheet.frame_count(anim_name) > 1)
 	queue_redraw()
 
 
@@ -82,6 +85,7 @@ func current() -> StringName:
 
 ## Turns toward [param angle] (radians, as [method Vector2.angle]).
 func set_facing(angle: float) -> void:
+	_facing_angle = angle
 	if _sheet == null:
 		return
 	var index: int = SpriteSheet.direction_index(angle, _sheet.directions)

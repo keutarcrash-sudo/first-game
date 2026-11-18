@@ -10,7 +10,7 @@ extends Area2D
 ## enemy frees itself by touching the crystal.
 signal died
 
-const COLOR := Color(1.0, 0.35, 0.3)
+const COLOR := Color(1.0, 0.35, 0.3)  # Disc colour, only used when no sprite sheet was given.
 const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at full HP.
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
 const SLOWED_TINT := Color(0.3, 0.55, 1.0)
@@ -31,6 +31,13 @@ const FROZEN_TINT := Color(0.88, 0.97, 1.0)  # Whitish ice look, wins over every
 const FROZEN_TINT_AMOUNT := 0.85
 const FROZEN_OUTLINE_COLOR := Color(0.75, 0.95, 1.0)
 const FROZEN_OUTLINE_WIDTH := 7.0  # Thick outline, clearly wider than the other rings.
+const RING_HEIGHT_RATIO := 0.32  # With a sprite, state rings have radius height_px x this, around the silhouette centre.
+const RING_UNDER_WIDTH := 2.0  # Black under-ring: this many pixels wider on each side of every ring.
+const HIT_POSE_SECONDS := 0.2  # The hit animation plays this long, once per hit.
+
+var _sprite: DirectionalSprite
+var _visual_height := 0.0
+var _hit_left := 0.0  # Seconds of hit pose remaining (visual only).
 
 var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
@@ -67,6 +74,23 @@ func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Cry
 	var touch_distance: float = crystal.radius + _radius
 	_touch_distance_sq = touch_distance * touch_distance
 	position = start_position
+
+
+## Draws the enemy with [param sheet] at [param height_px] on screen instead of a disc
+## (graphics only: the collision radius and every rule stay the same). Call before
+## adding the enemy to the tree; the sheet may be shared by all enemies.
+func set_visual(sheet: SpriteSheet, height_px: float) -> void:
+	_visual_height = height_px
+	_sprite = DirectionalSprite.new()
+	_sprite.show_behind_parent = true  # The state marks drawn by this node stay over the sprite.
+	add_child(_sprite)
+	_sprite.setup(sheet, height_px)
+	_sprite.play(&"run")
+
+
+## Angle in radians (as [method Vector2.angle]) from the enemy toward the crystal.
+func facing_angle() -> float:
+	return (_crystal.global_position - global_position).angle()
 
 
 func _ready() -> void:
@@ -124,6 +148,8 @@ func _physics_process(delta: float) -> void:
 	var target: Vector2 = _crystal.global_position
 	if _frozen_left <= 0.0:
 		position = position.move_toward(target, _speed * _slow_factor * delta)
+	if _sprite != null:
+		_update_visual(target)
 	if position.distance_squared_to(target) <= _touch_distance_sq:
 		_crystal.take_damage(_contact_damage)
 		queue_free()
@@ -132,6 +158,8 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	var shade: float = lerpf(DAMAGED_DARKEN, 1.0, _hp / _max_hp)
 	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
+	if _sprite != null:
+		color = Color(shade, shade, shade)  # Neutral base: the sprite keeps its own colours.
 	if _frozen_left > 0.0:
 		color = color.lerp(FROZEN_TINT, FROZEN_TINT_AMOUNT)
 	elif is_slowed():
@@ -140,17 +168,41 @@ func _draw() -> void:
 		color = color.lerp(WET_TINT, WET_TINT_AMOUNT)
 	elif _burn_left > 0.0:
 		color = color.lerp(BURNING_TINT, BURNING_TINT_AMOUNT)
-	draw_circle(Vector2.ZERO, _radius, color)
+	var center := Vector2.ZERO
+	var ring_radius: float = _radius
+	if _sprite != null:
+		_sprite.tint = color
+		center = Vector2(0.0, -_visual_height * 0.5)  # The sprite stands on the position: its middle is above it.
+		ring_radius = _visual_height * RING_HEIGHT_RATIO
+	else:
+		draw_circle(Vector2.ZERO, _radius, color)
 	if _burn_left > 0.0:
-		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, BURNING_TINT, BURNING_RING_WIDTH)
+		_draw_ring(center, ring_radius, BURNING_TINT, BURNING_RING_WIDTH)
 	if _wet_left > 0.0:
 		for i: int in WET_DROP_COUNT:
 			var angle: float = TAU * i / WET_DROP_COUNT - PI / 2.0
-			draw_circle(Vector2.from_angle(angle) * (_radius * 0.55), WET_DROP_RADIUS, WET_DROP_COLOR)
+			var drop_at: Vector2 = center + Vector2.from_angle(angle) * (ring_radius * 0.55)
+			draw_circle(drop_at, WET_DROP_RADIUS + RING_UNDER_WIDTH, Color.BLACK)
+			draw_circle(drop_at, WET_DROP_RADIUS, WET_DROP_COLOR)
 	if _frozen_left > 0.0:
-		draw_arc(Vector2.ZERO, _radius, 0.0, TAU, BURNING_RING_POINTS, FROZEN_OUTLINE_COLOR, FROZEN_OUTLINE_WIDTH)
+		_draw_ring(center, ring_radius, FROZEN_OUTLINE_COLOR, FROZEN_OUTLINE_WIDTH)
 	if _mark_left > 0.0:
-		draw_arc(Vector2.ZERO, _radius + MARKED_RING_GAP, 0.0, TAU, BURNING_RING_POINTS, MARKED_COLOR, MARKED_RING_WIDTH)
+		_draw_ring(center, ring_radius + MARKED_RING_GAP, MARKED_COLOR, MARKED_RING_WIDTH)
+
+
+## A ring over a black ring [constant RING_UNDER_WIDTH] pixels wider on each side, so it reads on any background.
+func _draw_ring(center: Vector2, ring_radius: float, color: Color, width: float) -> void:
+	draw_arc(center, ring_radius, 0.0, TAU, BURNING_RING_POINTS, Color.BLACK, width + RING_UNDER_WIDTH * 2.0)
+	draw_arc(center, ring_radius, 0.0, TAU, BURNING_RING_POINTS, color, width)
+
+
+## Faces the crystal and goes back from the hit pose to the run animation.
+func _update_visual(target: Vector2) -> void:
+	_sprite.set_facing((target - global_position).angle())
+	if _hit_left > 0.0:
+		_hit_left -= get_physics_process_delta_time()
+		if _hit_left <= 0.0:
+			_sprite.play(&"run")
 
 
 ## Body radius in pixels.
@@ -289,6 +341,11 @@ func _move_pushed(step: Vector2) -> void:
 
 ## Removes [param amount] hit points; the enemy is freed at zero.
 func take_damage(amount: float) -> void:
+	_damage(amount, true)
+
+
+## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
+func _damage(amount: float, show_hit: bool) -> void:
 	if is_queued_for_deletion():
 		return
 	_hp -= amount
@@ -296,4 +353,7 @@ func take_damage(amount: float) -> void:
 		died.emit()
 		queue_free()
 	else:
+		if show_hit and _sprite != null and _hit_left <= 0.0:
+			_hit_left = HIT_POSE_SECONDS
+			_sprite.play(&"hit")
 		queue_redraw()

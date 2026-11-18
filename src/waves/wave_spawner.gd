@@ -21,6 +21,8 @@ var _stats: DefenceStats
 var _crystal: Crystal
 var _enemies_parent: Node
 var _spawn_rect: Rect2
+var _enemy_sheet: SpriteSheet
+var _enemy_height := 0.0
 var _state := State.IDLE
 var _timer := 0.0
 var _wave_number := 0
@@ -43,6 +45,13 @@ func setup(curve: WaveCurve, stats: DefenceStats, field_rect: Rect2, crystal: Cr
 	_enemies_parent = enemies_parent
 	_spawn_rect = field_rect.grow(-stats.spawn_margin)
 	crystal.arrived.connect(_on_crystal_arrived)
+
+
+## Sets the sprite sheet shared by every enemy of the next spawns and the death
+## animation, with the on-screen height in pixels. Without it enemies are plain discs.
+func set_enemy_visual(sheet: SpriteSheet, height_px: float) -> void:
+	_enemy_sheet = sheet
+	_enemy_height = height_px
 
 
 func _physics_process(delta: float) -> void:
@@ -78,8 +87,25 @@ func _spawn_enemy() -> void:
 	_to_spawn -= 1
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
-	enemy.died.connect(func() -> void: enemy_killed.emit(enemy.global_position))
+	if _enemy_sheet != null:
+		enemy.set_visual(_enemy_sheet, _enemy_height)
+	enemy.died.connect(func() -> void:
+		_play_death(enemy)
+		enemy_killed.emit(enemy.global_position))
 	_enemies_parent.add_child(enemy)
+
+
+## Plays the death animation where [param enemy] fell. The effect is a sibling of
+## the enemies node, never its child, so nothing mistakes it for an enemy.
+func _play_death(enemy: Enemy) -> void:
+	var host: Node = _enemies_parent.get_parent()
+	if _enemy_sheet == null or host == null:
+		return
+	var effect := DeathEffect.new()
+	effect.setup(_enemy_sheet, _enemy_height, enemy.facing_angle())
+	host.add_child(effect)
+	host.move_child(effect, _enemies_parent.get_index() + 1)
+	effect.global_position = enemy.global_position
 
 
 func _on_crystal_arrived() -> void:

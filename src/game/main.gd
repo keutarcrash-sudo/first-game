@@ -21,6 +21,7 @@ const CARDS_PATH := "res://assets/data/cards.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
+const VISUALS_PATH := "res://assets/data/visuals.json"
 const SAVE_PATH := "user://progress.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
@@ -46,6 +47,8 @@ var _path_view: PathView
 var _camera: GameCamera
 var _ability_catalog: AbilityCatalog
 var _caster: AbilityCaster
+var _visuals: VisualStats
+var _sheets: Dictionary = {}  # Folder -> SpriteSheet, each loaded once and shared.
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -68,7 +71,10 @@ func _ready() -> void:
 	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
-	if _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	_visuals = VisualStats.load_from_file(VISUALS_PATH)
+	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
+	var enemy_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.enemy_sheet)
+	if default_sheet == null or enemy_sheet == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -82,6 +88,7 @@ func _ready() -> void:
 	_rng = RandomNumberGenerator.new()
 	_rng.randomize()
 	_hero.setup(stats, _field_rect, _bullets, rules)
+	_hero.set_visual(default_sheet, _visuals.height("hero"))
 	_crystal.global_position = _field_rect.get_center()
 	_crystal.setup(defence, _skill_tree.crystal_max_hp_bonus(owned))
 	# The hero starts below the crystal, not on top of it.
@@ -92,6 +99,7 @@ func _ready() -> void:
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
+	_spawner.set_enemy_visual(enemy_sheet, _visuals.height("enemy"))
 	# The gold field sits just before Enemies, so coins are drawn under the enemies.
 	var gold_field := GoldField.new()
 	add_child(gold_field)
@@ -142,6 +150,17 @@ func _ready() -> void:
 	queue_redraw()
 
 
+## The sheet of [param dir], loaded the first time and shared afterwards
+## ([code]null[/code] after an error, which is reported once per try).
+func _sheet_for(dir: String) -> SpriteSheet:
+	if not _sheets.has(dir):
+		var sheet: SpriteSheet = SpriteSheet.load_from_dir(dir)
+		if sheet == null:
+			return null
+		_sheets[dir] = sheet
+	return _sheets[dir]
+
+
 func _draw() -> void:
 	draw_rect(_field_rect, FLOOR_COLOR)
 	draw_rect(_field_rect, BORDER_COLOR, false, BORDER_WIDTH)
@@ -163,6 +182,9 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 		_rules.activate(combo_id)
 	if spec.freeze_duration > 0.0:
 		_modifiers.enable_freeze(spec.freeze_duration, spec.freeze_cooldown)
+	var spec_sheet: SpriteSheet = _sheet_for(_visuals.hero_sheet(spec.id))
+	if spec_sheet != null:  # On a load error the default look stays.
+		_hero.set_visual(spec_sheet, _visuals.height("hero"))
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)

@@ -9,15 +9,14 @@ extends CharacterBody2D
 ## Emitted when a [method dash] ends (duration elapsed).
 signal dash_finished
 
-const BODY_COLOR := Color(0.3, 0.8, 1.0)
-const AIM_COLOR := Color(0.3, 0.8, 1.0, 0.6)
-const AIM_LINE_LENGTH := 14.0
-const AIM_LINE_WIDTH := 3.0
+const SHOOT_POSE_SECONDS := 0.2  # The shoot animation plays this long after each shot, when standing still.
 const HERO_LAYER := 1
 const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
 const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
 
 var _stats: HeroStats
+var _sprite: DirectionalSprite
+var _shoot_left := 0.0  # Seconds of shoot pose remaining (visual only).
 var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
@@ -54,6 +53,18 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 	var collision := CollisionShape2D.new()
 	collision.shape = shape
 	add_child(collision)
+
+
+## Sets the sprite sheet the hero is drawn with and its on-screen height in
+## pixels (graphics only: nothing in the game rules depends on it). May be
+## called again to change the look, for example when the specialization is chosen.
+func set_visual(sheet: SpriteSheet, height_px: float) -> void:
+	if _sprite == null:
+		_sprite = DirectionalSprite.new()
+		add_child(_sprite)
+	_sprite.setup(sheet, height_px)
+	_sprite.set_facing(_aim_direction.angle())
+	_sprite.play(&"idle")
 
 
 ## Gives the hero the weapon of [param spec] and lets it move and fire. Card
@@ -120,6 +131,8 @@ func is_dashing() -> bool:
 
 func _physics_process(delta: float) -> void:
 	var finished_dash := false
+	var was_dashing := _dash_left > 0.0
+	var moving := false
 	if _dash_left > 0.0:
 		var step: float = minf(delta, _dash_left)
 		_dash_left -= step
@@ -129,7 +142,9 @@ func _physics_process(delta: float) -> void:
 			_dash_left = 0.0
 			finished_dash = true
 	else:
-		velocity = move_direction() * _stats.hero_speed
+		var wanted: Vector2 = move_direction()
+		moving = wanted != Vector2.ZERO
+		velocity = wanted * _stats.hero_speed
 		move_and_slide()
 		global_position = global_position.clamp(_min_position, _max_position)
 
@@ -141,18 +156,32 @@ func _physics_process(delta: float) -> void:
 	if _fire_cooldown <= 0.0:
 		_fire()
 		_fire_cooldown += 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
-	queue_redraw()
+	_shoot_left = maxf(_shoot_left - delta, 0.0)
+	_update_visual(was_dashing, moving)
 	if finished_dash:
 		dash_finished.emit()
 
 
-func _draw() -> void:
-	draw_circle(Vector2.ZERO, _stats.hero_radius, BODY_COLOR)
-	var aim_start: Vector2 = _aim_direction * _stats.hero_radius
-	draw_line(aim_start, aim_start + _aim_direction * AIM_LINE_LENGTH, AIM_COLOR, AIM_LINE_WIDTH)
+## Picks the animation (roll > shoot while still > run > idle) and the facing
+## (the dash direction while rolling, the mouse otherwise).
+func _update_visual(dashing: bool, moving: bool) -> void:
+	if _sprite == null:
+		return
+	if dashing:
+		_sprite.set_facing(_dash_direction.angle())
+		_sprite.play(&"roll")
+	else:
+		_sprite.set_facing(_aim_direction.angle())
+		if moving:
+			_sprite.play(&"run")
+		elif _shoot_left > 0.0:
+			_sprite.play(&"shoot")
+		else:
+			_sprite.play(&"idle")
 
 
 func _fire() -> void:
+	_shoot_left = SHOOT_POSE_SECONDS
 	var bullet := HeroBullet.new()
 	if _elemental != null:
 		bullet.configure(_elemental.damage(), _stats.bullet_speed, _elemental.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
