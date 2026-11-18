@@ -1,0 +1,98 @@
+## Draws one animation of a [SpriteSheet] in the direction the object faces.
+## The anchor of the current cell sits on the node position. The scale is
+## height_px / root cell height for every animation, so bigger cells (death,
+## roll) are drawn bigger, not shrunk.
+class_name DirectionalSprite
+extends Node2D
+
+## Emitted when a non-looping animation reaches its last frame.
+signal animation_finished(anim_name: StringName)
+
+## Multiplies the image colour (for example a translucent placement preview).
+var tint: Color = Color.WHITE:
+	set(value):
+		tint = value
+		queue_redraw()
+
+var _sheet: SpriteSheet
+var _scale: float = 1.0
+var _current: StringName = &""
+var _direction: int = 0
+var _time: float = 0.0
+var _finished: bool = false
+
+
+func _init() -> void:
+	set_process(false)
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	var duration: float = float(_sheet.frame_count(_current)) / _sheet.fps(_current)
+	if not _sheet.loops(_current) and _time >= duration:
+		_finished = true
+		set_process(false)
+		queue_redraw()
+		animation_finished.emit(_current)
+		return
+	queue_redraw()
+
+
+func _draw() -> void:
+	if _sheet == null or _current == &"":
+		return
+	var tex: Texture2D = _sheet.texture(_current)
+	var cell: Vector2i = _sheet.cell_of(_current)
+	var src := Rect2(_frame() * cell.x, _direction * cell.y, cell.x, cell.y)
+	var dest := Rect2(-_sheet.anchor_of(_current) * _scale, Vector2(cell) * _scale)
+	draw_texture_rect_region(tex, dest, src, tint)
+
+
+## Sets the sheet to draw and the on-screen height in pixels of the whole
+## root cell. Stops any running animation.
+func setup(sheet: SpriteSheet, height_px: float) -> void:
+	_sheet = sheet
+	_scale = height_px / float(sheet.cell.y)
+	_current = &""
+	_time = 0.0
+	_finished = false
+	set_process(false)
+	queue_redraw()
+
+
+## Plays [param anim_name]. Does nothing if it already plays, unless
+## [param restart] is true. Unknown names are reported and ignored.
+func play(anim_name: StringName, restart: bool = false) -> void:
+	if _sheet == null or not _sheet.has_animation(anim_name):
+		push_error("DirectionalSprite: unknown animation '%s'." % anim_name)
+		return
+	if anim_name == _current and not restart:
+		return
+	_current = anim_name
+	_time = 0.0
+	_finished = false
+	set_process(_sheet.loops(anim_name) and _sheet.frame_count(anim_name) > 1 or not _sheet.loops(anim_name))
+	queue_redraw()
+
+
+## Name of the current animation ([code]&""[/code] before the first play).
+func current() -> StringName:
+	return _current
+
+
+## Turns toward [param angle] (radians, as [method Vector2.angle]).
+func set_facing(angle: float) -> void:
+	if _sheet == null:
+		return
+	var index: int = SpriteSheet.direction_index(angle, _sheet.directions)
+	if index != _direction:
+		_direction = index
+		queue_redraw()
+
+
+func _frame() -> int:
+	var count: int = _sheet.frame_count(_current)
+	var raw: int = int(_time * _sheet.fps(_current))
+	if _sheet.loops(_current):
+		return raw % count
+	return mini(raw, count - 1)
