@@ -78,7 +78,7 @@ func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Cry
 
 ## Draws the enemy with [param sheet] at [param height_px] on screen instead of a disc
 ## (graphics only: the collision radius and every rule stay the same). Call before
-## adding the enemy to the tree; the sheet may be shared by all enemies.
+## adding the enemy to the tree and after [method setup]; the sheet may be shared by all enemies.
 func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	_visual_height = height_px
 	_sprite = DirectionalSprite.new()
@@ -86,6 +86,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	add_child(_sprite)
 	_sprite.setup(sheet, height_px)
 	_sprite.play(&"run")
+	_refresh_look()
 
 
 ## Angle in radians (as [method Vector2.angle]) from the enemy toward the crystal.
@@ -114,24 +115,24 @@ func _physics_process(delta: float) -> void:
 	_slow_factor = _requested_slow_factor
 	_requested_slow_factor = 1.0
 	if is_slowed() != was_slowed:
-		queue_redraw()
+		_refresh_look()
 	if _burn_left > 0.0:
-		# Damage over time goes through take_damage (a burn kill still emits died) and triggers no combo.
+		# Damage over time goes through _damage, without the hit pose (a burn kill still emits died) and triggers no combo.
 		var burn_time: float = minf(delta, _burn_left)
 		_burn_left -= burn_time
-		take_damage(_burn_damage_per_second * burn_time)
+		_damage(_burn_damage_per_second * burn_time, false)
 		if is_queued_for_deletion():
 			return
 		if _burn_left <= 0.0:
-			queue_redraw()
+			_refresh_look()
 	if _mark_left > 0.0:
 		_mark_left -= delta
 		if _mark_left <= 0.0:
-			queue_redraw()
+			_refresh_look()
 	if _wet_left > 0.0:
 		_wet_left -= delta
 		if _wet_left <= 0.0:
-			queue_redraw()
+			_refresh_look()
 	# Every freeze timer only counts down here, with the physics delta: a freeze
 	# always ends by itself, whatever the towers do (or whether they still exist).
 	_freeze_cooldown_left = maxf(_freeze_cooldown_left - delta, 0.0)
@@ -139,7 +140,7 @@ func _physics_process(delta: float) -> void:
 		_frozen_left -= delta
 		if _frozen_left <= 0.0:
 			_freeze_cooldown_left = _freeze_cooldown_after
-			queue_redraw()
+			_refresh_look()
 	if _push_left > 0.0:
 		var push_time: float = minf(delta, _push_left)
 		_push_left -= push_time
@@ -155,7 +156,9 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 
-func _draw() -> void:
+## Tint of the body for the current state: darker when hurt, then one fill tint
+## (frozen > slowed > wet > burning).
+func _body_color() -> Color:
 	var shade: float = lerpf(DAMAGED_DARKEN, 1.0, _hp / _max_hp)
 	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
 	if _sprite != null:
@@ -168,14 +171,24 @@ func _draw() -> void:
 		color = color.lerp(WET_TINT, WET_TINT_AMOUNT)
 	elif _burn_left > 0.0:
 		color = color.lerp(BURNING_TINT, BURNING_TINT_AMOUNT)
+	return color
+
+
+## Called whenever a state or the hit points change: updates the sprite tint at once and redraws the marks.
+func _refresh_look() -> void:
+	if _sprite != null:
+		_sprite.tint = _body_color()
+	queue_redraw()
+
+
+func _draw() -> void:
 	var center := Vector2.ZERO
 	var ring_radius: float = _radius
 	if _sprite != null:
-		_sprite.tint = color
 		center = Vector2(0.0, -_visual_height * 0.5)  # The sprite stands on the position: its middle is above it.
 		ring_radius = _visual_height * RING_HEIGHT_RATIO
 	else:
-		draw_circle(Vector2.ZERO, _radius, color)
+		draw_circle(Vector2.ZERO, _radius, _body_color())
 	if _burn_left > 0.0:
 		_draw_ring(center, ring_radius, BURNING_TINT, BURNING_RING_WIDTH)
 	if _wet_left > 0.0:
@@ -249,7 +262,7 @@ func apply_burn(duration: float, damage_per_second: float) -> void:
 	_burn_left = duration
 	_burn_damage_per_second = damage_per_second
 	if not was_burning:
-		queue_redraw()
+		_refresh_look()
 
 
 ## Marks the enemy for [param duration] seconds (story 008, Archer critical hit).
@@ -260,7 +273,7 @@ func apply_mark(duration: float) -> void:
 	var was_marked: bool = _mark_left > 0.0
 	_mark_left = duration
 	if not was_marked:
-		queue_redraw()
+		_refresh_look()
 
 
 ## Marks the enemy for at least [param duration] seconds: keeps the longer of the current
@@ -271,7 +284,7 @@ func extend_mark(duration: float) -> void:
 	var was_marked: bool = _mark_left > 0.0
 	_mark_left = maxf(_mark_left, duration)
 	if not was_marked and _mark_left > 0.0:
-		queue_redraw()
+		_refresh_look()
 
 
 ## Makes the enemy wet (« trempé ») for [param duration] seconds (story 009,
@@ -282,7 +295,7 @@ func apply_wet(duration: float) -> void:
 	var was_wet: bool = _wet_left > 0.0
 	_wet_left = duration
 	if not was_wet:
-		queue_redraw()
+		_refresh_look()
 
 
 ## « trempé + glace = gelé » (story 009): if the enemy is wet, not frozen and not
@@ -295,7 +308,7 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 	_frozen_left = duration
 	_freeze_cooldown_after = cooldown
 	_push_left = 0.0  # A frozen enemy stops dead, even mid-push.
-	queue_redraw()
+	_refresh_look()
 	return true
 
 
@@ -309,7 +322,7 @@ func force_freeze(duration: float) -> void:
 	_frozen_left = maxf(_frozen_left, duration)
 	_freeze_cooldown_left = 0.0
 	_push_left = 0.0
-	queue_redraw()
+	_refresh_look()
 
 
 ## Shoves the enemy by [param offset] pixels, spread over [param duration] seconds, on top
@@ -356,4 +369,4 @@ func _damage(amount: float, show_hit: bool) -> void:
 		if show_hit and _sprite != null and _hit_left <= 0.0:
 			_hit_left = HIT_POSE_SECONDS
 			_sprite.play(&"hit")
-		queue_redraw()
+		_refresh_look()

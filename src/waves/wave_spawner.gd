@@ -101,6 +101,9 @@ func _play_death(enemy: Enemy) -> void:
 	var host: Node = _enemies_parent.get_parent()
 	if _enemy_sheet == null or host == null:
 		return
+	if not _enemy_sheet.has_animation(&"death"):
+		push_error("WaveSpawner: the enemy sheet has no 'death' animation.")
+		return
 	var effect := DeathEffect.new()
 	effect.setup(_enemy_sheet, _enemy_height, enemy.facing_angle())
 	host.add_child(effect)

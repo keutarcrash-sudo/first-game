@@ -6,12 +6,9 @@ extends Node2D
 
 ## Draws [param sheet]'s [code]death[/code] animation at [param height_px], facing
 ## [param facing] (radians, as [method Vector2.angle]). Call before adding the
-## node to the tree. Frees itself at the end (at once if the sheet has no death animation).
+## node to the tree, and only with a sheet that has a [code]death[/code] animation
+## (see [method SpriteSheet.has_animation]). Frees itself at the end.
 func setup(sheet: SpriteSheet, height_px: float, facing: float) -> void:
-	if not sheet.has_animation(&"death"):
-		push_error("DeathEffect: the sheet has no 'death' animation.")
-		queue_free()
-		return
 	var sprite := DirectionalSprite.new()
 	add_child(sprite)
 	sprite.setup(sheet, height_px)
