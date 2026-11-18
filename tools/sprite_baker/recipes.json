@@ -1,0 +1,100 @@
+{
+  "cell": [128, 128],
+  "anchor": [64, 112],
+  "fps": 12,
+  "pitch_degrees": 50,
+  "outline_thickness": 0.02,
+  "directions": 8,
+  "kenney_palettes": {
+    "purple": { "hue": 0.76, "sat": 0.7 },
+    "orange": { "hue": 0.07, "sat": 1.0, "gray_to_hue": true }
+  },
+  "items": {
+    "elf": {
+      "kind": "character",
+      "model": "quaternius/Elf.glb",
+      "height": 1.8,
+      "half_size": 1.25,
+      "palette": { "Clothes": "#ff2bd6", "Hat": "#7a1fd6", "Belt": "#2a1a5e", "Gold": "#ffe23b", "Skin": "#f2b48a", "Face": "#ffffff" },
+      "animations": {
+        "idle": { "clip": "Idle", "frames": 8, "loop": true },
+        "run": { "clip": "Run", "frames": 8, "loop": true },
+        "shoot": { "clip": "Shoot_OneHanded", "frames": 8, "loop": false },
+        "roll": { "clip": "Roll", "frames": 8, "loop": false },
+        "hit": { "clip": "RecieveHit", "frames": 8, "loop": false },
+        "death": { "clip": "Death", "frames": 10, "loop": false }
+      }
+    },
+    "wizard": {
+      "kind": "character",
+      "model": "quaternius/Wizard.glb",
+      "height": 1.8,
+      "half_size": 1.25,
+      "palette": { "Clothes": "#ff8a1f", "Hat": "#ff3b3b", "Belt": "#2a1a5e", "Gold": "#ffe23b", "Hair": "#fff1d0", "Skin": "#f2b48a", "Face": "#ffffff" },
+      "animations": {
+        "idle": { "clip": "Idle", "frames": 8, "loop": true },
+        "run": { "clip": "Run", "frames": 8, "loop": true },
+        "shoot": { "clip": "Shoot_OneHanded", "frames": 8, "loop": false },
+        "roll": { "clip": "Roll", "frames": 8, "loop": false },
+        "hit": { "clip": "RecieveHit", "frames": 8, "loop": false },
+        "death": { "clip": "Death", "frames": 10, "loop": false }
+      }
+    },
+    "witch": {
+      "kind": "character",
+      "model": "quaternius/Witch.glb",
+      "height": 1.8,
+      "half_size": 1.25,
+      "palette": { "Clothes": "#1e6bff", "Hat": "#19e3ff", "Belt": "#2a1a5e", "Gold": "#ffffff", "Hair": "#8ff4ff", "Skin": "#f2b48a", "Face": "#ffffff" },
+      "animations": {
+        "idle": { "clip": "Idle", "frames": 8, "loop": true },
+        "run": { "clip": "Run", "frames": 8, "loop": true },
+        "shoot": { "clip": "Shoot_OneHanded", "frames": 8, "loop": false },
+        "roll": { "clip": "Roll", "frames": 8, "loop": false },
+        "hit": { "clip": "RecieveHit", "frames": 8, "loop": false },
+        "death": { "clip": "Death", "frames": 10, "loop": false }
+      }
+    },
+    "goblin": {
+      "kind": "character",
+      "model": "quaternius/Goblin_Male.glb",
+      "height": 1.8,
+      "half_size": 1.25,
+      "palette": { "Skin": "#9dff3b", "Pants": "#7a1fd6", "Teeth": "#ffffff", "Face": "#000000" },
+      "animations": {
+        "run": { "clip": "Run", "frames": 8, "loop": true },
+        "punch": { "clip": "Punch", "frames": 8, "loop": false },
+        "hit": { "clip": "RecieveHit", "frames": 8, "loop": false },
+        "death": { "clip": "Death", "frames": 10, "loop": false }
+      }
+    },
+    "cannon": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-round-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-round-middle-a.glb", "palette": "purple" },
+        { "model": "kenney/weapon-cannon.glb", "palette": "orange", "rotates": true }
+      ],
+      "builder": null,
+      "directions": 8,
+      "half_size": 0.95
+    },
+    "frost_tower": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-square-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-square-middle-a.glb", "palette": "purple" }
+      ],
+      "builder": "frostTop",
+      "directions": 1,
+      "half_size": 1.05
+    },
+    "crystal_cart": {
+      "kind": "prop",
+      "parts": [],
+      "builder": "crystalCart",
+      "directions": 1,
+      "half_size": 1.05
+    }
+  }
+}
