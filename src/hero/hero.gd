@@ -9,14 +9,17 @@ extends CharacterBody2D
 ## Emitted when a [method dash] ends (duration elapsed).
 signal dash_finished
 
-const SHOOT_POSE_SECONDS := 0.2  # The shoot animation plays this long after each shot, when standing still.
+const SHOOT_MAX_SPEED_SCALE := 4.0  # Fastest the shoot clip is played to fit a short fire interval.
 const HERO_LAYER := 1
 const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
 const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
 
 var _stats: HeroStats
 var _sprite: DirectionalSprite
-var _shoot_left := 0.0  # Seconds of shoot pose remaining (visual only).
+var _sheet: SpriteSheet
+var _shot_now := false  # A shot was fired since the last visual update (visual only).
+var _shooting := false  # The shoot clip is playing and has not ended (visual only).
+var _fire_interval := 1.0
 var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
@@ -62,7 +65,11 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	if _sprite == null:
 		_sprite = DirectionalSprite.new()
 		add_child(_sprite)
+	_sheet = sheet
+	_shooting = false
 	_sprite.setup(sheet, height_px)
+	if not _sprite.animation_finished.is_connected(_on_animation_finished):
+		_sprite.animation_finished.connect(_on_animation_finished)
 	_sprite.set_facing(_aim_direction.angle())
 	_sprite.play(&"idle")
 
@@ -155,33 +162,49 @@ func _physics_process(delta: float) -> void:
 	_fire_cooldown -= delta
 	if _fire_cooldown <= 0.0:
 		_fire()
-		_fire_cooldown += 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
-	_shoot_left = maxf(_shoot_left - delta, 0.0)
+		_fire_interval = 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
+		_fire_cooldown += _fire_interval
 	_update_visual(was_dashing, moving)
 	if finished_dash:
 		dash_finished.emit()
 
 
 ## Picks the animation (roll > shoot while still > run > idle) and the facing
-## (the dash direction while rolling, the mouse otherwise).
+## (the dash direction while rolling, the mouse otherwise). Each shot restarts the
+## shoot clip, sped up so that it lasts about one fire interval; the pose is kept
+## until the clip ends or the hero moves.
 func _update_visual(dashing: bool, moving: bool) -> void:
+	var shot: bool = _shot_now
+	_shot_now = false
 	if _sprite == null:
 		return
 	if dashing:
+		_shooting = false
 		_sprite.set_facing(_dash_direction.angle())
 		_sprite.play(&"roll")
+		return
+	_sprite.set_facing(_aim_direction.angle())
+	if moving:
+		_shooting = false
+		_sprite.play(&"run")
+	elif shot:
+		_shooting = true
+		_sprite.play(&"shoot", true)
+		var clip_length: float = float(_sheet.frame_count(&"shoot")) / _sheet.fps(&"shoot")
+		_sprite.speed_scale = clampf(clip_length / _fire_interval, 1.0, SHOOT_MAX_SPEED_SCALE)
+	elif _shooting:
+		_sprite.play(&"shoot")
 	else:
-		_sprite.set_facing(_aim_direction.angle())
-		if moving:
-			_sprite.play(&"run")
-		elif _shoot_left > 0.0:
-			_sprite.play(&"shoot")
-		else:
-			_sprite.play(&"idle")
+		_sprite.play(&"idle")
+
+
+func _on_animation_finished(anim_name: StringName) -> void:
+	if anim_name == &"shoot":
+		_shooting = false
 
 
 func _fire() -> void:
-	_shoot_left = SHOOT_POSE_SECONDS
+	_shot_now = true
 	var bullet := HeroBullet.new()
 	if _elemental != null:
 		bullet.configure(_elemental.damage(), _stats.bullet_speed, _elemental.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)

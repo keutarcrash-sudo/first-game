@@ -14,6 +14,10 @@ var tint: Color = Color.WHITE:
 		tint = value
 		queue_redraw()
 
+## Multiplies how fast the animation advances (1 = the sheet's fps, 0 = frozen
+## on the current frame). [method play] resets it to 1 when it starts an animation.
+var speed_scale: float = 1.0
+
 var _sheet: SpriteSheet
 var _scale: float = 1.0
 var _current: StringName = &""
@@ -28,7 +32,7 @@ func _init() -> void:
 
 
 func _process(delta: float) -> void:
-	_time += delta
+	_time += delta * speed_scale
 	var duration: float = float(_sheet.frame_count(_current)) / _sheet.fps(_current)
 	if not _sheet.loops(_current) and _time >= duration:
 		_finished = true
@@ -72,6 +76,7 @@ func play(anim_name: StringName, restart: bool = false) -> void:
 	if anim_name == _current and not restart:
 		return
 	_current = anim_name
+	speed_scale = 1.0
 	_time = 0.0
 	_finished = false
 	set_process(not _sheet.loops(anim_name) or _sheet.frame_count(anim_name) > 1)

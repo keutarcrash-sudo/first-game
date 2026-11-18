@@ -214,6 +214,7 @@ func _draw_ring(center: Vector2, ring_radius: float, color: Color, width: float)
 ## Faces the crystal and goes back from the hit pose to the run animation.
 func _update_visual(target: Vector2) -> void:
 	_sprite.set_facing((target - global_position).angle())
+	_sprite.speed_scale = 0.0 if _frozen_left > 0.0 else 1.0  # A frozen enemy holds its frame.
 	if _hit_left > 0.0:
 		_hit_left -= get_physics_process_delta_time()
 		if _hit_left <= 0.0:
