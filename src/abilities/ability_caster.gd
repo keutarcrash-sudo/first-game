@@ -14,6 +14,9 @@ const ACTIONS := {
 	&"r": &"ability_r",
 }
 
+const ARROW_RAIN_COLOR := Color(1.0, 0.95, 0.6)
+const PUDDLE_COLOR := Color(0.55, 0.85, 1.0)
+
 var _state: GameState
 var _hero: Hero
 var _enemies: Node2D
@@ -141,6 +144,80 @@ func _cast(def: AbilityDef) -> void:
 			_cast_fireball(def)
 		"water_wave":
 			_cast_water_wave(def)
+		"arrow_rain":
+			_cast_arrow_rain(def)
+		"fire_wall":
+			_cast_fire_wall(def)
+		"puddle":
+			_cast_puddle(def)
+
+
+## The mouse position brought back to [param max_range] from the hero, then into the field
+## shrunk by [param margin] on every side, so a zone of that half-size stays inside the field.
+func _target_point(max_range: float, margin: float) -> Vector2:
+	var origin: Vector2 = _hero.global_position
+	var point: Vector2 = _hero.get_global_mouse_position()
+	if point.distance_to(origin) > max_range:
+		point = origin + (point - origin).normalized() * max_range
+	var low: Vector2 = _field_rect.position + Vector2(margin, margin)
+	var high: Vector2 = _field_rect.end - Vector2(margin, margin)
+	# A field smaller than the zone: aim at its centre.
+	var centre: Vector2 = _field_rect.get_center()
+	var x: float = clampf(point.x, low.x, high.x) if low.x <= high.x else centre.x
+	var y: float = clampf(point.y, low.y, high.y) if low.y <= high.y else centre.y
+	return Vector2(x, y)
+
+
+func _cast_arrow_rain(def: AbilityDef) -> void:
+	var radius: float = float(def.values["radius"])
+	var zone := GroundZone.new()
+	zone.setup_circle(radius, float(def.values["duration"]), ARROW_RAIN_COLOR, _state, _enemies)
+	# One tick counter per zone, shared by all the enemies it hits.
+	var tick := {"left": 0.0, "frame": -1, "fire": false}
+	zone.enemy_inside.connect(_on_arrow_rain_enemy_inside.bind(tick, float(def.values["tick_interval"]), float(def.values["damage"])))
+	_bullets.add_child(zone)
+	zone.global_position = _target_point(float(def.values["max_range"]), radius)
+
+
+## Hits every enemy in the zone for [param damage] each [param interval] seconds (first hit at once).
+func _on_arrow_rain_enemy_inside(enemy: Enemy, delta: float, tick: Dictionary, interval: float, damage: float) -> void:
+	var frame: int = Engine.get_physics_frames()
+	if tick["frame"] != frame:
+		tick["frame"] = frame
+		tick["left"] = float(tick["left"]) - delta
+		tick["fire"] = float(tick["left"]) <= 0.0
+		if tick["fire"]:
+			tick["left"] = float(tick["left"]) + interval
+	if tick["fire"]:
+		enemy.take_damage(damage * _modifiers.damage_multiplier())
+
+
+func _cast_fire_wall(def: AbilityDef) -> void:
+	var half: float = float(def.values["length"]) * 0.5
+	var centre: Vector2 = _target_point(float(def.values["max_range"]), half)
+	var aim: Vector2 = centre - _hero.global_position
+	var direction: Vector2 = aim.normalized() if aim != Vector2.ZERO else _direction_to_mouse()
+	var along := Vector2(-direction.y, direction.x) * half
+	var zone := GroundZone.new()
+	zone.setup_segment(centre - along, centre + along, float(def.values["thickness"]), float(def.values["duration"]), Hero.FIRE_BOLT_COLOR, _state, _enemies)
+	zone.enemy_inside.connect(_on_trail_enemy_inside)  # Same burn as the flame trail.
+	_bullets.add_child(zone)
+
+
+func _cast_puddle(def: AbilityDef) -> void:
+	var radius: float = float(def.values["radius"])
+	var zone := GroundZone.new()
+	zone.setup_circle(radius, float(def.values["duration"]), PUDDLE_COLOR, _state, _enemies)
+	zone.enemy_inside.connect(_on_puddle_enemy_inside.bind(float(def.values["slow_factor"])))
+	_bullets.add_child(zone)
+	zone.global_position = _target_point(float(def.values["max_range"]), radius)
+
+
+func _on_puddle_enemy_inside(enemy: Enemy, _delta: float, slow_factor: float) -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	if weapon != null:
+		enemy.apply_wet(weapon.wet_duration())
+	enemy.apply_slow(slow_factor)
 
 
 func _direction_to_mouse() -> Vector2:
