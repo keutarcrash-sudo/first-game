@@ -25,6 +25,8 @@ const SAVE_PATH := "user://progress.json"
 const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
 const BORDER_COLOR := Color(0.4, 0.45, 0.6)
 const BORDER_WIDTH := 4.0
+## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
+const UNLOCK_CARD_PREFIX := "unlock_ability_"
 
 var _field_rect: Rect2
 var _cycle: WaveCycle
@@ -184,14 +186,40 @@ func _open_card_choice() -> void:
 	if _state.phase != GameState.Phase.CARD_CHOICE or _crystal.current_hp <= 0.0:
 		return
 	var offer: Array[CardDef] = _card_pool.draw()
+	var unlock_card: CardDef = _unlock_card_if_due()
+	if unlock_card != null:
+		var full_size: int = _catalog.offered_per_choice + _skill_tree.cards_offered_bonus(_progress.owned_ids)
+		if offer.size() >= full_size:
+			offer.pop_back()
+		offer.push_front(unlock_card)
 	if offer.is_empty():
 		_end_card_choice()
 		return
 	_card_screen.show_cards(offer)
 
 
+## The "Nouvelle compétence" card when the next locked ability (A, E, R) is due
+## (étape 3b: [member AbilityCatalog.unlock_after_waves]); [code]null[/code] otherwise.
+func _unlock_card_if_due() -> CardDef:
+	var slot: StringName = _caster.next_locked_slot()
+	if slot == &"":
+		return null
+	var index: int = AbilityCatalog.UNLOCK_SLOTS.find(slot)
+	if _state.waves_completed < _ability_catalog.unlock_after_waves[index]:
+		return null
+	var def: AbilityDef = _caster.ability(slot)
+	var card := CardDef.new()
+	card.id = UNLOCK_CARD_PREFIX + String(slot)
+	card.display_name = "Nouvelle compétence : %s (%s)" % [def.display_name, String(slot).to_upper()]
+	card.description = def.description
+	return card
+
+
 func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:
-	modifiers.take(card)
+	if card.id.begins_with(UNLOCK_CARD_PREFIX):
+		_caster.unlock(StringName(card.id.trim_prefix(UNLOCK_CARD_PREFIX)))
+	else:
+		modifiers.take(card)
 	_end_card_choice()
 
 

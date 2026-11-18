@@ -9,13 +9,26 @@ const TYPE_NUMBER_KEYS := {
 	"piercing_arrow": ["damage", "speed", "range", "radius"],
 	"fireball": ["damage", "explosion_radius", "speed", "range", "radius"],
 	"water_wave": ["damage", "angle_degrees", "range", "push_distance", "push_duration"],
+	"dash_crit": ["distance", "duration"],
+	"dash_fire_trail": ["distance", "duration", "trail_width", "trail_duration"],
+	"dash_wet": ["distance", "duration", "wet_radius"],
+	"arrow_rain": ["radius", "max_range", "duration", "tick_interval", "damage"],
+	"fire_wall": ["length", "thickness", "max_range", "duration"],
+	"puddle": ["radius", "max_range", "duration", "slow_factor"],
+	"hunter_eye": ["duration"],
+	"meteor": ["radius", "max_range", "delay", "damage"],
+	"tidal_wave": ["freeze_duration"],
 }
 ## The input slots an ability may use.
 const SLOTS: Array[StringName] = [&"primary", &"a", &"e", &"r"]
-const TEXT_KEYS := ["id", "spec_id", "slot", "display_name", "type"]
+const TEXT_KEYS := ["id", "spec_id", "slot", "display_name", "description", "type"]
+## The slots unlocked during a game, in unlock order (matches [member unlock_after_waves]).
+const UNLOCK_SLOTS: Array[StringName] = [&"a", &"e", &"r"]
 
 ## All abilities, in file order.
 var abilities: Array[AbilityDef] = []
+## Waves to complete before the A, E and R abilities are offered (3 strictly increasing integers above 0).
+var unlock_after_waves: PackedInt32Array = PackedInt32Array()
 
 
 ## Reads and validates the JSON file at [param path]. Each [code]spec_id[/code]
@@ -30,7 +43,18 @@ static func load_from_file(path: String, specs: SpecializationCatalog) -> Abilit
 	if not data is Dictionary or not data.get("abilities") is Array or (data["abilities"] as Array).is_empty():
 		push_error("AbilityCatalog: '%s' must be a JSON object with a non-empty 'abilities' list." % path)
 		return null
+	var raw_waves: Variant = data.get("unlock_after_waves")
+	if not raw_waves is Array or (raw_waves as Array).size() != UNLOCK_SLOTS.size():
+		push_error("AbilityCatalog: key 'unlock_after_waves' in '%s' must be a list of %d integers." % [path, UNLOCK_SLOTS.size()])
+		return null
 	var catalog := AbilityCatalog.new()
+	var previous := 0
+	for wave: Variant in raw_waves:
+		if not (wave is int or (wave is float and wave == floorf(wave))) or int(wave) <= previous:
+			push_error("AbilityCatalog: key 'unlock_after_waves' in '%s' must hold strictly increasing integers above 0 (got %s)." % [path, str(raw_waves)])
+			return null
+		previous = int(wave)
+		catalog.unlock_after_waves.append(previous)
 	for i: int in data["abilities"].size():
 		var ability: AbilityDef = _parse_ability(data["abilities"][i], "abilities[%d]" % i, path, specs)
 		if ability == null:
@@ -77,6 +101,7 @@ static func _parse_ability(raw: Variant, where: String, path: String, specs: Spe
 	ability.spec_id = raw["spec_id"]
 	ability.slot = StringName(raw["slot"])
 	ability.display_name = raw["display_name"]
+	ability.description = raw["description"]
 	ability.cooldown = float(cooldown)
 	ability.type = raw["type"]
 	ability.values = values

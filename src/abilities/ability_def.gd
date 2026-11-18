@@ -11,6 +11,8 @@ var spec_id: String
 var slot: StringName
 ## Name shown in the HUD.
 var display_name: String
+## One French sentence describing the ability (shown on the "new ability" card).
+var description: String
 ## Seconds between two uses (above 0).
 var cooldown: float
 ## Ability type, one of the keys of [constant AbilityCatalog.TYPE_NUMBER_KEYS].

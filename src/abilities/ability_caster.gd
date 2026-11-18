@@ -23,6 +23,7 @@ var _modifiers: PlayerModifiers
 var _rules: ProcRules
 var _abilities: Dictionary = {}  # { slot: AbilityDef }
 var _cooldowns: Dictionary = {}  # { slot: seconds left }
+var _unlocked: Dictionary = {}  # { slot: true } for the slots that can be cast
 
 
 ## Gives the caster what the abilities need: [param bullets] is where projectiles are
@@ -37,13 +38,38 @@ func setup(state: GameState, hero: Hero, enemies: Node2D, bullets: Node2D, field
 	_rules = rules
 
 
-## Sets the abilities of the chosen specialization, [code]{ slot: AbilityDef }[/code]. All start ready.
+## Sets the abilities of the chosen specialization, [code]{ slot: AbilityDef }[/code].
+## All start ready, except A, E and R which start locked (the right click is open).
 func equip(abilities: Dictionary) -> void:
 	_abilities = abilities
 	_cooldowns.clear()
+	_unlocked.clear()
 	for slot: StringName in abilities:
 		_cooldowns[slot] = 0.0
+		if not AbilityCatalog.UNLOCK_SLOTS.has(slot):
+			_unlocked[slot] = true
 	cooldowns_changed.emit()
+
+
+## True when the ability in [param slot] exists and can be cast (not locked).
+func is_unlocked(slot: StringName) -> bool:
+	return _unlocked.has(slot)
+
+
+## Unlocks the ability in [param slot] (ready at once). Does nothing when there is none.
+func unlock(slot: StringName) -> void:
+	if not _abilities.has(slot):
+		return
+	_unlocked[slot] = true
+	cooldowns_changed.emit()
+
+
+## The first of A, E, R that exists and is still locked; [code]&""[/code] when none.
+func next_locked_slot() -> StringName:
+	for slot: StringName in AbilityCatalog.UNLOCK_SLOTS:
+		if _abilities.has(slot) and not _unlocked.has(slot):
+			return slot
+	return &""
 
 
 ## The ability in [param slot], or [code]null[/code] when there is none.
@@ -63,7 +89,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if not event.is_action_pressed(ACTIONS[slot]):
 			continue
 		var def: AbilityDef = ability(slot)
-		if def == null or cooldown_left(slot) > 0.0:
+		if def == null or not is_unlocked(slot) or cooldown_left(slot) > 0.0:
 			return
 		_cast(def)
 		_cooldowns[slot] = def.cooldown
