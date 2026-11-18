@@ -60,6 +60,11 @@ func force_next_crit() -> void:
 	_force_next_crit = true
 
 
+## Drops a pending forced critical (see [method force_next_crit]) without consuming it on an arrow.
+func clear_forced_crit() -> void:
+	_force_next_crit = false
+
+
 ## While [param active], every [method roll_crit] returns [code]true[/code] (étape 3b, Œil du chasseur).
 func set_always_crit(active: bool) -> void:
 	_always_crit = active

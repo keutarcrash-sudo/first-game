@@ -1,7 +1,7 @@
 ## Meteor of the Maître du feu's ultimate (étape 3b, « Météore »): a red announcement
 ## circle fills up during [code]delay[/code] seconds, then the explosion damages and
-## sets on fire every enemy inside, fades out and frees the node. The caster frees it
-## when the phase leaves COMBAT, so it never hits enemies of a finished wave.
+## sets on fire every enemy inside, fades out and frees the node. It frees itself as soon
+## as the phase is not COMBAT, so it never hits enemies of a finished wave.
 class_name Meteor
 extends Node2D
 
@@ -16,15 +16,17 @@ var _damage := 0.0
 var _burn_duration := 0.0
 var _burn_dps := 0.0
 var _enemies: Node2D
+var _state: GameState
 var _time := 0.0
 var _exploded := false
 
 
-## Sets the meteor up: explosion [param radius], announcement [param delay] in seconds,
+## Sets the meteor up: [param state] (it frees itself outside COMBAT), explosion [param radius], announcement [param delay] in seconds,
 ## [param damage] to each enemy inside plus a burn of [param burn_duration] seconds at
 ## [param burn_dps] per second; [param enemies] is the enemies' parent.
 ## Call before adding to the tree, then place it with global_position.
-func setup(radius: float, delay: float, damage: float, burn_duration: float, burn_dps: float, enemies: Node2D) -> void:
+func setup(state: GameState, radius: float, delay: float, damage: float, burn_duration: float, burn_dps: float, enemies: Node2D) -> void:
+	_state = state
 	_radius = radius
 	_delay = delay
 	_damage = damage
@@ -34,6 +36,9 @@ func setup(radius: float, delay: float, damage: float, burn_duration: float, bur
 
 
 func _physics_process(delta: float) -> void:
+	if _state != null and _state.phase != GameState.Phase.COMBAT:
+		queue_free()
+		return
 	_time += delta
 	if not _exploded and _time >= _delay:
 		_exploded = true

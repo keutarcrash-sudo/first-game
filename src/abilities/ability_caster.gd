@@ -22,7 +22,6 @@ const HUNTER_EYE_RING_WIDTH := 3.0
 const HUNTER_EYE_RING_POINTS := 32
 const TIDAL_FLASH_COLOR := Color(0.55, 0.85, 1.0, 0.6)
 const TIDAL_FLASH_DURATION := 0.3
-const HERO_RING_FALLBACK_RADIUS := 16.0
 
 var _state: GameState
 var _hero: Hero
@@ -38,7 +37,6 @@ var _wet_dash_radius := 0.0  # > 0 while a dash_wet jump is in progress.
 var _wet_dash_done: Dictionary = {}  # { enemy instance id: true } already soaked by this jump
 var _eye_left := 0.0  # Seconds of Œil du chasseur remaining; 0 = not active.
 var _eye_ring: Node2D  # Yellow outline around the hero while the eye is active.
-var _meteors: Array[Meteor] = []  # Announced or exploding meteors, freed when COMBAT ends.
 
 
 ## Gives the caster what the abilities need: [param bullets] is where projectiles are
@@ -109,10 +107,8 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 	_wet_dash_radius = 0.0
 	_wet_dash_done.clear()
 	_end_hunter_eye()
-	for meteor: Meteor in _meteors:
-		if is_instance_valid(meteor):
-			meteor.queue_free()
-	_meteors.clear()
+	if _hero != null and _hero.archer_weapon() != null:
+		_hero.archer_weapon().clear_forced_crit()  # A pending Roulade crit does not outlive the combat.
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -381,7 +377,7 @@ func _cast_hunter_eye(def: AbilityDef) -> void:
 
 
 func _draw_eye_ring() -> void:
-	_eye_ring.draw_arc(Vector2.ZERO, HERO_RING_FALLBACK_RADIUS + HUNTER_EYE_RING_GAP, 0.0, TAU, HUNTER_EYE_RING_POINTS, HUNTER_EYE_COLOR, HUNTER_EYE_RING_WIDTH)
+	_eye_ring.draw_arc(Vector2.ZERO, _hero.body_radius() + HUNTER_EYE_RING_GAP, 0.0, TAU, HUNTER_EYE_RING_POINTS, HUNTER_EYE_COLOR, HUNTER_EYE_RING_WIDTH)
 
 
 func _tick_hunter_eye(delta: float) -> void:
@@ -398,7 +394,7 @@ func _tick_hunter_eye(delta: float) -> void:
 ## Marks the enemies on screen for the time the eye has left (refreshed every frame).
 func _mark_on_screen() -> void:
 	for enemy: Enemy in _enemies_on_screen():
-		enemy.apply_mark(_eye_left)
+		enemy.extend_mark(_eye_left)
 
 
 func _end_hunter_eye() -> void:
@@ -418,11 +414,9 @@ func _cast_meteor(def: AbilityDef) -> void:
 	var burn_duration: float = weapon.burn_duration() if weapon != null else 0.0
 	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
 	var meteor := Meteor.new()
-	meteor.setup(radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps, _enemies)
+	meteor.setup(_state, radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps, _enemies)
 	_bullets.add_child(meteor)
 	meteor.global_position = _target_point(float(def.values["max_range"]), radius)
-	meteor.tree_exited.connect(_meteors.erase.bind(meteor))
-	_meteors.append(meteor)
 
 
 ## Raz-de-marée: soaks then freezes every enemy on screen, with a short light-blue flash.
@@ -444,7 +438,9 @@ func _flash_screen() -> void:
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(rect)
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS  # Fades and frees even if the tree pauses (defeat).
 	add_child(layer)
 	var tween := layer.create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(rect, "modulate:a", 0.0, TIDAL_FLASH_DURATION)
 	tween.tween_callback(layer.queue_free)

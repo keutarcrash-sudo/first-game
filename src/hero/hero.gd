@@ -84,6 +84,11 @@ func elemental_weapon() -> ElementalWeapon:
 	return _elemental
 
 
+## Radius of the hero's body in pixels (0 before [method setup]).
+func body_radius() -> float:
+	return _stats.hero_radius if _stats != null else 0.0
+
+
 ## Current movement direction from the move_* actions (length up to 1),
 ## [code]Vector2.ZERO[/code] when no key is held.
 func move_direction() -> Vector2:

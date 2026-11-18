@@ -211,6 +211,17 @@ func apply_mark(duration: float) -> void:
 		queue_redraw()
 
 
+## Marks the enemy for at least [param duration] seconds: keeps the longer of the current
+## and the new duration (étape 3b, Œil du chasseur), unlike [method apply_mark].
+func extend_mark(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	var was_marked: bool = _mark_left > 0.0
+	_mark_left = maxf(_mark_left, duration)
+	if not was_marked and _mark_left > 0.0:
+		queue_redraw()
+
+
 ## Makes the enemy wet (« trempé ») for [param duration] seconds (story 009,
 ## Maître de l'eau). A new call refreshes the duration; it never stacks.
 func apply_wet(duration: float) -> void:
