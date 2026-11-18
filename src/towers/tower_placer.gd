@@ -30,6 +30,7 @@ var _frost_sheet: SpriteSheet
 var _cannon_height: float
 var _frost_height: float
 var _preview: DirectionalSprite
+var _sheet_error_reported := false
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
@@ -109,10 +110,13 @@ func _unhandled_input(event: InputEvent) -> void:
 func _apply_preview_sheet() -> void:
 	if _preview == null:
 		return
-	if _kind == TowerStats.Kind.CANNON:
-		_preview.setup(_cannon_sheet, _cannon_height)
-	else:
-		_preview.setup(_frost_sheet, _frost_height)
+	var sheet: SpriteSheet = _cannon_sheet if _kind == TowerStats.Kind.CANNON else _frost_sheet
+	if sheet == null:
+		_report_missing_sheet()
+		_preview.visible = false
+		return
+	_preview.visible = true
+	_preview.setup(sheet, _cannon_height if _kind == TowerStats.Kind.CANNON else _frost_height)
 	_preview.play(&"idle")
 
 
@@ -137,17 +141,31 @@ func _is_spot_valid(spot: Vector2, radius: float) -> bool:
 	return true
 
 
+## Reports once that a tower image was not given; the tower is then placed without its visual.
+func _report_missing_sheet() -> void:
+	if _sheet_error_reported:
+		return
+	_sheet_error_reported = true
+	push_error("TowerPlacer: tower sheets were not set (set_visuals); towers are shown without an image.")
+
+
 func _place(spot: Vector2) -> void:
 	var tower: Tower
 	if _kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
 		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator)
-		cannon.set_visual(_cannon_sheet, _cannon_height)
+		if _cannon_sheet != null:
+			cannon.set_visual(_cannon_sheet, _cannon_height)
+		else:
+			_report_missing_sheet()
 		tower = cannon
 	else:
 		var frost := FrostTower.new()
 		frost.setup(_stats, _enemies, _modifiers)
-		frost.set_visual(_frost_sheet, _frost_height)
+		if _frost_sheet != null:
+			frost.set_visual(_frost_sheet, _frost_height)
+		else:
+			_report_missing_sheet()
 		tower = frost
 	tower.position = spot
 	_towers.add_child(tower)

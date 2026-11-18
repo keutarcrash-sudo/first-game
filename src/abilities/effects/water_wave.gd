@@ -73,7 +73,7 @@ func _apply() -> void:
 		if to_enemy != Vector2.ZERO and absf(_direction.angle_to(to_enemy)) > _half_angle:
 			continue
 		var away: Vector2 = to_enemy.normalized() if to_enemy != Vector2.ZERO else _direction
-		enemy.take_damage(_damage)
+		enemy.take_damage(_damage, true)
 		# After the damage: wet and push ignore an enemy the hit just killed.
 		enemy.apply_wet(_wet_duration)
 		enemy.push(away * _push_distance, _push_duration, _field_rect)

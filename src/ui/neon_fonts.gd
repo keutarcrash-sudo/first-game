@@ -11,20 +11,32 @@ const OUTLINE_SIZE := 6
 
 static var _title: FontFile
 static var _numbers: FontFile
+static var _tried: Dictionary = {}  # Path -> true once a load was attempted (a failure is not retried).
 
 
 ## Bangers, for titles and short shouted text.
 static func title() -> Font:
 	if _title == null:
-		_title = load(TITLE_PATH) as FontFile
+		_title = _load(TITLE_PATH)
 	return _title
 
 
 ## Bungee, for numbers (cooldowns).
 static func numbers() -> Font:
 	if _numbers == null:
-		_numbers = load(NUMBERS_PATH) as FontFile
+		_numbers = _load(NUMBERS_PATH)
 	return _numbers
+
+
+## Loads [param path] once; on failure reports it (once) and returns [code]null[/code].
+static func _load(path: String) -> FontFile:
+	if _tried.has(path):
+		return null
+	_tried[path] = true
+	var font := load(path) as FontFile
+	if font == null:
+		push_error("NeonFonts: cannot load font '%s'." % path)
+	return font
 
 
 ## Gives [param label] the font [param font] and a black outline of [constant OUTLINE_SIZE].

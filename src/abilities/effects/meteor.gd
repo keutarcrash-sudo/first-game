@@ -19,6 +19,7 @@ var _enemies: Node2D
 var _state: GameState
 var _time := 0.0
 var _exploded := false
+var _impact: ImpactFeedback
 
 
 ## Sets the meteor up: [param state] (it frees itself outside COMBAT), explosion [param radius], announcement [param delay] in seconds,
@@ -33,6 +34,11 @@ func setup(state: GameState, radius: float, delay: float, damage: float, burn_du
 	_burn_duration = burn_duration
 	_burn_dps = burn_dps
 	_enemies = enemies
+
+
+## Gives the meteor the feedback node (big shake and hit-stop on impact). Optional.
+func set_impact(impact: ImpactFeedback) -> void:
+	_impact = impact
 
 
 func _physics_process(delta: float) -> void:
@@ -51,6 +57,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _explode() -> void:
+	PopBurst.spawn(get_parent(), global_position, "BOUM !", WARNING_COLOR, _radius)
+	if _impact != null:
+		_impact.shake(&"big")
+		_impact.hitstop()
 	if _enemies == null:
 		return
 	# Collected first: a kill frees the enemy but never changes the child list mid-loop.
@@ -60,7 +70,7 @@ func _explode() -> void:
 			continue
 		if enemy.global_position.distance_to(global_position) <= _radius + enemy.radius():
 			enemy.apply_burn(_burn_duration, _burn_dps)
-			enemy.take_damage(_damage)
+			enemy.take_damage(_damage, true)
 
 
 func _draw() -> void:

@@ -22,6 +22,7 @@ const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
 const VISUALS_PATH := "res://assets/data/visuals.json"
+const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
 ## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
 const UNLOCK_CARD_PREFIX := "unlock_ability_"
@@ -44,6 +45,7 @@ var _path_view: PathView
 var _camera: GameCamera
 var _ability_catalog: AbilityCatalog
 var _caster: AbilityCaster
+var _impact: ImpactFeedback
 var _visuals: VisualStats
 var _sheets: Dictionary = {}  # Folder -> SpriteSheet, each loaded once and shared.
 
@@ -69,12 +71,13 @@ func _ready() -> void:
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
+	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
 	var enemy_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.enemy_sheet)
 	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
 	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if default_sheet == null or enemy_sheet == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if default_sheet == null or enemy_sheet == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -121,6 +124,11 @@ func _ready() -> void:
 	_camera = GameCamera.new()
 	add_child(_camera)
 	_camera.setup(_hero, _field_rect, _state)
+	_impact = ImpactFeedback.new()
+	add_child(_impact)
+	_impact.setup(impact_stats, _camera, _state)
+	_impact.watch_enemies(_enemies)
+	_impact.watch_crystal(_crystal)
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
@@ -142,6 +150,7 @@ func _ready() -> void:
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
 	_caster = AbilityCaster.new()
 	add_child(_caster)
+	_caster.set_impact(_impact)
 	_caster.setup(_state, _hero, _enemies, _bullets, _field_rect, modifiers, rules)
 	_hud.bind_abilities(_caster)
 	_death_screen = DeathScreen.new()

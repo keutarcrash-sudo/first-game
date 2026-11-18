@@ -121,14 +121,17 @@ func _on_hit(target: Node2D) -> void:
 		var crit: bool = _archer != null and (_guaranteed_crit or _archer.roll_crit())
 		if crit:
 			dealt *= _archer.crit_multiplier()
-			_show_effect(target, CRIT_EFFECT_OFFSET, "Critique ×%s" % String.num(_archer.crit_multiplier()), CRIT_COLOR)
+			_show_effect(target, CRIT_EFFECT_OFFSET, "CRIT !", CRIT_COLOR)
 		if _rules != null and enemy != null:
 			# Resolved now, at impact: the state is the one the enemy has this instant.
 			var proc: ProcRules.Result = _rules.resolve(_source, enemy.has_state)
 			if not proc.combo_ids.is_empty():
 				dealt *= proc.multiplier
 				_show_effect(target, Vector2.ZERO, "×%s" % String.num(proc.multiplier), ProcEffect.COLOR)
-		target.call(&"take_damage", dealt)
+		if enemy != null:
+			enemy.take_damage(dealt, crit)  # A critical kill is a heavy one.
+		else:
+			target.call(&"take_damage", dealt)
 		# After the hit, so this bullet's own combo ignores its burn or mark; both ignore an enemy the hit killed.
 		if enemy != null and _burn_duration > 0.0:
 			enemy.apply_burn(_burn_duration, _burn_damage_per_second)

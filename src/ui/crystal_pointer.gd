@@ -8,6 +8,7 @@ const ARROW_SIZE: float = 18.0
 const ARROW_COLOR: Color = Color(0.55, 0.9, 1.0)
 const FONT_SIZE: int = 20
 const TEXT_OFFSET: Vector2 = Vector2(-30.0, 28.0)
+const TEXT_MARGIN: Vector2 = Vector2(130.0, 10.0)  # Room kept for the Bungee text at the screen edge.
 
 var _crystal: Crystal
 
@@ -42,8 +43,11 @@ func _draw() -> void:
 	var side: Vector2 = dir.orthogonal()
 	var tip: Vector2 = spot + dir * ARROW_SIZE
 	draw_colored_polygon(PackedVector2Array([tip, spot + side * ARROW_SIZE * 0.6, spot - side * ARROW_SIZE * 0.6]), ARROW_COLOR)
-	var text_pos: Vector2 = (spot - dir * ARROW_SIZE * 1.2 + TEXT_OFFSET).clamp(Vector2.ZERO, screen.size - Vector2(80.0, 10.0))
-	draw_string(ThemeDB.fallback_font, text_pos, "%d PV" % ceili(_crystal.current_hp), HORIZONTAL_ALIGNMENT_LEFT, -1.0, FONT_SIZE, ARROW_COLOR)
+	var text_pos: Vector2 = (spot - dir * ARROW_SIZE * 1.2 + TEXT_OFFSET).clamp(Vector2.ZERO, screen.size - Vector2(TEXT_MARGIN.x, TEXT_MARGIN.y))
+	var font: Font = NeonFonts.numbers()
+	if font == null:
+		font = ThemeDB.fallback_font
+	draw_string(font, text_pos, "%d PV" % ceili(_crystal.current_hp), HORIZONTAL_ALIGNMENT_LEFT, -1.0, FONT_SIZE, ARROW_COLOR)
 
 
 ## Point where the ray from [param centre] along [param dir] leaves [param inner].

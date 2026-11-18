@@ -9,6 +9,8 @@ extends Area2D
 ## Emitted when hero fire brings the hit points to zero. Not emitted when the
 ## enemy frees itself by touching the crystal.
 signal died
+## Emitted right after [signal died] when the killing blow was heavy (critical hit, ability).
+signal died_heavy
 
 const COLOR := Color(1.0, 0.35, 0.3)  # Disc colour, only used when no sprite sheet was given.
 const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at full HP.
@@ -352,18 +354,21 @@ func _move_pushed(step: Vector2) -> void:
 	global_position = target
 
 
-## Removes [param amount] hit points; the enemy is freed at zero.
-func take_damage(amount: float) -> void:
-	_damage(amount, true)
+## Removes [param amount] hit points; the enemy is freed at zero. A lethal
+## [param heavy] hit (critical, ability) also emits [signal died_heavy].
+func take_damage(amount: float, heavy: bool = false) -> void:
+	_damage(amount, true, heavy)
 
 
 ## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
-func _damage(amount: float, show_hit: bool) -> void:
+func _damage(amount: float, show_hit: bool, heavy: bool = false) -> void:
 	if is_queued_for_deletion():
 		return
 	_hp -= amount
 	if _hp <= 0.0:
 		died.emit()
+		if heavy:
+			died_heavy.emit()
 		queue_free()
 	else:
 		if show_hit and _sprite != null and _hit_left <= 0.0:

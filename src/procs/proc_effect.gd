@@ -13,7 +13,7 @@ const RING_WIDTH := 4.0
 const RING_POINTS := 24
 const LABEL_OFFSET := Vector2(-20.0, -50.0)
 const LABEL_RISE := 24.0
-const LABEL_FONT_SIZE := 22
+const LABEL_FONT_SIZE := 26
 
 var _age := 0.0
 var _label: Label
@@ -28,6 +28,7 @@ func setup(at: Vector2, text: String, color: Color = COLOR) -> void:
 	_label = Label.new()
 	_label.text = text
 	_label.position = LABEL_OFFSET
+	NeonFonts.style_label(_label, NeonFonts.title())
 	_label.add_theme_font_size_override(&"font_size", LABEL_FONT_SIZE)
 	_label.add_theme_color_override(&"font_color", color)
 	add_child(_label)
