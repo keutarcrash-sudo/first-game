@@ -211,6 +211,17 @@ func apply_mark(duration: float) -> void:
 		queue_redraw()
 
 
+## Marks the enemy for at least [param duration] seconds: keeps the longer of the current
+## and the new duration (étape 3b, Œil du chasseur), unlike [method apply_mark].
+func extend_mark(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	var was_marked: bool = _mark_left > 0.0
+	_mark_left = maxf(_mark_left, duration)
+	if not was_marked and _mark_left > 0.0:
+		queue_redraw()
+
+
 ## Makes the enemy wet (« trempé ») for [param duration] seconds (story 009,
 ## Maître de l'eau). A new call refreshes the duration; it never stacks.
 func apply_wet(duration: float) -> void:
@@ -234,6 +245,19 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 	_push_left = 0.0  # A frozen enemy stops dead, even mid-push.
 	queue_redraw()
 	return true
+
+
+## Freezes the enemy for [param duration] seconds whatever its freeze cooldown or
+## wetness (étape 3b, Raz-de-marée); same look and rules as [method try_freeze]. A
+## freeze already running is only extended, never shortened. The cooldown that
+## follows the freeze is left unchanged.
+func force_freeze(duration: float) -> void:
+	if is_queued_for_deletion():
+		return
+	_frozen_left = maxf(_frozen_left, duration)
+	_freeze_cooldown_left = 0.0
+	_push_left = 0.0
+	queue_redraw()
 
 
 ## Shoves the enemy by [param offset] pixels, spread over [param duration] seconds, on top

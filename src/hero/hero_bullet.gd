@@ -27,6 +27,7 @@ var _burn_damage_per_second := 0.0
 var _hits_left := 1  # Enemies this projectile can still hit.
 var _hit_ids: Dictionary = {}  # Instance ids of the targets already hit.
 var _archer: ArcherWeapon
+var _guaranteed_crit := false
 var _wet_duration := 0.0
 var _color := COLOR
 
@@ -64,6 +65,11 @@ func set_pierce(count: int) -> void:
 
 ## Makes each hit roll a critical with [param archer]: a critical hit is
 ## multiplied by its critical multiplier and marks the enemy. Call before adding the bullet to the tree.
+## Makes every hit of this arrow critical (Roulade); needs [method set_archer].
+func set_guaranteed_crit(active: bool) -> void:
+	_guaranteed_crit = active
+
+
 func set_archer(archer: ArcherWeapon) -> void:
 	_archer = archer
 
@@ -112,7 +118,7 @@ func _on_hit(target: Node2D) -> void:
 	if target.has_method(&"take_damage"):
 		var dealt: float = damage
 		var enemy := target as Enemy
-		var crit: bool = _archer != null and _archer.roll_crit()
+		var crit: bool = _archer != null and (_guaranteed_crit or _archer.roll_crit())
 		if crit:
 			dealt *= _archer.crit_multiplier()
 			_show_effect(target, CRIT_EFFECT_OFFSET, "Critique ×%s" % String.num(_archer.crit_multiplier()), CRIT_COLOR)

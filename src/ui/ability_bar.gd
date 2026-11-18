@@ -60,6 +60,10 @@ func _draw() -> void:
 		if def == null:
 			draw_string(font, box.position + Vector2(0.0, 42.0), "—", HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, EMPTY_COLOR)
 			continue
+		if not _caster.is_unlocked(slot):
+			draw_string(font, box.position + Vector2(0.0, 30.0), def.display_name, HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, EMPTY_COLOR)
+			draw_string(font, box.position + Vector2(0.0, 48.0), "verrouillée", HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, KEY_FONT_SIZE, EMPTY_COLOR)
+			continue
 		draw_string(font, box.position + Vector2(0.0, 44.0), def.display_name, HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, TEXT_COLOR)
 		var left: float = _caster.cooldown_left(slot)
 		if left > 0.0:
