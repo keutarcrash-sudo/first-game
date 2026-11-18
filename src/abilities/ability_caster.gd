@@ -7,6 +7,8 @@ extends Node
 ## Emitted when a cooldown changes its displayed second, and after a cast.
 signal cooldowns_changed
 
+const FIRE_COLOR := Color(1.0, 0.55, 0.15)
+
 const ACTIONS := {
 	&"primary": &"ability_primary",
 	&"a": &"ability_a",
@@ -24,6 +26,8 @@ var _rules: ProcRules
 var _abilities: Dictionary = {}  # { slot: AbilityDef }
 var _cooldowns: Dictionary = {}  # { slot: seconds left }
 var _unlocked: Dictionary = {}  # { slot: true } for the slots that can be cast
+var _wet_dash_radius := 0.0  # > 0 while a dash_wet jump is in progress.
+var _wet_dash_done: Dictionary = {}  # { enemy instance id: true } already soaked by this jump
 
 
 ## Gives the caster what the abilities need: [param bullets] is where projectiles are
@@ -99,6 +103,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _wet_dash_radius > 0.0:
+		_soak_near_hero()
 	if _state == null or _state.phase != GameState.Phase.COMBAT:
 		return
 	var changed := false
@@ -127,6 +133,73 @@ func _cast(def: AbilityDef) -> void:
 func _direction_to_mouse() -> Vector2:
 	var to_mouse: Vector2 = _hero.get_global_mouse_position() - _hero.global_position
 	return to_mouse.normalized() if to_mouse != Vector2.ZERO else Vector2.RIGHT
+
+
+## Direction of a jump: the movement keys if held, else toward the mouse.
+func _dash_direction() -> Vector2:
+	var move: Vector2 = _hero.move_direction()
+	return move.normalized() if move != Vector2.ZERO else _direction_to_mouse()
+
+
+func _cast_dash_crit(def: AbilityDef) -> void:
+	if _hero.is_dashing():
+		return
+	_hero.dash(_dash_direction(), float(def.values["distance"]), float(def.values["duration"]))
+	var weapon: ArcherWeapon = _hero.archer_weapon()
+	if weapon != null:
+		weapon.force_next_crit()
+
+
+func _cast_dash_fire_trail(def: AbilityDef) -> void:
+	if _hero.is_dashing():
+		return
+	var start: Vector2 = _hero.global_position
+	_hero.dash_finished.connect(_on_fire_dash_finished.bind(start, def), CONNECT_ONE_SHOT)
+	_hero.dash(_dash_direction(), float(def.values["distance"]), float(def.values["duration"]))
+
+
+func _on_fire_dash_finished(start: Vector2, def: AbilityDef) -> void:
+	var zone := GroundZone.new()
+	zone.setup_segment(start, _hero.global_position, float(def.values["trail_width"]), float(def.values["trail_duration"]), FIRE_COLOR, _field_rect, _enemies)
+	zone.enemy_inside.connect(_on_trail_enemy_inside)
+	_bullets.add_child(zone)
+
+
+func _on_trail_enemy_inside(enemy: Enemy, _delta: float) -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	if weapon == null:
+		return
+	enemy.apply_burn(weapon.burn_duration(), weapon.burn_damage_per_second())
+
+
+func _cast_dash_wet(def: AbilityDef) -> void:
+	if _hero.is_dashing():
+		return
+	_wet_dash_radius = float(def.values["wet_radius"])
+	_wet_dash_done.clear()
+	_hero.dash_finished.connect(_on_wet_dash_finished, CONNECT_ONE_SHOT)
+	_hero.dash(_dash_direction(), float(def.values["distance"]), float(def.values["duration"]))
+	_soak_near_hero()
+
+
+func _on_wet_dash_finished() -> void:
+	_soak_near_hero()
+	_wet_dash_radius = 0.0
+	_wet_dash_done.clear()
+
+
+## Soaks, once each, the enemies within the jump's wet radius of the hero.
+func _soak_near_hero() -> void:
+	var weapon: ElementalWeapon = _hero.elemental_weapon()
+	if weapon == null or _enemies == null:
+		return
+	for child: Node in _enemies.get_children():
+		var enemy := child as Enemy
+		if enemy == null or enemy.is_queued_for_deletion() or _wet_dash_done.has(enemy.get_instance_id()):
+			continue
+		if enemy.global_position.distance_to(_hero.global_position) <= _wet_dash_radius + enemy.radius():
+			_wet_dash_done[enemy.get_instance_id()] = true
+			enemy.apply_wet(weapon.wet_duration())
 
 
 func _cast_fireball(def: AbilityDef) -> void:
