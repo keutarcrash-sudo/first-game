@@ -35,29 +35,36 @@ function serve() {
   const wanted = process.argv.slice(2);
   const ids = wanted.length ? wanted : Object.keys(recipes.items);
   const server = await serve();
-  const browser = await chromium.launch({ args: ["--use-gl=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] });
-  const page = await browser.newPage();
-  page.on("pageerror", (e) => console.log("PAGE ERROR", e.message));
-  page.on("console", (m) => { if (m.type() === "error") console.log("PAGE CONSOLE", m.text()); });
-  await page.goto(`http://127.0.0.1:${server.address().port}/page.html`);
-  const common = { cell: recipes.cell, anchor: recipes.anchor, pitch_degrees: recipes.pitch_degrees, outline_thickness: recipes.outline_thickness, directions: recipes.directions, kenney_palettes: recipes.kenney_palettes };
-  let failed = false;
-  for (const id of ids) {
-    const item = recipes.items[id];
-    if (!item) { console.log("recette inconnue : " + id); failed = true; continue; }
-    const res = await page.evaluate(([it, c]) => window.bakeItem(it, c), [item, common]);
-    const dir = path.join(OUT, id);
-    fs.mkdirSync(dir, { recursive: true });
-    const sheet = { cell: recipes.cell, anchor: recipes.anchor, directions: item.directions || recipes.directions, animations: {} };
-    for (const [name, a] of Object.entries(res)) {
-      fs.writeFileSync(path.join(dir, name + ".png"), Buffer.from(a.png.split(",")[1], "base64"));
-      sheet.animations[name] = { file: name + ".png", frames: a.frames, fps: recipes.fps, loop: a.loop };
-      if (a.shifted > 0) console.log(`info ${id}/${name} : ${a.shifted} images decalees pour rester dans la case`);
-      if (a.clipped > 0) { console.log(`ATTENTION ${id}/${name} : ${a.clipped} pixels opaques touchent le bord de la case`); failed = true; }
+  let browser = null; let failed = false;
+  try {
+    browser = await chromium.launch({ args: ["--use-gl=swiftshader", "--enable-webgl", "--ignore-gpu-blocklist"] });
+    const page = await browser.newPage();
+    page.on("pageerror", (e) => console.log("PAGE ERROR", e.message));
+    page.on("console", (m) => { if (m.type() === "error") console.log("PAGE CONSOLE", m.text()); });
+    await page.goto(`http://127.0.0.1:${server.address().port}/page.html`);
+    const common = { cell: recipes.cell, anchor: recipes.anchor, pitch_degrees: recipes.pitch_degrees, outline_thickness: recipes.outline_thickness, directions: recipes.directions, kenney_palettes: recipes.kenney_palettes };
+    for (const id of ids) {
+      const item = recipes.items[id];
+      if (!item) { console.log("recette inconnue : " + id); failed = true; continue; }
+      const res = await page.evaluate(([it, c]) => window.bakeItem(it, c), [item, common]);
+      const dir = path.join(OUT, id);
+      fs.mkdirSync(dir, { recursive: true });
+      const sheet = { cell: recipes.cell, anchor: recipes.anchor, directions: item.directions || recipes.directions, animations: {} };
+      for (const [name, a] of Object.entries(res)) {
+        fs.writeFileSync(path.join(dir, name + ".png"), Buffer.from(a.png.split(",")[1], "base64"));
+        sheet.animations[name] = { file: name + ".png", frames: a.frames, fps: recipes.fps, loop: a.loop };
+        if (a.custom) {
+          sheet.animations[name].cell = a.cell; sheet.animations[name].anchor = a.anchor;
+          console.log(`info ${id}/${name} : case propre ${a.cell[0]}x${a.cell[1]}, ancrage ${a.anchor[0]},${a.anchor[1]}`);
+        }
+        if (a.clipped > 0) { console.log(`ATTENTION ${id}/${name} : ${a.clipped} pixels opaques touchent le bord de la case`); failed = true; }
+      }
+      fs.writeFileSync(path.join(dir, "sheet.json"), JSON.stringify(sheet, null, "\t") + "\n");
+      console.log("ok " + id + " : " + Object.keys(res).join(", "));
     }
-    fs.writeFileSync(path.join(dir, "sheet.json"), JSON.stringify(sheet, null, "\t") + "\n");
-    console.log("ok " + id + " : " + Object.keys(res).join(", "));
+  } finally {
+    if (browser) await browser.close();
+    server.close();
   }
-  await browser.close(); server.close();
   process.exit(failed ? 1 : 0);
 })();

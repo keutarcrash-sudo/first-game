@@ -31,7 +31,15 @@
 			"file": "roll.png",
 			"frames": 8,
 			"fps": 12,
-			"loop": false
+			"loop": false,
+			"cell": [
+				128,
+				144
+			],
+			"anchor": [
+				64,
+				112
+			]
 		},
 		"hit": {
 			"file": "hit.png",
@@ -43,7 +51,15 @@
 			"file": "death.png",
 			"frames": 10,
 			"fps": 12,
-			"loop": false
+			"loop": false,
+			"cell": [
+				192,
+				176
+			],
+			"anchor": [
+				96,
+				112
+			]
 		}
 	}
 }

@@ -5,14 +5,14 @@
 <script src="/three/examples/js/effects/OutlineEffect.js"></script>
 <script>
 let renderer, effect, grad, CELL_W, CELL_H;
-const PAD = 64;
+const PAD = 128;
 const loader = new THREE.GLTFLoader();
 const load = (f) => new Promise((ok, ko) => loader.load("/models/" + f, ok, undefined, ko));
 
 function init(common) {
   CELL_W = common.cell[0]; CELL_H = common.cell[1];
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-  // Rendu sur une toile plus large (marge PAD de chaque cote) pour pouvoir recadrer une silhouette qui deborde.
+  // Rendu sur une toile plus large (marge PAD de chaque cote) pour mesurer une silhouette qui deborde de la case.
   renderer.setPixelRatio(1); renderer.setSize(CELL_W + 2 * PAD, CELL_H + 2 * PAD);
   renderer.outputEncoding = THREE.sRGBEncoding; renderer.setClearColor(0x000000, 0);
   effect = new THREE.OutlineEffect(renderer, { defaultThickness: common.outline_thickness * CELL_W / (CELL_W + 2 * PAD), defaultColor: [0, 0, 0] });
@@ -108,7 +108,7 @@ async function bakeCharacter(item, common) {
   root.scale.setScalar(item.height / (box.max.y - box.min.y)); root.position.y = -box.min.y * root.scale.y;
   const wrap = new THREE.Group(); wrap.add(root);
   const s = newScene(); s.add(wrap);
-  const mixer = new THREE.AnimationMixer(root); const out = {}; const stats = { shifted: 0 };
+  const mixer = new THREE.AnimationMixer(root); const out = {};
   const first = Object.values(item.animations)[0]; const firstClip = THREE.AnimationClip.findByName(g.animations, first.clip);
   mixer.clipAction(firstClip).play(); mixer.setTime(0);
   const cam = makeCamera(common, item.half_size, fitShift(common, s, item.half_size, (k) => { wrap.rotation.y = rotationFor(k); }));
@@ -118,24 +118,18 @@ async function bakeCharacter(item, common) {
     mixer.stopAllAction(); const act = mixer.clipAction(clip);
     if (!a.loop) { act.setLoop(THREE.LoopOnce, 1); act.clampWhenFinished = true; } // derniere image = pose finale
     act.reset(); act.play();
-    const sheet = document.createElement("canvas"); sheet.width = CELL_W * a.frames; sheet.height = CELL_H * common.directions; const sx = sheet.getContext("2d");
-    for (let k = 0; k < common.directions; k++) {
-      wrap.rotation.y = rotationFor(k); act.reset(); act.play();
-      for (let f = 0; f < a.frames; f++) {
-        const t = a.loop ? clip.duration * f / a.frames : clip.duration * f / Math.max(1, a.frames - 1);
-        mixer.setTime(Math.min(t, clip.duration));
-        stats.shifted += placeInCell(sx, f * CELL_W, k * CELL_H, s, cam);
-      }
-    }
-    out[name] = { png: sheet.toDataURL("image/png"), frames: a.frames, loop: a.loop, clipped: countClipped(sx, a.frames, common.directions), shifted: stats.shifted };
-    stats.shifted = 0;
+    const setFrame = (k, f) => {
+      wrap.rotation.y = rotationFor(k); if (f === 0) { act.reset(); act.play(); }
+      const t = a.loop ? clip.duration * f / a.frames : clip.duration * f / Math.max(1, a.frames - 1);
+      mixer.setTime(Math.min(t, clip.duration));
+    };
+    const res = bakeSheet(common, s, cam, a.frames, common.directions, setFrame);
+    out[name] = Object.assign({ frames: a.frames, loop: a.loop }, res);
   }
   return out;
 }
 
-// Rend la scene (toile large) et copie la fenetre de la case dans la planche. Si la silhouette depasse la
-// case (corps allonge d'une mort ou d'une roulade), la fenetre est decalee du minimum pour la garder entiere
-// (marge 1 px). Renvoie 1 si decalee.
+// Rend la scene sur la toile large et renvoie ses pixels (la case standard est la fenetre PAD..PAD+CELL).
 let scratchCanvas = null;
 function grab(scene, cam) {
   if (!scratchCanvas) { scratchCanvas = document.createElement("canvas"); scratchCanvas.width = CELL_W + 2 * PAD; scratchCanvas.height = CELL_H + 2 * PAD; }
@@ -148,16 +142,6 @@ function bbox(d) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 16) { if (x < x1) x1 = x; if (x > x2) x2 = x; if (y < y1) y1 = y; if (y > y2) y2 = y; }
   return { x1, x2, y1, y2 };
 }
-function placeInCell(sx, x0, y0, scene, cam) {
-  const b = bbox(grab(scene, cam)); let dx = 0, dy = 0;
-  if (b.x2 >= 0) {
-    if (b.x1 - PAD < 1) dx = 1 - (b.x1 - PAD); else if (b.x2 - PAD > CELL_W - 2) dx = CELL_W - 2 - (b.x2 - PAD);
-    if (b.y1 - PAD < 1) dy = 1 - (b.y1 - PAD); else if (b.y2 - PAD > CELL_H - 2) dy = CELL_H - 2 - (b.y2 - PAD);
-  }
-  sx.drawImage(scratchCanvas, PAD - dx, PAD - dy, CELL_W, CELL_H, x0, y0, CELL_W, CELL_H);
-  return (dx || dy) ? 1 : 0;
-}
-
 // Mesure la ligne la plus basse opaque (toutes directions) et renvoie le decalage en pixels vers le haut
 // qui pose le bas de la silhouette sur la ligne d'ancrage.
 function fitShift(common, scene, half, renderDir) {
@@ -166,13 +150,41 @@ function fitShift(common, scene, half, renderDir) {
   return bottom + 1 - common.anchor[1];
 }
 
-function countClipped(sx, frames, dirs) {
+const up16 = (n) => Math.ceil(n / 16) * 16;
+
+// Photographie toutes les images (k = direction, f = image) d'une animation. Mesure d'abord l'etendue de la
+// silhouette autour de l'ancrage ; si elle depasse la case standard, l'animation recoit sa propre case et son
+// propre ancrage (multiples de 16), de sorte que l'ancrage reste exactement la position de jeu sur chaque image.
+// setFrame(k, f) pose le modele. Renvoie { png, cell, anchor, custom, clipped }.
+function bakeSheet(common, scene, cam, frames, dirs, setFrame) {
+  const [ax0, ay0] = common.anchor; let l = 0, r = 0, u = 0, d = 0;
+  for (let k = 0; k < dirs; k++) for (let f = 0; f < frames; f++) {
+    setFrame(k, f); const b = bbox(grab(scene, cam)); if (b.x2 < 0) continue;
+    l = Math.max(l, ax0 - (b.x1 - PAD)); r = Math.max(r, (b.x2 - PAD) - ax0); u = Math.max(u, ay0 - (b.y1 - PAD)); d = Math.max(d, (b.y2 - PAD) - ay0);
+  }
+  const m = 1; // marge : le bord de la case reste transparent
+  const std = l + m <= ax0 && r + m <= CELL_W - ax0 && u + m <= ay0 && d + m <= CELL_H - ay0;
+  let cw = CELL_W, ch = CELL_H, ax = ax0, ay = ay0;
+  if (!std) {
+    ax = up16(Math.max(ax0, l + m, r + m)); cw = 2 * ax; // ancrage au centre de la case
+    ay = up16(Math.max(ay0, u + m)); ch = ay + up16(Math.max(CELL_H - ay0, d + m));
+  }
+  if (cw > PAD * 2 + CELL_W - 2 || ch > PAD * 2 + CELL_H - 2) throw new Error("silhouette plus grande que la toile de mesure");
+  const sheet = document.createElement("canvas"); sheet.width = cw * frames; sheet.height = ch * dirs; const sx = sheet.getContext("2d");
+  for (let k = 0; k < dirs; k++) for (let f = 0; f < frames; f++) {
+    setFrame(k, f); grab(scene, cam);
+    sx.drawImage(scratchCanvas, PAD + ax0 - ax, PAD + ay0 - ay, cw, ch, f * cw, k * ch, cw, ch);
+  }
+  return { png: sheet.toDataURL("image/png"), cell: [cw, ch], anchor: [ax, ay], custom: !std, clipped: countClipped(sx, frames, dirs, cw, ch) };
+}
+
+function countClipped(sx, frames, dirs, cw, ch) {
   let n = 0;
   for (let k = 0; k < dirs; k++) for (let f = 0; f < frames; f++) {
-    const d = sx.getImageData(f * CELL_W, k * CELL_H, CELL_W, CELL_H).data;
-    for (let y = 0; y < CELL_H; y++) for (let x = 0; x < CELL_W; x++) {
-      if (x > 0 && x < CELL_W - 1 && y > 0 && y < CELL_H - 1) continue;
-      if (d[(y * CELL_W + x) * 4 + 3] > 16) n++;
+    const d = sx.getImageData(f * cw, k * ch, cw, ch).data;
+    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+      if (x > 0 && x < cw - 1 && y > 0 && y < ch - 1) continue;
+      if (d[(y * cw + x) * 4 + 3] > 16) n++;
     }
   }
   return n;
@@ -191,12 +203,8 @@ async function bakeProp(item, common, kenneyImg) {
   if (item.builder) builders[item.builder](s, y);
   const setDir = (k) => rot.forEach((r) => { r.rotation.y = rotationFor(k); });
   const cam = makeCamera(common, item.half_size, fitShift(common, s, item.half_size, setDir));
-  const sheet = document.createElement("canvas"); sheet.width = CELL_W; sheet.height = CELL_H * item.directions; const sx = sheet.getContext("2d");
-  for (let k = 0; k < item.directions; k++) {
-    setDir(k);
-    placeInCell(sx, 0, k * CELL_H, s, cam);
-  }
-  return { idle: { png: sheet.toDataURL("image/png"), frames: 1, loop: true, clipped: countClipped(sx, 1, item.directions) } };
+  const res = bakeSheet(common, s, cam, 1, item.directions, (k) => setDir(k));
+  return { idle: Object.assign({ frames: 1, loop: true }, res) };
 }
 
 window.bakeItem = async (item, common) => {

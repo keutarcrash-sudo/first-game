@@ -77,7 +77,7 @@
       ],
       "builder": null,
       "directions": 8,
-      "half_size": 0.95
+      "half_size": 1.1
     },
     "frost_tower": {
       "kind": "prop",
@@ -87,7 +87,7 @@
       ],
       "builder": "frostTop",
       "directions": 1,
-      "half_size": 1.05
+      "half_size": 1.2
     },
     "crystal_cart": {
       "kind": "prop",
