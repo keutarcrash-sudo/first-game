@@ -12,8 +12,8 @@ const BOTTOM_MARGIN := 120.0  # Just above the tower buttons.
 const KEY_FONT_SIZE := 14
 const NAME_FONT_SIZE := 16
 const COOLDOWN_FONT_SIZE := 26
-const BOX_COLOR := Color(0.12, 0.14, 0.2, 0.85)
-const BORDER_COLOR := Color(0.4, 0.45, 0.6)
+const BOX_COLOR := Color("#1c1340")
+const BORDER_COLOR := Color("#19e3ff")
 const VEIL_COLOR := Color(0.0, 0.0, 0.0, 0.65)
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const EMPTY_COLOR := Color(0.5, 0.5, 0.55)
@@ -49,7 +49,8 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
 	if _caster == null:
 		return
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = NeonFonts.title()
+	var number_font: Font = NeonFonts.numbers()
 	for i: int in SLOTS.size():
 		var slot: StringName = SLOTS[i]
 		var box := Rect2(Vector2(i * (BOX_SIZE.x + BOX_SPACING), 0.0), BOX_SIZE)
@@ -64,8 +65,9 @@ func _draw() -> void:
 			draw_string(font, box.position + Vector2(0.0, 30.0), def.display_name, HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, EMPTY_COLOR)
 			draw_string(font, box.position + Vector2(0.0, 48.0), "verrouillée", HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, KEY_FONT_SIZE, EMPTY_COLOR)
 			continue
+		draw_string_outline(font, box.position + Vector2(0.0, 44.0), def.display_name, HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, NeonFonts.OUTLINE_SIZE, Color.BLACK)
 		draw_string(font, box.position + Vector2(0.0, 44.0), def.display_name, HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, NAME_FONT_SIZE, TEXT_COLOR)
 		var left: float = _caster.cooldown_left(slot)
 		if left > 0.0:
 			draw_rect(box, VEIL_COLOR)
-			draw_string(font, box.position + Vector2(0.0, 38.0), str(ceili(left)), HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, COOLDOWN_FONT_SIZE, TEXT_COLOR)
+			draw_string(number_font, box.position + Vector2(0.0, 38.0), str(ceili(left)), HORIZONTAL_ALIGNMENT_CENTER, BOX_SIZE.x, COOLDOWN_FONT_SIZE, TEXT_COLOR)

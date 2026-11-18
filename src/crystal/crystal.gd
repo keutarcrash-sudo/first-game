@@ -3,9 +3,15 @@
 class_name Crystal
 extends Node2D
 
-const COLOR := Color(0.4, 0.95, 0.85)
-const OUTLINE_COLOR := Color(0.85, 1.0, 0.97)
-const OUTLINE_WIDTH := 3.0
+const HALO_COLOR := Color(0.1, 0.89, 1.0)
+const HALO_FILL_ALPHA := 0.25
+const HALO_EDGE_ALPHA := 0.7
+const HALO_EDGE_WIDTH := 3.0
+## Halo radius is the crystal radius times (1 + amplitude * sin(...)).
+const HALO_BASE_SCALE := 1.15
+const HALO_PULSE_AMPLITUDE := 0.12
+const HALO_PULSE_SPEED := 3.0
+const HALO_POINTS := 48
 
 ## Emitted after every change of hit points.
 signal health_changed(current_hp: float, max_hp: float)
@@ -26,6 +32,7 @@ var current_hp: float
 var max_hp: float
 
 var _path: CrystalPath
+var _sprite: DirectionalSprite
 var _distance: float = 0.0
 var _travelling: bool = false
 
@@ -39,6 +46,16 @@ func setup(stats: DefenceStats, max_hp_bonus: float) -> void:
 	max_hp = stats.crystal_max_hp + max_hp_bonus
 	current_hp = max_hp
 	queue_redraw()
+
+
+## Gives the crystal its cart image: [param sheet] drawn [param height_px] tall.
+## A cyan halo pulses under it.
+func set_visual(sheet: SpriteSheet, height_px: float) -> void:
+	if _sprite == null:
+		_sprite = DirectionalSprite.new()
+		add_child(_sprite)
+	_sprite.setup(sheet, height_px)
+	_sprite.play(&"idle")
 
 
 ## Starts walking [param path] from its beginning, at [member speed]. Restarts
@@ -59,6 +76,10 @@ func stop() -> void:
 ## True while the crystal is walking along a path.
 func is_travelling() -> bool:
 	return _travelling
+
+
+func _process(_delta: float) -> void:
+	queue_redraw()  # The halo pulses with time.
 
 
 func _physics_process(delta: float) -> void:
@@ -93,10 +114,7 @@ func heal(amount: float) -> void:
 
 
 func _draw() -> void:
-	var points := PackedVector2Array([
-		Vector2(0.0, -radius), Vector2(radius * 0.8, 0.0),
-		Vector2(0.0, radius), Vector2(-radius * 0.8, 0.0),
-	])
-	draw_colored_polygon(points, COLOR)
-	points.append(points[0])
-	draw_polyline(points, OUTLINE_COLOR, OUTLINE_WIDTH)
+	var time: float = Time.get_ticks_msec() / 1000.0
+	var halo_radius: float = radius * (HALO_BASE_SCALE + HALO_PULSE_AMPLITUDE * sin(time * HALO_PULSE_SPEED))
+	draw_circle(Vector2.ZERO, halo_radius, Color(HALO_COLOR, HALO_FILL_ALPHA))
+	draw_arc(Vector2.ZERO, halo_radius, 0.0, TAU, HALO_POINTS, Color(HALO_COLOR, HALO_EDGE_ALPHA), HALO_EDGE_WIDTH, true)
