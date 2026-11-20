@@ -7,7 +7,13 @@
   "directions": 8,
   "kenney_palettes": {
     "purple": { "hue": 0.76, "sat": 0.7 },
-    "orange": { "hue": 0.07, "sat": 1.0, "gray_to_hue": true }
+    "orange": { "hue": 0.07, "sat": 1.0, "gray_to_hue": true },
+    "decor_rock": { "hue": 0.74, "sat": 0.35, "l": [0.18, 0.22], "l_mul": 0.8 },
+    "decor_tree": { "hue": 0.88, "sat": 0.5, "l": [0.25, 0.22], "l_mul": 0.7, "map": [
+      { "from": [0.15, 0.5], "hue": 0.9, "sat": 0.55, "l": [0.28, 0.25] },
+      { "from": [0.0, 0.15], "hue": 0.75, "sat": 0.3, "l": [0.1, 0.15] }
+    ] },
+    "decor_crystal": { "hue": 0.5, "sat": 0.6, "l": [0.28, 0.25], "l_mul": 0.8 }
   },
   "items": {
     "elf": {
@@ -95,6 +101,12 @@
       "builder": "crystalCart",
       "directions": 1,
       "half_size": 1.05
-    }
+    },
+    "decor_rocks": { "kind": "prop", "parts": [ { "model": "kenney/detail-rocks.glb", "palette": "decor_rock" } ], "builder": null, "directions": 1, "half_size": 0.6 },
+    "decor_rocks_large": { "kind": "prop", "parts": [ { "model": "kenney/detail-rocks-large.glb", "palette": "decor_rock" } ], "builder": null, "directions": 1, "half_size": 0.85 },
+    "decor_tree": { "kind": "prop", "parts": [ { "model": "kenney/detail-tree.glb", "palette": "decor_tree" } ], "builder": null, "directions": 1, "half_size": 0.6 },
+    "decor_tree_large": { "kind": "prop", "parts": [ { "model": "kenney/detail-tree-large.glb", "palette": "decor_tree" } ], "builder": null, "directions": 1, "half_size": 0.75 },
+    "decor_crystal": { "kind": "prop", "parts": [ { "model": "kenney/detail-crystal.glb", "palette": "decor_crystal" } ], "builder": null, "directions": 1, "half_size": 0.45 },
+    "decor_crystal_large": { "kind": "prop", "parts": [ { "model": "kenney/detail-crystal-large.glb", "palette": "decor_crystal" } ], "builder": null, "directions": 1, "half_size": 0.9 }
   }
 }

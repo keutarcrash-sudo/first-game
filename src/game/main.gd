@@ -23,6 +23,7 @@ const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
 const VISUALS_PATH := "res://assets/data/visuals.json"
+const DECOR_PATH := "res://assets/data/decor.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
 ## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
@@ -44,6 +45,7 @@ var _skill_tree: SkillTree
 var _progress: SaveProgress
 var _death_screen: DeathScreen
 var _path_view: PathView
+var _decor: DecorField
 var _camera: GameCamera
 var _ability_catalog: AbilityCatalog
 var _caster: AbilityCaster
@@ -128,6 +130,14 @@ func _ready() -> void:
 	add_child(floor_view)
 	move_child(floor_view, 0)
 	floor_view.setup(_field_rect)
+	# The decor sits right above the floor and under the path view. It is optional:
+	# a missing or invalid decor.json (error already logged) leaves the field bare.
+	var decor_stats: DecorStats = DecorStats.load_from_file(DECOR_PATH)
+	if decor_stats != null:
+		_decor = DecorField.new()
+		add_child(_decor)
+		move_child(_decor, 1)
+		_decor.setup(decor_stats, _field_rect, _crystal.global_position, _rng)
 	_camera = GameCamera.new()
 	add_child(_camera)
 	_camera.setup(_hero, _field_rect, _state)
@@ -303,6 +313,8 @@ func _end_card_choice() -> void:
 ## Shows the prepared wave's path and its preview text.
 func _on_wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath) -> void:
 	_path_view.show_path(path)
+	if _decor != null:
+		_decor.show_path(path)
 	_hud.show_wave_preview(wave_number, enemy_count)
 
 

@@ -52,13 +52,21 @@ function toonify(root, colors) {
   });
 }
 
-// Remplace la palette Kenney par une version teintee (teinte unique, gris -> violet fonce).
-function huePalette(img, targetHue, sat, grayToHue) {
+// Remplace la palette Kenney par une version teintee. `cfg` : hue, sat, gray_to_hue ;
+// facultatif : l = [base, ecart] (luminosite des couleurs), l_mul (gris), map = liste de
+// { from: [teinte_min, teinte_max], hue, sat, l } qui recolore chaque famille de couleurs
+// (ex. feuilles vertes -> rose, tronc brun -> violet sombre).
+function huePalette(img, cfg) {
+  const targetHue = cfg.hue, sat = cfg.sat, grayToHue = cfg.gray_to_hue;
+  const lb = cfg.l ? cfg.l[0] : 0.35, lr = cfg.l ? cfg.l[1] : 0.3, lm = cfg.l_mul || 1;
   const c = document.createElement("canvas"); c.width = img.width; c.height = img.height; const x = c.getContext("2d"); x.drawImage(img, 0, 0);
   const d = x.getImageData(0, 0, c.width, c.height); const p = d.data; const tmp = new THREE.Color();
   for (let i = 0; i < p.length; i += 4) {
     tmp.setRGB(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255); const h = {}; tmp.getHSL(h);
-    if (h.s < 0.18) tmp.setHSL(grayToHue ? targetHue : 0.74, grayToHue ? sat : 0.5, grayToHue ? 0.3 + h.l * 0.35 : 0.12 + h.l * 0.38); else tmp.setHSL(targetHue, sat, 0.35 + h.l * 0.3);
+    const m = (cfg.map && h.s >= 0.18) ? cfg.map.find((e) => h.h >= e.from[0] && h.h <= e.from[1]) : null;
+    if (m) tmp.setHSL(m.hue, m.sat, m.l[0] + h.l * m.l[1]);
+    else if (h.s < 0.18) tmp.setHSL(grayToHue ? targetHue : 0.74, grayToHue ? sat : 0.5, (grayToHue ? 0.3 + h.l * 0.35 : 0.12 + h.l * 0.38) * lm);
+    else tmp.setHSL(targetHue, sat, lb + h.l * lr);
     p[i] = tmp.r * 255; p[i + 1] = tmp.g * 255; p[i + 2] = tmp.b * 255;
   }
   x.putImageData(d, 0, 0); const t = new THREE.CanvasTexture(c); t.flipY = false; t.encoding = THREE.sRGBEncoding; t.magFilter = THREE.NearestFilter; return t;
@@ -195,7 +203,7 @@ async function bakeProp(item, common, kenneyImg) {
   const pals = {};
   for (const p of item.parts) {
     const g = await load(p.model); const r = g.scene;
-    if (!pals[p.palette]) { const cfg = common.kenney_palettes[p.palette]; pals[p.palette] = huePalette(kenneyImg, cfg.hue, cfg.sat, cfg.gray_to_hue); }
+    if (!pals[p.palette]) { const cfg = common.kenney_palettes[p.palette]; pals[p.palette] = huePalette(kenneyImg, cfg); }
     r.traverse((o) => { if (o.isMesh) o.material.map = pals[p.palette]; });
     toonify(r); r.position.y = y; s.add(r); if (p.rotates) rot.push(r);
     y = new THREE.Box3().setFromObject(r).max.y;

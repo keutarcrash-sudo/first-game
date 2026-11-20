@@ -1,0 +1,15 @@
+{
+	"count": 40,
+	"min_spacing": 120.0,
+	"crystal_clearance": 220.0,
+	"path_clearance": 70.0,
+	"edge_margin": 50.0,
+	"pieces": [
+		{ "sheet": "res://assets/sprites/decor_rocks", "height_px": 130.0 },
+		{ "sheet": "res://assets/sprites/decor_rocks_large", "height_px": 170.0 },
+		{ "sheet": "res://assets/sprites/decor_tree", "height_px": 170.0 },
+		{ "sheet": "res://assets/sprites/decor_tree_large", "height_px": 230.0 },
+		{ "sheet": "res://assets/sprites/decor_crystal", "height_px": 150.0 },
+		{ "sheet": "res://assets/sprites/decor_crystal_large", "height_px": 200.0 }
+	]
+}
