@@ -153,7 +153,7 @@ func open(run: WorldRun, preview_text: String, choosing: bool) -> void:
 	_open_places = _places_ahead(run)
 	_hovered = Vector2i(-1, -1)
 	_title_label.text = "Monde %d" % run.world
-	_preview_label.text = "Prochaine vague — %s" % preview_text
+	_preview_label.text = "Prochaine — %s" % preview_text
 	_hint_label.visible = choosing
 	_go_button.visible = not choosing
 	_rebuild_buttons()
