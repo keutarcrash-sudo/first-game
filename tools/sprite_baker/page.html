@@ -54,7 +54,7 @@ function toonify(root, colors) {
 
 // Remplace la palette Kenney par une version teintee. `cfg` : hue, sat, gray_to_hue ;
 // facultatif : l = [base, ecart] (luminosite des couleurs), l_mul (gris), map = liste de
-// { from: [teinte_min, teinte_max], hue, sat, l } qui recolore chaque famille de couleurs
+// { from: [teinte_min, teinte_max], s: [sat_min, sat_max] (facultatif), hue, sat, l } qui recolore chaque famille de couleurs
 // (ex. feuilles vertes -> rose, tronc brun -> violet sombre).
 function huePalette(img, cfg) {
   const targetHue = cfg.hue, sat = cfg.sat, grayToHue = cfg.gray_to_hue;
@@ -63,7 +63,7 @@ function huePalette(img, cfg) {
   const d = x.getImageData(0, 0, c.width, c.height); const p = d.data; const tmp = new THREE.Color();
   for (let i = 0; i < p.length; i += 4) {
     tmp.setRGB(p[i] / 255, p[i + 1] / 255, p[i + 2] / 255); const h = {}; tmp.getHSL(h);
-    const m = (cfg.map && h.s >= 0.18) ? cfg.map.find((e) => h.h >= e.from[0] && h.h <= e.from[1]) : null;
+    const m = (cfg.map && h.s >= 0.18) ? cfg.map.find((e) => h.h >= e.from[0] && h.h <= e.from[1] && (!e.s || (h.s >= e.s[0] && h.s <= e.s[1]))) : null;
     if (m) tmp.setHSL(m.hue, m.sat, m.l[0] + h.l * m.l[1]);
     else if (h.s < 0.18) tmp.setHSL(grayToHue ? targetHue : 0.74, grayToHue ? sat : 0.5, (grayToHue ? 0.3 + h.l * 0.35 : 0.12 + h.l * 0.38) * lm);
     else tmp.setHSL(targetHue, sat, lb + h.l * lr);
@@ -210,9 +210,38 @@ async function bakeProp(item, common, kenneyImg) {
   }
   if (item.builder) builders[item.builder](s, y);
   const setDir = (k) => rot.forEach((r) => { r.rotation.y = rotationFor(k); });
+  if (item.animations) return bakeSynthetic(item, common, s, setDir);
   const cam = makeCamera(common, item.half_size, fitShift(common, s, item.half_size, setDir));
   const res = bakeSheet(common, s, cam, 1, item.directions, (k) => setDir(k));
   return { idle: Object.assign({ frames: 1, loop: true }, res) };
+}
+
+// Animations synthetiques pour un modele fixe (sans squelette) : on anime un groupe qui enveloppe la scene.
+// `synth` : spin_bob (tour complet sur soi + oscillation verticale, boucle), shake (secousse, une fois),
+// shrink_spin (rapetisse en tournant, une fois ; derniere image = taille `end_scale`). `item.scale` agrandit le tout.
+const synthPoses = {
+  spin_bob: (t) => ({ ry: 2 * Math.PI * t, y: 0.06 * Math.sin(4 * Math.PI * t) + 0.06, x: 0, s: 1 }),
+  shake: (t) => ({ ry: 0.25 * Math.sin(2 * Math.PI * t * 2), y: 0, x: 0.09 * Math.sin(2 * Math.PI * t * 2) * (1 - t), s: 1 }),
+  shrink_spin: (t, a) => ({ ry: 4 * Math.PI * t, y: 0.12 * Math.sin(Math.PI * t), x: 0, s: 1 - (1 - (a.end_scale || 0.08)) * t }),
+};
+function bakeSynthetic(item, common, scene, setDir) {
+  const wrap = new THREE.Group(); const kids = scene.children.filter((c) => !c.isLight);
+  kids.forEach((c) => wrap.add(c)); scene.add(wrap);
+  const sc = item.scale || 1; const out = {};
+  const pose = (a, k, f) => {
+    setDir(k);
+    const t = a.loop ? f / a.frames : f / Math.max(1, a.frames - 1);
+    const p = synthPoses[a.synth](t, a);
+    wrap.rotation.y = p.ry; wrap.position.set(p.x, p.y, 0); wrap.scale.setScalar(sc * p.s);
+  };
+  pose({ synth: "spin_bob", loop: true, frames: 8 }, 0, 0); wrap.rotation.y = 0; wrap.position.set(0, 0, 0);
+  const cam = makeCamera(common, item.half_size, fitShift(common, scene, item.half_size, (k) => { setDir(k); }));
+  for (const [name, a] of Object.entries(item.animations)) {
+    if (!synthPoses[a.synth]) throw new Error(item.model + ": animation synthetique inconnue " + a.synth);
+    const res = bakeSheet(common, scene, cam, a.frames, item.directions, (k, f) => pose(a, k, f));
+    out[name] = Object.assign({ frames: a.frames, loop: a.loop }, res);
+  }
+  return out;
 }
 
 window.bakeItem = async (item, common) => {

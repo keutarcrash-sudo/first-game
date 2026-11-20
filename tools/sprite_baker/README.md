@@ -28,7 +28,10 @@ par element dans `items` :
   (nom court -> nom du pack, nombre d'images, boucle), `half_size` (demi-largeur du champ en unites monde).
 - `kind: "prop"` (Kenney + sur mesure) : `parts` (GLB empiles, palette `kenney_palettes`, `rotates`
   pour la piece qui tourne selon la direction), `builder` (`frostTop`, `crystalCart`, dans `page.html`),
-  `directions` (8 ou 1).
+  `directions` (8 ou 1). Un prop sans squelette peut avoir `animations` synthetiques : chaque entree
+  `{ synth, frames, loop }` (`spin_bob` = tour sur soi + oscillation, `shake` = secousse, `shrink_spin` = rapetisse
+  en tournant, `end_scale`) anime un groupe autour du modele (`scale` agrandit le tout) ; voir `bakeSynthetic` dans `page.html`.
+  Une entree de `map` d'une palette Kenney peut aussi filtrer par saturation avec `s: [min, max]`.
 
 Sortie par element : une planche `<animation>.png` (8 lignes = directions, une colonne par image)
 et `sheet.json` (`cell`, `anchor`, `directions`, `animations`).

@@ -1,0 +1,31 @@
+{
+	"cell": [
+		128,
+		128
+	],
+	"anchor": [
+		64,
+		112
+	],
+	"directions": 1,
+	"animations": {
+		"run": {
+			"file": "run.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": true
+		},
+		"hit": {
+			"file": "hit.png",
+			"frames": 4,
+			"fps": 12,
+			"loop": false
+		},
+		"death": {
+			"file": "death.png",
+			"frames": 10,
+			"fps": 12,
+			"loop": false
+		}
+	}
+}
