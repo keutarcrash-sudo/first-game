@@ -64,7 +64,7 @@
 		{
 			"id": "arsenal_feu",
 			"display_name": "Arsenal du feu",
-			"description": "Ajoute Munitions incendiaires et Frappe du brasier aux cartes possibles.",
+			"description": "Ajoute Canons incendiaires aux cartes possibles.",
 			"branch": "Arsenal",
 			"cost": 10,
 			"requires": [],
@@ -72,8 +72,7 @@
 				{
 					"type": "unlock_cards",
 					"card_ids": [
-						"munitions_incendiaires",
-						"frappe_du_brasier"
+						"munitions_incendiaires"
 					]
 				}
 			]

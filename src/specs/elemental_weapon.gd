@@ -24,7 +24,7 @@ func fire_rate() -> float:
 
 ## Damage of one hit before combo multipliers, card damage bonus included.
 func damage() -> float:
-	return float(_weapon["damage"]) * _modifiers.damage_multiplier()
+	return float(_weapon["damage"]) * _modifiers.hero_damage_multiplier()
 
 
 ## Distance in pixels a shot travels.

@@ -22,6 +22,8 @@ const HP_FONT_SIZE := 20
 const INFO_FONT_SIZE := 20
 const INFO_POSITION := Vector2(40.0, 30.0)
 const CARDS_POSITION := Vector2(40.0, 58.0)
+const CARDS_WIDTH := 840.0  # Stops before the stats panel (starts at x = 920 on 1280 px).
+const CARDS_MAX_LINES := 2
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
@@ -44,6 +46,7 @@ var _cards_label: Label
 var _modifiers: PlayerModifiers
 var _spec_label: Label
 var _wave_preview: String = ""
+var _stats_panel: StatsPanel
 
 
 func _ready() -> void:
@@ -62,6 +65,12 @@ func _ready() -> void:
 	add_child(_info_label)
 	_cards_label = Label.new()
 	_cards_label.position = CARDS_POSITION
+	_cards_label.custom_minimum_size = Vector2(CARDS_WIDTH, 0.0)
+	_cards_label.size = Vector2(CARDS_WIDTH, 0.0)
+	_cards_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_cards_label.max_lines_visible = CARDS_MAX_LINES
+	_cards_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_cards_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cards_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_cards_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
 	NeonFonts.style_label(_cards_label, NeonFonts.title())
@@ -163,6 +172,25 @@ func show_specialization(spec: SpecializationDef) -> void:
 	_spec_label.text = "Spécialisation : %s" % spec.display_name
 
 
+## Shows the hero's stats panel (top right, under the specialization line) during BUILD
+## and COMBAT. Call after [method bind_game_state]; call [method refresh_stats] once the hero is equipped.
+func bind_stats(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats) -> void:
+	_stats_panel = StatsPanel.new()
+	add_child(_stats_panel)
+	_stats_panel.setup(hero, modifiers, economy, stats)
+	_stats_panel.visible = _stats_visible()
+
+
+## Rereads the stats panel (the specialization lines appear when the hero is equipped).
+func refresh_stats() -> void:
+	if _stats_panel != null:
+		_stats_panel.refresh()
+
+
+func _stats_visible() -> bool:
+	return _state != null and (_state.phase == GameState.Phase.BUILD or _state.phase == GameState.Phase.COMBAT)
+
+
 ## Shows the crystal's hit points and keeps them up to date. Call after the crystal's setup.
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
@@ -214,6 +242,8 @@ func _refresh_info() -> void:
 	elif _state.phase == GameState.Phase.SPEC_CHOICE:
 		phase_name = "Choix de la spécialisation"
 	_build_box.visible = building
+	if _stats_panel != null:
+		_stats_panel.visible = _stats_visible()
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
 	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1)
 	if _wave_preview != "":

@@ -30,6 +30,7 @@ var _archer: ArcherWeapon
 var _guaranteed_crit := false
 var _wet_duration := 0.0
 var _color := COLOR
+var _on_crit: Callable  # Called (deferred) on each critical hit; invalid = none (Tir en rafale).
 
 
 ## Sets the damage source tag (for example [code]&"cannon"[/code]) and the combo
@@ -55,6 +56,11 @@ func set_wet(duration: float) -> void:
 ## Sets the colour the projectile is drawn with (default [constant COLOR]).
 func set_color(color: Color) -> void:
 	_color = color
+
+
+## Calls [param callback] (deferred, no argument) at each critical hit of this arrow. Call before adding the bullet to the tree.
+func set_on_crit(callback: Callable) -> void:
+	_on_crit = callback
 
 
 ## Lets the projectile hit [param count] different enemies (at least 1) before
@@ -120,6 +126,8 @@ func _on_hit(target: Node2D) -> void:
 		var enemy := target as Enemy
 		var crit: bool = _archer != null and (_guaranteed_crit or _archer.roll_crit())
 		if crit:
+			if _on_crit.is_valid():
+				_on_crit.call_deferred()  # Deferred: it adds an arrow, inside a physics signal.
 			dealt *= _archer.crit_multiplier()
 			_show_effect(target, CRIT_EFFECT_OFFSET, "CRIT !", CRIT_COLOR)
 		if _rules != null and enemy != null:

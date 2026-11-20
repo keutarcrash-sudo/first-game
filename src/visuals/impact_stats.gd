@@ -1,6 +1,7 @@
 ## Screen shake and hit-stop values (assets/data/impact.json, passe graphique 1).
 ## Every key is required; strengths and durations must be positive numbers and
-## the hit-stop time scale must be above 0 and at most 1.
+## the hit-stop time scale must be above 0 and at most 1, and its min_interval
+## (real seconds between two hit-stops) at least 0.
 class_name ImpactStats
 extends RefCounted
 
@@ -10,6 +11,8 @@ const _KINDS: Array[String] = ["small", "big"]
 var hitstop_duration: float
 ## Value of [code]Engine.time_scale[/code] during a hit-stop.
 var hitstop_time_scale: float
+## Minimum real seconds between two accepted hit-stops.
+var hitstop_min_interval: float
 
 var _strengths: Dictionary = {}
 var _durations: Dictionary = {}
@@ -55,8 +58,13 @@ static func load_from_file(path: String) -> ImpactStats:
 	if not (scale is float or scale is int) or scale <= 0 or scale > 1:
 		push_error("ImpactStats: key 'hitstop.time_scale' must be above 0 and at most 1 in '%s'." % path)
 		return null
+	var min_interval: Variant = (hitstop as Dictionary).get("min_interval")
+	if not (min_interval is float or min_interval is int) or min_interval < 0:
+		push_error("ImpactStats: key 'hitstop.min_interval' must be a number of at least 0 in '%s'." % path)
+		return null
 	stats.hitstop_duration = float(duration)
 	stats.hitstop_time_scale = float(scale)
+	stats.hitstop_min_interval = float(min_interval)
 	return stats
 
 

@@ -16,6 +16,12 @@ var locked_by_default := false
 ## Id of the specialization this card belongs to (story 008): the card is only
 ## offered when that specialization is the one chosen. Empty for every specialization.
 var requires_spec := ""
+## Rarity id, one of [constant CardRarities.IDS].
+var rarity: StringName = &"common"
+## Id of an ability (abilities.json) that must be unlocked for the card to be offered; empty for none.
+var requires_ability := ""
+## Id of a card that must have been taken at least once for this card to be offered; empty for none.
+var requires_card := ""
 ## Maximum number of times the card can be taken; -1 means unlimited.
 var max_stacks := -1
 ## Effects applied each time the card is taken: dictionaries with a "type" key

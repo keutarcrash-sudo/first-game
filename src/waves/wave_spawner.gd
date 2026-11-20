@@ -29,6 +29,7 @@ var _wave_number := 0
 var _to_spawn := 0
 var _spawn_interval := 0.0
 var _hp_multiplier := 1.0
+var _modifiers: PlayerModifiers
 
 
 func _ready() -> void:
@@ -52,6 +53,11 @@ func setup(curve: WaveCurve, stats: DefenceStats, field_rect: Rect2, crystal: Cr
 func set_enemy_visual(sheet: SpriteSheet, height_px: float) -> void:
 	_enemy_sheet = sheet
 	_enemy_height = height_px
+
+
+## Gives every enemy spawned from now on the card modifiers (Combustion, Marée montante). Optional.
+func set_modifiers(modifiers: PlayerModifiers) -> void:
+	_modifiers = modifiers
 
 
 func _physics_process(delta: float) -> void:
@@ -87,6 +93,7 @@ func _spawn_enemy() -> void:
 	_to_spawn -= 1
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
+	enemy.set_modifiers(_modifiers)
 	if _enemy_sheet != null:
 		enemy.set_visual(_enemy_sheet, _enemy_height)
 	enemy.died.connect(func() -> void:

@@ -3,6 +3,7 @@
 	"cards": [
 		{
 			"id": "canon_rapide",
+			"rarity": "common",
 			"display_name": "Canon rapide",
 			"description": "Les canons tirent 25 % plus vite.",
 			"combines_with": "",
@@ -16,6 +17,7 @@
 		},
 		{
 			"id": "balles_lourdes",
+			"rarity": "common",
 			"display_name": "Balles lourdes",
 			"description": "+30 % de dégâts sur les tirs du héros et des canons.",
 			"combines_with": "",
@@ -28,7 +30,64 @@
 			]
 		},
 		{
+			"id": "reparation",
+			"rarity": "common",
+			"display_name": "Réparation",
+			"description": "Le cristal récupère 25 PV.",
+			"combines_with": "",
+			"max_stacks": null,
+			"effects": [
+				{
+					"type": "heal_crystal",
+					"value": 25
+				}
+			]
+		},
+		{
+			"id": "pillage",
+			"rarity": "common",
+			"display_name": "Pillage",
+			"description": "+5 or par ennemi tué.",
+			"combines_with": "",
+			"max_stacks": 4,
+			"effects": [
+				{
+					"type": "gold_per_kill_bonus",
+					"value": 5
+				}
+			]
+		},
+		{
+			"id": "aimant",
+			"rarity": "common",
+			"display_name": "Aimant",
+			"description": "La portée de ramassage de l'or augmente de 40 %.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "pickup_radius_mult",
+					"value": 1.4
+				}
+			]
+		},
+		{
+			"id": "pas_leger",
+			"rarity": "common",
+			"display_name": "Pas léger",
+			"description": "Le héros se déplace 10 % plus vite.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "move_speed_bonus",
+					"value": 0.1
+				}
+			]
+		},
+		{
 			"id": "glace_profonde",
+			"rarity": "uncommon",
 			"display_name": "Glace profonde",
 			"description": "Les tours de glace ralentissent plus fort et couvrent 15 % de portée en plus.",
 			"combines_with": "tout ce qui exploite les ennemis ralentis",
@@ -46,35 +105,10 @@
 			]
 		},
 		{
-			"id": "reparation",
-			"display_name": "Réparation",
-			"description": "Le cristal récupère 25 PV.",
-			"combines_with": "",
-			"max_stacks": null,
-			"effects": [
-				{
-					"type": "heal_crystal",
-					"value": 25
-				}
-			]
-		},
-		{
-			"id": "pillage",
-			"display_name": "Pillage",
-			"description": "+5 or par ennemi tué.",
-			"combines_with": "",
-			"max_stacks": 4,
-			"effects": [
-				{
-					"type": "gold_per_kill_bonus",
-					"value": 5
-				}
-			]
-		},
-		{
 			"id": "munitions_incendiaires",
+			"rarity": "uncommon",
 			"locked_by_default": true,
-			"display_name": "Munitions incendiaires",
+			"display_name": "Canons incendiaires",
 			"description": "Les tirs des canons enflamment l'ennemi pendant 3 s (5 dégâts par seconde).",
 			"combines_with": "Frappe du brasier",
 			"max_stacks": 1,
@@ -88,6 +122,7 @@
 		},
 		{
 			"id": "tir_brisant",
+			"rarity": "rare",
 			"locked_by_default": true,
 			"display_name": "Tir brisant",
 			"description": "Combo Glace + Héros : les tirs du héros font ×2 de dégâts sur les ennemis ralentis.",
@@ -101,35 +136,40 @@
 			]
 		},
 		{
-			"id": "frappe_du_brasier",
-			"locked_by_default": true,
-			"display_name": "Frappe du brasier",
-			"description": "Combo Feu + Héros : les tirs du héros font ×2 de dégâts sur les ennemis qui brûlent.",
-			"combines_with": "Munitions incendiaires (nécessaire pour enflammer les ennemis)",
+			"id": "plus_de_choix",
+			"rarity": "rare",
+			"display_name": "Plus de choix",
+			"description": "Une carte de plus est proposée à chaque choix.",
+			"combines_with": "",
 			"max_stacks": 1,
 			"effects": [
 				{
-					"type": "unlock_combo",
-					"combo_id": "feu_heros"
-				}
-			]
-		},
-		{
-			"id": "carquois_profond",
-			"requires_spec": "archer",
-			"display_name": "Carquois profond",
-			"description": "Les flèches traversent 1 ennemi de plus.",
-			"combines_with": "",
-			"max_stacks": 3,
-			"effects": [
-				{
-					"type": "pierce_bonus",
+					"type": "cards_offered_bonus",
 					"value": 1
 				}
 			]
 		},
 		{
+			"id": "collectionneur",
+			"rarity": "epic",
+			"display_name": "Collectionneur",
+			"description": "La portée de ramassage de l'or double et l'or reste 5 s de plus au sol.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "pickup_radius_mult",
+					"value": 2.0
+				},
+				{
+					"type": "gold_lifetime_bonus",
+					"value": 5.0
+				}
+			]
+		},
+		{
 			"id": "oeil_de_faucon",
+			"rarity": "common",
 			"requires_spec": "archer",
 			"display_name": "Œil de faucon",
 			"description": "+10 % de chance de coup critique.",
@@ -143,21 +183,8 @@
 			]
 		},
 		{
-			"id": "fleche_lourde",
-			"requires_spec": "archer",
-			"display_name": "Flèche lourde",
-			"description": "Les coups critiques font +0,5 × de dégâts.",
-			"combines_with": "",
-			"max_stacks": 3,
-			"effects": [
-				{
-					"type": "crit_multiplier_bonus",
-					"value": 0.5
-				}
-			]
-		},
-		{
 			"id": "marque_prolongee",
+			"rarity": "common",
 			"requires_spec": "archer",
 			"display_name": "Marque prolongée",
 			"description": "Les ennemis restent marqués 2 s de plus.",
@@ -171,7 +198,144 @@
 			]
 		},
 		{
+			"id": "carquois_profond",
+			"rarity": "uncommon",
+			"requires_spec": "archer",
+			"display_name": "Carquois profond",
+			"description": "Les flèches traversent 1 ennemi de plus.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "pierce_bonus",
+					"value": 1
+				}
+			]
+		},
+		{
+			"id": "fleche_lourde",
+			"rarity": "uncommon",
+			"requires_spec": "archer",
+			"display_name": "Flèche lourde",
+			"description": "Les coups critiques font +0,5 × de dégâts.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "crit_multiplier_bonus",
+					"value": 0.5
+				}
+			]
+		},
+		{
+			"id": "esquive",
+			"rarity": "uncommon",
+			"requires_spec": "archer",
+			"requires_ability": "roulade",
+			"display_name": "Esquive",
+			"description": "La Roulade se recharge 30 % plus vite.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_cooldown_mult",
+					"ability_id": "roulade",
+					"value": 0.7
+				}
+			]
+		},
+		{
+			"id": "pointe_acier",
+			"rarity": "rare",
+			"requires_spec": "archer",
+			"requires_ability": "fleche_perforante",
+			"display_name": "Pointe d'acier",
+			"description": "La Flèche perforante inflige 50 % de dégâts en plus.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "fleche_perforante",
+					"key": "damage",
+					"value": 1.5
+				}
+			]
+		},
+		{
+			"id": "deluge",
+			"rarity": "rare",
+			"requires_spec": "archer",
+			"requires_ability": "pluie_de_fleches",
+			"display_name": "Déluge",
+			"description": "La Pluie de flèches couvre 30 % de zone en plus et dure 1 s de plus.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "pluie_de_fleches",
+					"key": "radius",
+					"value": 1.3
+				},
+				{
+					"type": "ability_value_bonus",
+					"ability_id": "pluie_de_fleches",
+					"key": "duration",
+					"value": 1.0
+				}
+			]
+		},
+		{
+			"id": "regard_percant",
+			"rarity": "rare",
+			"requires_spec": "archer",
+			"requires_ability": "oeil_du_chasseur",
+			"display_name": "Regard perçant",
+			"description": "L'Œil du chasseur dure 3 s de plus.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "ability_value_bonus",
+					"ability_id": "oeil_du_chasseur",
+					"key": "duration",
+					"value": 3.0
+				}
+			]
+		},
+		{
+			"id": "tir_en_rafale",
+			"rarity": "epic",
+			"requires_spec": "archer",
+			"display_name": "Tir en rafale",
+			"description": "Chaque coup critique a 30 % de chances de tirer aussitôt une seconde flèche.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "burst_on_crit",
+					"chance": 0.3
+				}
+			]
+		},
+		{
+			"id": "fleches_fantomes",
+			"rarity": "legendary",
+			"requires_spec": "archer",
+			"display_name": "Flèches fantômes",
+			"description": "Les flèches normales traversent tous les ennemis.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "ghost_arrows"
+				}
+			]
+		},
+		{
 			"id": "braises_ardentes",
+			"rarity": "common",
 			"requires_spec": "maitre_feu",
 			"display_name": "Braises ardentes",
 			"description": "La brûlure fait 2 dégâts par seconde de plus.",
@@ -186,6 +350,7 @@
 		},
 		{
 			"id": "longue_combustion",
+			"rarity": "common",
 			"requires_spec": "maitre_feu",
 			"display_name": "Longue combustion",
 			"description": "La brûlure dure 1 s de plus.",
@@ -200,6 +365,7 @@
 		},
 		{
 			"id": "cadence_infernale",
+			"rarity": "uncommon",
 			"requires_spec": "maitre_feu",
 			"display_name": "Cadence infernale",
 			"description": "+20 % de cadence de tir.",
@@ -213,21 +379,140 @@
 			]
 		},
 		{
+			"id": "grosse_boule",
+			"rarity": "uncommon",
+			"requires_spec": "maitre_feu",
+			"requires_ability": "boule_de_feu",
+			"display_name": "Grosse boule",
+			"description": "L'explosion de la Boule de feu a un rayon 30 % plus grand.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "boule_de_feu",
+					"key": "explosion_radius",
+					"value": 1.3
+				}
+			]
+		},
+		{
+			"id": "trainee_ardente",
+			"rarity": "uncommon",
+			"requires_spec": "maitre_feu",
+			"requires_ability": "bond_enflamme",
+			"display_name": "Traînée ardente",
+			"description": "La traînée du Bond enflammé dure 2 s de plus.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_bonus",
+					"ability_id": "bond_enflamme",
+					"key": "trail_duration",
+					"value": 2.0
+				}
+			]
+		},
+		{
+			"id": "frappe_du_brasier",
+			"rarity": "rare",
+			"requires_spec": "maitre_feu",
+			"display_name": "Frappe du brasier",
+			"description": "Combo Feu + Héros : les tirs du héros font ×2 de dégâts sur les ennemis qui brûlent.",
+			"combines_with": "Canons incendiaires (nécessaire pour enflammer les ennemis)",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "unlock_combo",
+					"combo_id": "feu_heros"
+				}
+			]
+		},
+		{
+			"id": "rempart_flammes",
+			"rarity": "rare",
+			"requires_spec": "maitre_feu",
+			"requires_ability": "mur_de_feu",
+			"display_name": "Rempart de flammes",
+			"description": "Le Mur de feu est 50 % plus long.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "mur_de_feu",
+					"key": "length",
+					"value": 1.5
+				}
+			]
+		},
+		{
+			"id": "apocalypse",
+			"rarity": "rare",
+			"requires_spec": "maitre_feu",
+			"requires_ability": "meteore",
+			"display_name": "Apocalypse",
+			"description": "Le Météore inflige 50 % de dégâts en plus.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "meteore",
+					"key": "damage",
+					"value": 1.5
+				}
+			]
+		},
+		{
+			"id": "combustion",
+			"rarity": "epic",
+			"requires_spec": "maitre_feu",
+			"display_name": "Combustion",
+			"description": "Les ennemis qui brûlent subissent 25 % de dégâts en plus de toutes les sources.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "burning_vulnerability",
+					"value": 0.25
+				}
+			]
+		},
+		{
+			"id": "brasier_eternel",
+			"rarity": "legendary",
+			"requires_spec": "maitre_feu",
+			"display_name": "Brasier éternel",
+			"description": "Un ennemi qui meurt en brûlant enflamme les ennemis à moins de 80 px.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "burn_spread_on_death",
+					"radius": 80.0
+				}
+			]
+		},
+		{
 			"id": "jet_puissant",
+			"rarity": "common",
 			"requires_spec": "maitre_eau",
 			"display_name": "Jet puissant",
-			"description": "+25 % de dégâts.",
+			"description": "+25 % de dégâts du héros (les canons ne sont pas concernés).",
 			"combines_with": "",
 			"max_stacks": 3,
 			"effects": [
 				{
-					"type": "damage_bonus",
+					"type": "hero_damage_bonus",
 					"value": 0.25
 				}
 			]
 		},
 		{
 			"id": "trempage_durable",
+			"rarity": "common",
 			"requires_spec": "maitre_eau",
 			"display_name": "Trempage durable",
 			"description": "Les ennemis restent trempés 2 s de plus.",
@@ -242,6 +527,7 @@
 		},
 		{
 			"id": "gel_profond",
+			"rarity": "uncommon",
 			"requires_spec": "maitre_eau",
 			"display_name": "Gel profond",
 			"description": "Le gel dure 1 s de plus.",
@@ -256,6 +542,7 @@
 		},
 		{
 			"id": "maree",
+			"rarity": "uncommon",
 			"requires_spec": "maitre_eau",
 			"display_name": "Marée",
 			"description": "+20 % de cadence de tir.",
@@ -265,6 +552,115 @@
 				{
 					"type": "weapon_fire_rate_bonus",
 					"value": 0.2
+				}
+			]
+		},
+		{
+			"id": "lame_de_fond",
+			"rarity": "uncommon",
+			"requires_spec": "maitre_eau",
+			"requires_ability": "vague",
+			"display_name": "Lame de fond",
+			"description": "La Vague porte 40 % plus loin et repousse 40 % plus fort.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "vague",
+					"key": "range",
+					"value": 1.4
+				},
+				{
+					"type": "ability_value_mult",
+					"ability_id": "vague",
+					"key": "push_distance",
+					"value": 1.4
+				}
+			]
+		},
+		{
+			"id": "glisse",
+			"rarity": "uncommon",
+			"requires_spec": "maitre_eau",
+			"requires_ability": "glissade",
+			"display_name": "Glisse",
+			"description": "La Glissade se recharge 30 % plus vite.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_cooldown_mult",
+					"ability_id": "glissade",
+					"value": 0.7
+				}
+			]
+		},
+		{
+			"id": "grande_flaque",
+			"rarity": "rare",
+			"requires_spec": "maitre_eau",
+			"requires_ability": "flaque",
+			"display_name": "Grande flaque",
+			"description": "La Flaque est 30 % plus grande.",
+			"combines_with": "",
+			"max_stacks": 2,
+			"effects": [
+				{
+					"type": "ability_value_mult",
+					"ability_id": "flaque",
+					"key": "radius",
+					"value": 1.3
+				}
+			]
+		},
+		{
+			"id": "grand_froid",
+			"rarity": "rare",
+			"requires_spec": "maitre_eau",
+			"requires_ability": "raz_de_maree",
+			"display_name": "Grand froid",
+			"description": "Le Raz-de-marée gèle 1 s de plus.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "ability_value_bonus",
+					"ability_id": "raz_de_maree",
+					"key": "freeze_duration",
+					"value": 1.0
+				}
+			]
+		},
+		{
+			"id": "maree_montante",
+			"rarity": "epic",
+			"requires_spec": "maitre_eau",
+			"display_name": "Marée montante",
+			"description": "Un ennemi trempé est ralenti de 25 % tant qu'il reste trempé.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "wet_slow",
+					"factor": 0.75
+				}
+			]
+		},
+		{
+			"id": "zero_absolu",
+			"rarity": "legendary",
+			"requires_spec": "maitre_eau",
+			"display_name": "Zéro absolu",
+			"description": "Un ennemi gelé qui meurt explose : 20 dégâts et gel de 1 s aux ennemis à moins de 60 px.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "shatter_on_frozen_death",
+					"damage": 20.0,
+					"radius": 60.0,
+					"freeze": 1.0
 				}
 			]
 		}

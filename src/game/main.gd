@@ -18,10 +18,12 @@ const ECONOMY_PATH := "res://assets/data/economy.json"
 const TOWERS_PATH := "res://assets/data/towers.json"
 const PROCS_PATH := "res://assets/data/procs.json"
 const CARDS_PATH := "res://assets/data/cards.json"
+const RARITIES_PATH := "res://assets/data/card_rarities.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
 const VISUALS_PATH := "res://assets/data/visuals.json"
+const DECOR_PATH := "res://assets/data/decor.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
 ## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
@@ -32,6 +34,7 @@ var _cycle: WaveCycle
 var _state: GameState
 var _card_pool: CardPool  # Built once the specialization is chosen: its cards depend on it.
 var _catalog: CardCatalog
+var _rarities: CardRarities
 var _specs: SpecializationCatalog
 var _spec_screen: SpecializationChoiceScreen
 var _rules: ProcRules
@@ -42,6 +45,7 @@ var _skill_tree: SkillTree
 var _progress: SaveProgress
 var _death_screen: DeathScreen
 var _path_view: PathView
+var _decor: DecorField
 var _camera: GameCamera
 var _ability_catalog: AbilityCatalog
 var _caster: AbilityCaster
@@ -67,8 +71,9 @@ func _ready() -> void:
 	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
 	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
 	_specs = null if rules == null else SpecializationCatalog.load_from_file(SPECS_PATH, rules)
-	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
+	_rarities = CardRarities.load_from_file(RARITIES_PATH)
+	_catalog = null if _ability_catalog == null or _rarities == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs, _rarities, _ability_catalog)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
@@ -104,11 +109,15 @@ func _ready() -> void:
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
 	_spawner.set_enemy_visual(enemy_sheet, _visuals.height("enemy"))
+	_spawner.set_modifiers(modifiers)
+	var card_effects := CardEffects.new()
+	add_child(card_effects)
+	card_effects.setup(_enemies, modifiers)
 	# The gold field sits just before Enemies, so coins are drawn under the enemies.
 	var gold_field := GoldField.new()
 	add_child(gold_field)
 	move_child(gold_field, _enemies.get_index())
-	gold_field.setup(_state, _hero, economy)
+	gold_field.setup(_state, _hero, economy, modifiers)
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: gold_field.clear())
 	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng, gold_field)
 	# The path view is moved to index 0 so it is drawn under every child (crystal, Towers, ...).
@@ -121,6 +130,14 @@ func _ready() -> void:
 	add_child(floor_view)
 	move_child(floor_view, 0)
 	floor_view.setup(_field_rect)
+	# The decor sits right above the floor and under the path view. It is optional:
+	# a missing or invalid decor.json (error already logged) leaves the field bare.
+	var decor_stats: DecorStats = DecorStats.load_from_file(DECOR_PATH)
+	if decor_stats != null:
+		_decor = DecorField.new()
+		add_child(_decor)
+		move_child(_decor, 1)
+		_decor.setup(decor_stats, _field_rect, _crystal.global_position, _rng)
 	_camera = GameCamera.new()
 	add_child(_camera)
 	_camera.setup(_hero, _field_rect, _state)
@@ -133,9 +150,12 @@ func _ready() -> void:
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
+	_hud.bind_stats(_hero, modifiers, economy, stats)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
+	_card_screen.setup(_rarities, _ability_catalog)
 	_card_screen.card_chosen.connect(_on_card_chosen.bind(modifiers))
+	_card_screen.reroll_requested.connect(_on_reroll_requested)
 	_state.phase_changed.connect(_on_phase_changed)
 	# Added after Enemies, so the mark is drawn over the enemies.
 	var designator := TargetDesignator.new()
@@ -198,7 +218,14 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)
-	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)
+	_hud.refresh_stats()
+	var abilities: Dictionary = _ability_catalog.for_spec(spec.id)
+	var is_unlocked := func(ability_id: String) -> bool:
+		for slot: StringName in abilities:
+			if (abilities[slot] as AbilityDef).id == ability_id:
+				return _caster.is_unlocked(slot)
+		return false
+	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id, _rarities, is_unlocked)
 	if _skill_tree.has_start_card_choice(owned):
 		_state.begin_card_choice()
 		return
@@ -217,17 +244,39 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 func _open_card_choice() -> void:
 	if _state.phase != GameState.Phase.CARD_CHOICE or _crystal.current_hp <= 0.0:
 		return
-	var offer: Array[CardDef] = _card_pool.draw()
+	_card_pool.begin_choice()
+	if not _present_offer(_card_pool.draw(_choice_wave())):
+		_end_card_choice()
+
+
+## The wave about to be played, used for the rarity weights.
+func _choice_wave() -> int:
+	return _state.waves_completed + 1
+
+
+## Adds the "Nouvelle compétence" card to [param drawn] when due (it takes a slot
+## of a full offer) and shows the result. Returns false when there is nothing to offer.
+func _present_offer(drawn: Array[CardDef]) -> bool:
+	var offer: Array[CardDef] = drawn.duplicate()
 	var unlock_card: CardDef = _unlock_card_if_due()
 	if unlock_card != null:
-		var full_size: int = _catalog.offered_per_choice + _skill_tree.cards_offered_bonus(_progress.owned_ids)
-		if offer.size() >= full_size:
+		if offer.size() >= _card_pool.offer_size():
 			offer.pop_back()
 		offer.push_front(unlock_card)
 	if offer.is_empty():
-		_end_card_choice()
+		return false
+	var cost: int = _card_pool.reroll_cost()
+	_card_screen.show_cards(offer, cost, _state.gold >= cost, _card_pool.can_draw())
+	return true
+
+
+## Pays for a reroll and replaces the offer; refused when the gold is short.
+func _on_reroll_requested() -> void:
+	if _state.phase != GameState.Phase.CARD_CHOICE or not _card_pool.can_draw():
 		return
-	_card_screen.show_cards(offer)
+	if not _state.spend_gold(_card_pool.reroll_cost()):
+		return
+	_present_offer(_card_pool.reroll(_choice_wave()))
 
 
 ## The "Nouvelle compétence" card when the next locked ability (A, E, R) is due
@@ -242,6 +291,7 @@ func _unlock_card_if_due() -> CardDef:
 	var def: AbilityDef = _caster.ability(slot)
 	var card := CardDef.new()
 	card.id = UNLOCK_CARD_PREFIX + String(slot)
+	card.rarity = &""  # No rarity: the screen draws no rarity frame for it.
 	card.display_name = "Nouvelle compétence : %s (%s)" % [def.display_name, String(slot).to_upper()]
 	card.description = def.description
 	return card
@@ -263,6 +313,8 @@ func _end_card_choice() -> void:
 ## Shows the prepared wave's path and its preview text.
 func _on_wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath) -> void:
 	_path_view.show_path(path)
+	if _decor != null:
+		_decor.show_path(path)
 	_hud.show_wave_preview(wave_number, enemy_count)
 
 

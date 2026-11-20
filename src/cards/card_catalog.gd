@@ -24,7 +24,26 @@ const EFFECT_NUMBER_KEYS := {
 	"burn_duration_bonus": ["value"],
 	"wet_duration_bonus": ["value"],
 	"freeze_duration_bonus": ["value"],
+	"hero_damage_bonus": ["value"],
+	"move_speed_bonus": ["value"],
+	"pickup_radius_mult": ["value"],
+	"gold_lifetime_bonus": ["value"],
+	"cards_offered_bonus": ["value"],
+	"ability_cooldown_mult": ["value"],
+	"ability_value_mult": ["value"],
+	"ability_value_bonus": ["value"],
+	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
+	"burst_on_crit": ["chance"],
+	"ghost_arrows": [],
+	"burning_vulnerability": ["value"],
+	"burn_spread_on_death": ["radius"],
+	"wet_slow": ["factor"],
+	"shatter_on_frozen_death": ["damage", "radius", "freeze"],
 }
+## Effect types that name an ability with an [code]ability_id[/code] string.
+const ABILITY_EFFECTS: Array[String] = ["ability_cooldown_mult", "ability_value_mult", "ability_value_bonus"]
+## Effect types that also name one numeric value of that ability with a [code]key[/code] string.
+const ABILITY_VALUE_EFFECTS: Array[String] = ["ability_value_mult", "ability_value_bonus"]
 
 ## How many cards a choice screen offers.
 var offered_per_choice := 3
@@ -36,7 +55,7 @@ var cards: Array[CardDef] = []
 ## [code]unlock_combo[/code] must exist in [param rules], and specialization ids
 ## used by [code]requires_spec[/code] in [param specs]. Returns [code]null[/code]
 ## and prints an error naming the file and the faulty key if anything is wrong.
-static func load_from_file(path: String, rules: ProcRules, specs: SpecializationCatalog) -> CardCatalog:
+static func load_from_file(path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog) -> CardCatalog:
 	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		push_error("CardCatalog: cannot read '%s' (%s)." % [path, error_string(FileAccess.get_open_error())])
@@ -53,7 +72,7 @@ static func load_from_file(path: String, rules: ProcRules, specs: Specialization
 	catalog.offered_per_choice = int(offered)
 	var seen: Dictionary = {}
 	for i: int in data["cards"].size():
-		var card: CardDef = _parse_card(data["cards"][i], i, path, rules, specs)
+		var card: CardDef = _parse_card(data["cards"][i], i, path, rules, specs, rarities, abilities)
 		if card == null:
 			return null
 		if seen.has(card.id):
@@ -61,6 +80,11 @@ static func load_from_file(path: String, rules: ProcRules, specs: Specialization
 			return null
 		seen[card.id] = true
 		catalog.cards.append(card)
+	for i: int in catalog.cards.size():
+		var required: String = catalog.cards[i].requires_card
+		if not required.is_empty() and not seen.has(required):
+			push_error("CardCatalog: key 'cards[%d].requires_card' in '%s' must be the id of a card in the file (got '%s')." % [i, path, required])
+			return null
 	return catalog
 
 
@@ -72,7 +96,7 @@ func has_card(card_id: String) -> bool:
 	return false
 
 
-static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog) -> CardDef:
+static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog) -> CardDef:
 	if not raw is Dictionary:
 		push_error("CardCatalog: 'cards[%d]' in '%s' must be an object." % [index, path])
 		return null
@@ -99,6 +123,21 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 		push_error("CardCatalog: key 'cards[%d].requires_spec' in '%s' must be the id of a specialization in specializations.json (got %s)." % [index, path, spec_id])
 		return null
 	card.requires_spec = spec_id
+	var rarity: Variant = raw.get("rarity")
+	if not rarity is String or not rarities.has_rarity(StringName(rarity)):
+		push_error("CardCatalog: key 'cards[%d].rarity' in '%s' must be a rarity id of card_rarities.json (got %s)." % [index, path, rarity])
+		return null
+	card.rarity = StringName(rarity)
+	var ability_id: Variant = raw.get("requires_ability", "")
+	if not ability_id is String or (not (ability_id as String).is_empty() and _find_ability(abilities, ability_id) == null):
+		push_error("CardCatalog: key 'cards[%d].requires_ability' in '%s' must be the id of an ability in abilities.json (got %s)." % [index, path, ability_id])
+		return null
+	card.requires_ability = ability_id
+	var card_id: Variant = raw.get("requires_card", "")
+	if not card_id is String:
+		push_error("CardCatalog: key 'cards[%d].requires_card' in '%s' must be a string." % [index, path])
+		return null
+	card.requires_card = card_id
 	var max_stacks: Variant = raw.get("max_stacks")
 	if max_stacks != null:
 		if not (max_stacks is float or max_stacks is int) or max_stacks < 1:
@@ -110,13 +149,13 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 		return null
 	for j: int in raw["effects"].size():
 		var effect: Variant = raw["effects"][j]
-		if not _is_effect_valid(effect, "cards[%d].effects[%d]" % [index, j], path, rules):
+		if not _is_effect_valid(effect, "cards[%d].effects[%d]" % [index, j], path, rules, abilities):
 			return null
 		card.effects.append(effect)
 	return card
 
 
-static func _is_effect_valid(effect: Variant, where: String, path: String, rules: ProcRules) -> bool:
+static func _is_effect_valid(effect: Variant, where: String, path: String, rules: ProcRules, abilities: AbilityCatalog) -> bool:
 	if not effect is Dictionary or not effect.get("type") is String:
 		push_error("CardCatalog: key '%s.type' in '%s' must be a string." % [where, path])
 		return false
@@ -132,4 +171,22 @@ static func _is_effect_valid(effect: Variant, where: String, path: String, rules
 		if not effect.get("combo_id") is String or not rules.has_combo(effect["combo_id"]):
 			push_error("CardCatalog: key '%s.combo_id' in '%s' must be the id of a combo in procs.json (got %s)." % [where, path, effect.get("combo_id")])
 			return false
+	if ABILITY_EFFECTS.has(effect["type"]):
+		var def: AbilityDef = _find_ability(abilities, str(effect.get("ability_id")))
+		if def == null:
+			push_error("CardCatalog: key '%s.ability_id' in '%s' must be the id of an ability in abilities.json (got %s)." % [where, path, effect.get("ability_id")])
+			return false
+		if ABILITY_VALUE_EFFECTS.has(effect["type"]) and not def.values.has(str(effect.get("key"))):
+			push_error("CardCatalog: key '%s.key' in '%s' must be a value of ability '%s' (got %s)." % [where, path, def.id, effect.get("key")])
+			return false
+		if effect["type"] == "ability_cooldown_mult" and float(effect["value"]) >= 1.0:
+			push_error("CardCatalog: key '%s.value' in '%s' must be below 1 (a cooldown multiplier, got %s)." % [where, path, effect["value"]])
+			return false
 	return true
+
+
+static func _find_ability(abilities: AbilityCatalog, ability_id: String) -> AbilityDef:
+	for def: AbilityDef in abilities.abilities:
+		if def.id == ability_id:
+			return def
+	return null

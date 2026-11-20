@@ -10,6 +10,11 @@ signal changed
 ## Emitted when a card asks the crystal to recover [param amount] hit points.
 signal heal_requested(amount: float)
 
+## Cooldown reductions never go below this share of the base cooldown (-75 % at most).
+const MIN_COOLDOWN_FACTOR := 0.25
+## Effect types that are only flags (read through [method has_flag] and [method flag_value]).
+const FLAG_EFFECTS: Array[String] = ["burst_on_crit", "ghost_arrows", "burning_vulnerability", "burn_spread_on_death", "wet_slow", "shatter_on_frozen_death"]
+
 var _rules: ProcRules
 var _stacks: Dictionary = {}
 var _taken: Array[CardDef] = []
@@ -32,6 +37,16 @@ var _wet_duration_bonus := 0.0
 var _freeze_duration_bonus := 0.0
 var _freeze_base_duration := 0.0
 var _freeze_cooldown := 0.0
+var _hero_damage_bonus := 0.0
+var _move_speed_bonus := 0.0
+var _pickup_bonus := 0.0  # Sum of (multiplier - 1) over the cards taken.
+var _gold_lifetime_bonus := 0.0
+var _cards_offered_bonus := 0
+var _cooldown_reduction: Dictionary = {}  # { ability id: summed reduction, 0.3 = -30 % }
+var _value_mult_bonus: Dictionary = {}  # { "ability id/key": summed (multiplier - 1) }
+var _value_bonus: Dictionary = {}  # { "ability id/key": summed flat bonus }
+var _flags: Dictionary = {}  # { flag: { key: summed value } }
+var _took_legendary := false
 
 
 ## [param rules] receives the combos unlocked by cards.
@@ -56,6 +71,8 @@ func take(card: CardDef) -> void:
 	if not _stacks.has(card.id):
 		_taken.append(card)
 	_stacks[card.id] = stacks_of(card.id) + 1
+	if card.rarity == &"legendary":
+		_took_legendary = true
 	for effect: Dictionary in card.effects:
 		match String(effect["type"]):
 			"cannon_fire_rate_bonus":
@@ -94,6 +111,28 @@ func take(card: CardDef) -> void:
 				_wet_duration_bonus += float(effect["value"])
 			"freeze_duration_bonus":
 				_freeze_duration_bonus += float(effect["value"])
+			"hero_damage_bonus":
+				_hero_damage_bonus += float(effect["value"])
+			"move_speed_bonus":
+				_move_speed_bonus += float(effect["value"])
+			"pickup_radius_mult":
+				_pickup_bonus += float(effect["value"]) - 1.0
+			"gold_lifetime_bonus":
+				_gold_lifetime_bonus += float(effect["value"])
+			"cards_offered_bonus":
+				_cards_offered_bonus += roundi(effect["value"])
+			"ability_cooldown_mult":
+				var ability_id := String(effect["ability_id"])
+				_cooldown_reduction[ability_id] = float(_cooldown_reduction.get(ability_id, 0.0)) + 1.0 - float(effect["value"])
+			"ability_value_mult":
+				var mult_key := "%s/%s" % [effect["ability_id"], effect["key"]]
+				_value_mult_bonus[mult_key] = float(_value_mult_bonus.get(mult_key, 0.0)) + float(effect["value"]) - 1.0
+			"ability_value_bonus":
+				var bonus_key := "%s/%s" % [effect["ability_id"], effect["key"]]
+				_value_bonus[bonus_key] = float(_value_bonus.get(bonus_key, 0.0)) + float(effect["value"])
+			_:
+				if FLAG_EFFECTS.has(String(effect["type"])):
+					_add_flag(StringName(String(effect["type"])), effect)
 	changed.emit()
 
 
@@ -102,9 +141,68 @@ func cannon_interval_factor() -> float:
 	return 1.0 / (1.0 + _fire_rate_bonus)
 
 
-## Factor applied to hero and cannon shot damage, before combo multipliers.
+## Factor applied to the cannons' shot damage, before combo multipliers (general bonus only).
 func damage_multiplier() -> float:
 	return 1.0 + _damage_bonus
+
+
+## Factor applied to the hero's shots and abilities, before combo multipliers: the
+## general bonus times the hero-only bonus.
+func hero_damage_multiplier() -> float:
+	return (1.0 + _damage_bonus) * (1.0 + _hero_damage_bonus)
+
+
+## Factor applied to the hero's walking speed.
+func move_speed_factor() -> float:
+	return 1.0 + _move_speed_bonus
+
+
+## Factor applied to the gold pickup radius (bonuses of several cards add up).
+func pickup_radius_factor() -> float:
+	return 1.0 + _pickup_bonus
+
+
+## Extra seconds gold stays on the ground.
+func gold_lifetime_bonus() -> float:
+	return _gold_lifetime_bonus
+
+
+## Extra cards offered at each choice (added to the skill tree bonus).
+func cards_offered_bonus() -> int:
+	return _cards_offered_bonus
+
+
+## Factor applied to the cooldown of [param ability_id] (1.0 = unchanged); reductions add up, never below [constant MIN_COOLDOWN_FACTOR].
+func ability_cooldown_factor(ability_id: String) -> float:
+	return maxf(1.0 - float(_cooldown_reduction.get(ability_id, 0.0)), MIN_COOLDOWN_FACTOR)
+
+
+## The value [param key] of [param ability_id] given its base [param base]: base × multiplier + bonus.
+func ability_value(ability_id: String, key: String, base: float) -> float:
+	var full_key := "%s/%s" % [ability_id, key]
+	return base * (1.0 + float(_value_mult_bonus.get(full_key, 0.0))) + float(_value_bonus.get(full_key, 0.0))
+
+
+## True once a card of the flag effect [param flag] has been taken.
+func has_flag(flag: StringName) -> bool:
+	return _flags.has(flag)
+
+
+## The number [param key] of the flag effect [param flag] (summed over stacks); 0 when the flag is off.
+func flag_value(flag: StringName, key: String) -> float:
+	return float((_flags.get(flag, {}) as Dictionary).get(key, 0.0))
+
+
+## True once a legendary card has been taken: no other legendary is offered afterwards.
+func took_legendary() -> bool:
+	return _took_legendary
+
+
+func _add_flag(flag: StringName, effect: Dictionary) -> void:
+	var values: Dictionary = _flags.get(flag, {})
+	for key: String in CardCatalog.EFFECT_NUMBER_KEYS[String(flag)]:
+		values[key] = float(values.get(key, 0.0)) + float(effect[key])
+	_flags[flag] = values
 
 
 ## The frost slow factor to use given the tower's base [param base] (lower = slower), never below the card floor.
