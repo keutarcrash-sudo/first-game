@@ -10,7 +10,7 @@ func _init() -> void:
 		print("MODIFIERS OK")
 	else:
 		print("MODIFIERS FAIL: %s" % failed)
-	quit()
+	quit(0 if failed.is_empty() else 1)
 
 
 func _card(id: String, effect: Dictionary, rarity: StringName = &"common") -> CardDef:
@@ -75,4 +75,54 @@ func _run() -> String:
 	surv.take(_card("vampirisme", {"type": "hero_heal_on_kill", "value": 1.0}, &"epic"))
 	if not is_equal_approx(surv.hero_heal_on_kill(), 1.0):
 		return "hero_heal_on_kill"
+	return _run_items()
+
+
+func _item(id: String, effect: Dictionary) -> ItemDef:
+	var item := ItemDef.new()
+	item.id = id
+	item.display_name = id
+	item.effects.append(effect)
+	return item
+
+
+## Passive items: each reader, the second take ignored, and the second_chance flag.
+func _run_items() -> String:
+	var mods := PlayerModifiers.new(null)
+	var changes: Array[int] = [0, 0]
+	mods.items_changed.connect(func() -> void: changes[0] += 1)
+	mods.changed.connect(func() -> void: changes[1] += 1)
+	if not is_equal_approx(mods.tower_range_factor(), 1.0) or mods.tower_cost(50) != 50 or mods.gold_per_kill(15) != 15 or not is_equal_approx(mods.crystal_damage_factor(), 1.0):
+		return "item_readers_default"
+	var bourse: ItemDef = _item("bourse_percee", {"type": "gold_per_kill_mult", "value": 1.2})
+	var plans: ItemDef = _item("plans_ingenieur", {"type": "tower_cost_mult", "value": 0.8})
+	var oeil: ItemDef = _item("oeil_de_faucon", {"type": "tower_range_bonus", "value": 0.2})
+	var bouclier: ItemDef = _item("bouclier_cristal", {"type": "crystal_damage_reduction", "value": 0.15})
+	var pansement: ItemDef = _item("pansement_dore", {"type": "hero_heal_per_wave", "value": 10})
+	var seconde: ItemDef = _item("seconde_chance", {"type": "second_chance", "hp_fraction": 0.3})
+	for item: ItemDef in [bourse, plans, oeil, bouclier, pansement, seconde, bourse]:
+		mods.take_item(item)  # The last one is a second take of the same item.
+	if mods.gold_per_kill(15) != 18:
+		return "gold_per_kill_item"
+	if mods.tower_cost(50) != 40:
+		return "tower_cost_item"
+	if not is_equal_approx(mods.tower_range_factor(), 1.2):
+		return "tower_range_factor_item"
+	if not is_equal_approx(mods.crystal_damage_factor(), 0.85):
+		return "crystal_damage_factor_item"
+	if not is_equal_approx(mods.hero_heal_per_wave(), 10.0):
+		return "hero_heal_per_wave_item"
+	if not mods.owns_item("bourse_percee") or mods.owns_item("lunette"):
+		return "owns_item"
+	if mods.owned_items().size() != 6:
+		return "owned_items_second_take_ignored"
+	if changes[0] != 6 or changes[1] != 6:
+		return "items_changed_signals"
+	if not mods.has_flag(&"second_chance") or not is_equal_approx(mods.flag_value(&"second_chance", "hp_fraction"), 0.3):
+		return "flag_second_chance"
+	var heavy := PlayerModifiers.new(null)
+	for i: int in 3:
+		heavy.take_item(_item("shield_%d" % i, {"type": "crystal_damage_reduction", "value": 0.5}))
+	if not is_equal_approx(heavy.crystal_damage_factor(), 0.1):
+		return "crystal_damage_floor"
 	return ""

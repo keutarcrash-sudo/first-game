@@ -1,7 +1,7 @@
 ## Every card of the game, loaded from assets/data/cards.json (story 006).
 ## Pure data: adding a card with an existing effect type is a data change only.
 ## To add an effect type, add it to [constant EFFECT_NUMBER_KEYS] and handle it
-## in [method PlayerModifiers.take].
+## in [method PlayerModifiers._apply_effect].
 class_name CardCatalog
 extends RefCounted
 
@@ -36,6 +36,11 @@ const EFFECT_NUMBER_KEYS := {
 	"ability_cooldown_mult": ["value"],
 	"ability_value_mult": ["value"],
 	"ability_value_bonus": ["value"],
+	"tower_range_bonus": ["value"],
+	"hero_heal_per_wave": ["value"],
+	"crystal_damage_reduction": ["value"],
+	"tower_cost_mult": ["value"],
+	"gold_per_kill_mult": ["value"],
 	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
 	"burst_on_crit": ["chance"],
 	"ghost_arrows": [],
@@ -43,6 +48,7 @@ const EFFECT_NUMBER_KEYS := {
 	"burn_spread_on_death": ["radius"],
 	"wet_slow": ["factor"],
 	"shatter_on_frozen_death": ["damage", "radius", "freeze"],
+	"second_chance": ["hp_fraction"],
 }
 ## Effect types that name an ability with an [code]ability_id[/code] string.
 const ABILITY_EFFECTS: Array[String] = ["ability_cooldown_mult", "ability_value_mult", "ability_value_bonus"]
