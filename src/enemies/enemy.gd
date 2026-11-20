@@ -117,7 +117,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	_sprite = DirectionalSprite.new()
 	_sprite.show_behind_parent = true  # The state marks drawn by this node stay over the sprite.
 	add_child(_sprite)
-	_sprite.setup(sheet, height_px)
+	_sprite.setup(sheet, height_px, true)
 	_sprite.play(&"run")
 	_refresh_look()
 
@@ -236,7 +236,7 @@ func _draw() -> void:
 	var center := Vector2.ZERO
 	var ring_radius: float = _radius
 	if _sprite != null:
-		center = Vector2(0.0, -_visual_height * 0.5)  # The sprite stands on the position: its middle is above it.
+		# The sprite body is centred on the position: the rings share its centre.
 		ring_radius = _visual_height * RING_HEIGHT_RATIO
 	else:
 		draw_circle(Vector2.ZERO, _radius, _body_color())
