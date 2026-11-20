@@ -12,6 +12,11 @@ const GROWTH_KEYS := ["enemy_count_per_wave", "hp_multiplier_per_wave", "path_le
 var spawn_window: float
 ## Tuning values for generating the crystal's path.
 var path_settings: PathSettings
+## Waves in one world (étape 5a): wave [code]n[/code] is a world's final wave
+## when [code]n % waves_per_world == 0[/code].
+var waves_per_world: int
+## Enemy count multiplier of a world's final wave, applied to every enemy type.
+var final_count_mult: float
 
 var _waves: Array[Dictionary] = []
 var _enemy_count_per_wave: float
@@ -70,6 +75,19 @@ static func load_from_file(path: String) -> WaveCurve:
 	if growth["enemy_count_per_wave"] <= 0 and growth["hp_multiplier_per_wave"] <= 0:
 		push_error("WaveCurve: 'growth' in '%s' must make waves harder (more enemies or more HP)." % path)
 		return null
+	var world: Variant = data.get("world")
+	if not world is Dictionary:
+		push_error("WaveCurve: key 'world' in '%s' must be an object." % path)
+		return null
+	var per_world: Variant = world.get("waves_per_world")
+	if not _is_number(per_world, false) or float(per_world) != floorf(float(per_world)):
+		push_error("WaveCurve: key 'world.waves_per_world' in '%s' must be a whole number of at least 1." % path)
+		return null
+	if not _is_number(world.get("final_count_mult"), false):
+		push_error("WaveCurve: key 'world.final_count_mult' in '%s' must be a positive number." % path)
+		return null
+	curve.waves_per_world = int(per_world)
+	curve.final_count_mult = float(world["final_count_mult"])
 	curve.spawn_window = float(window)
 	curve.path_settings = settings
 	curve._enemy_count_per_wave = growth["enemy_count_per_wave"]

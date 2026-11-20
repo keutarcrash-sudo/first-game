@@ -10,5 +10,6 @@
 		"enemy_count_per_wave": 3.0,
 		"hp_multiplier_per_wave": 0.25,
 		"path_length_per_wave": 200.0
-	}
+	},
+	"world": { "waves_per_world": 8, "final_count_mult": 1.5 }
 }
