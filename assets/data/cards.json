@@ -663,6 +663,62 @@
 					"freeze": 1.0
 				}
 			]
+		},
+		{
+			"id": "bandage",
+			"rarity": "common",
+			"display_name": "Bandage",
+			"description": "Le héros récupère 30 PV.",
+			"combines_with": "",
+			"max_stacks": null,
+			"effects": [
+				{
+					"type": "hero_heal",
+					"value": 30
+				}
+			]
+		},
+		{
+			"id": "peau_dure",
+			"rarity": "uncommon",
+			"display_name": "Peau dure",
+			"description": "+25 PV maximum pour le héros, qui récupère autant.",
+			"combines_with": "",
+			"max_stacks": 3,
+			"effects": [
+				{
+					"type": "hero_max_hp_bonus",
+					"value": 25
+				}
+			]
+		},
+		{
+			"id": "regeneration",
+			"rarity": "rare",
+			"display_name": "Régénération",
+			"description": "Le héros récupère 1 PV par seconde.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "hero_regen",
+					"value": 1.0
+				}
+			]
+		},
+		{
+			"id": "vampirisme",
+			"rarity": "epic",
+			"display_name": "Vampirisme",
+			"description": "Le héros récupère 1 PV à chaque ennemi tué.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "hero_heal_on_kill",
+					"value": 1.0
+				}
+			]
 		}
 	]
 }

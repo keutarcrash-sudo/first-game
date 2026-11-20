@@ -102,6 +102,9 @@ func _collect_rows() -> Array[Dictionary]:
 	rows.append(_row("pickup", "Ramassage", pickup, "%d px" % roundi(pickup)))
 	var max_hp: float = _hero.health().max_hp
 	rows.append(_row("max_hp", "PV max", max_hp, "%d" % roundi(max_hp)))
+	var regen: float = _modifiers.hero_regen()
+	if regen > 0.0:
+		rows.append(_row("regen", "Régénération", regen, "%.1f PV/s" % regen))
 	if archer != null:
 		var chance: float = archer.crit_chance()
 		rows.append(_row("crit_chance", "Critique", chance, "%d %%" % roundi(chance * 100.0)))

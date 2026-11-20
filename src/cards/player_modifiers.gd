@@ -9,6 +9,8 @@ extends RefCounted
 signal changed
 ## Emitted when a card asks the crystal to recover [param amount] hit points.
 signal heal_requested(amount: float)
+## Emitted when a card asks the hero to recover [param amount] hit points.
+signal hero_heal_requested(amount: float)
 
 ## Cooldown reductions never go below this share of the base cooldown (-75 % at most).
 const MIN_COOLDOWN_FACTOR := 0.25
@@ -46,6 +48,9 @@ var _cooldown_reduction: Dictionary = {}  # { ability id: summed reduction, 0.3 
 var _value_mult_bonus: Dictionary = {}  # { "ability id/key": summed (multiplier - 1) }
 var _value_bonus: Dictionary = {}  # { "ability id/key": summed flat bonus }
 var _flags: Dictionary = {}  # { flag: { key: summed value } }
+var _hero_max_hp_bonus := 0.0
+var _hero_regen := 0.0
+var _hero_heal_on_kill := 0.0
 var _took_legendary := false
 
 
@@ -86,6 +91,14 @@ func take(card: CardDef) -> void:
 				_range_bonus += float(effect["value"])
 			"heal_crystal":
 				heal_requested.emit(float(effect["value"]))
+			"hero_heal":
+				hero_heal_requested.emit(float(effect["value"]))
+			"hero_max_hp_bonus":
+				_hero_max_hp_bonus += float(effect["value"])
+			"hero_regen":
+				_hero_regen += float(effect["value"])
+			"hero_heal_on_kill":
+				_hero_heal_on_kill += float(effect["value"])
 			"gold_per_kill_bonus":
 				_gold_bonus += int(effect["value"])
 			"cannon_burn":
@@ -150,6 +163,21 @@ func damage_multiplier() -> float:
 ## general bonus times the hero-only bonus.
 func hero_damage_multiplier() -> float:
 	return (1.0 + _damage_bonus) * (1.0 + _hero_damage_bonus)
+
+
+## Total extra maximum hit points the hero got from cards.
+func hero_max_hp_bonus() -> float:
+	return _hero_max_hp_bonus
+
+
+## Hero hit points regenerated per second.
+func hero_regen() -> float:
+	return _hero_regen
+
+
+## Hero hit points recovered for each enemy killed.
+func hero_heal_on_kill() -> float:
+	return _hero_heal_on_kill
 
 
 ## Factor applied to the hero's walking speed.

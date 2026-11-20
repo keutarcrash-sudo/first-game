@@ -33,6 +33,7 @@ const HERO_DEATH_SECONDS := 0.8
 const UNLOCK_CARD_PREFIX := "unlock_ability_"
 
 var _field_rect: Rect2
+var _applied_max_hp_bonus := 0.0  # Card max-HP bonus already given to the hero.
 var _lost := false  # The defeat already happened: _lose() must not run twice.
 var _cycle: WaveCycle
 var _state: GameState
@@ -119,6 +120,9 @@ func _ready() -> void:
 	_hero.died.connect(_on_hero_died)
 	_crystal.destroyed.connect(_lose)
 	modifiers.heal_requested.connect(_crystal.heal)
+	modifiers.hero_heal_requested.connect(_hero.health().heal)
+	modifiers.changed.connect(_apply_hero_survival.bind(modifiers))
+	_spawner.enemy_killed.connect(func(_position: Vector2) -> void: _hero.health().heal(modifiers.hero_heal_on_kill()))
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
@@ -316,6 +320,17 @@ func _unlock_card_if_due() -> CardDef:
 	card.display_name = "Nouvelle compétence : %s (%s)" % [def.display_name, String(slot).to_upper()]
 	card.description = def.description
 	return card
+
+
+## Survival cards (étape 4 §7): gives the hero the extra maximum (healing as much, once per
+## new bonus) and sets the regeneration from the modifiers.
+func _apply_hero_survival(modifiers: PlayerModifiers) -> void:
+	var health: HeroHealth = _hero.health()
+	var extra: float = modifiers.hero_max_hp_bonus() - _applied_max_hp_bonus
+	if extra > 0.0:
+		health.add_max(extra)
+		_applied_max_hp_bonus += extra
+	health.set_regen(modifiers.hero_regen())
 
 
 func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:

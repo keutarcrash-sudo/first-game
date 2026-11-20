@@ -58,4 +58,21 @@ func _run() -> String:
 		floor_mods.take(esquive)  # No max_stacks set on this test card: unlimited.
 	if not is_equal_approx(floor_mods.ability_cooldown_factor("roulade"), 0.25):
 		return "cooldown_floor"
+	var surv := PlayerModifiers.new(null)
+	var healed: Array[float] = []
+	surv.hero_heal_requested.connect(func(amount: float) -> void: healed.append(amount))
+	surv.take(_card("bandage", {"type": "hero_heal", "value": 30}))
+	if healed.size() != 1 or not is_equal_approx(healed[0], 30.0):
+		return "hero_heal_requested"
+	var peau: CardDef = _card("peau_dure", {"type": "hero_max_hp_bonus", "value": 25}, &"uncommon")
+	surv.take(peau)
+	surv.take(peau)
+	if not is_equal_approx(surv.hero_max_hp_bonus(), 50.0):
+		return "hero_max_hp_bonus_two_stacks"
+	surv.take(_card("regeneration", {"type": "hero_regen", "value": 1.0}, &"rare"))
+	if not is_equal_approx(surv.hero_regen(), 1.0):
+		return "hero_regen"
+	surv.take(_card("vampirisme", {"type": "hero_heal_on_kill", "value": 1.0}, &"epic"))
+	if not is_equal_approx(surv.hero_heal_on_kill(), 1.0):
+		return "hero_heal_on_kill"
 	return ""
