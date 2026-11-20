@@ -5,7 +5,9 @@
 ## (story 007): points are added to the saved progression, the player buys
 ## permanent upgrades, and « Rejouer » reloads this scene, which applies them.
 ## Start of a game (story 008): specialization choice, then the « Départ en
-## trombe » card choice when owned, then the build phase of wave 1.
+## trombe » card choice when owned, then the build phase of wave 1. Étape 5a: the game's
+## [WorldRun] (world 1 map generated at start), « Monde X — Vague Y/8 », per-type wave
+## preview and the « VAGUE FINALE ! » banner.
 ## Step 1 flow: build (zoomed-out camera, the wave's crystal path shown, towers
 ## placed) -> Space -> the crystal travels the path while enemies attack ->
 ## it arrives: leftovers and towers are cleared, card choice, next build.
@@ -26,6 +28,9 @@ const VISUALS_PATH := "res://assets/data/visuals.json"
 const DECOR_PATH := "res://assets/data/decor.json"
 const ENEMY_TYPES_PATH := "res://assets/data/enemy_types.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
+const WORLD_MAP_PATH := "res://assets/data/world_map.json"
+## Banner shown when a world's final wave is announced (étape 5a, spec §5).
+const FINAL_WAVE_BANNER := "VAGUE FINALE !"
 const SAVE_PATH := "user://progress.json"
 ## Seconds the hero's death animation plays before the defeat screen opens.
 const HERO_DEATH_SECONDS := 0.8
@@ -57,6 +62,8 @@ var _caster: AbilityCaster
 var _impact: ImpactFeedback
 var _visuals: VisualStats
 var _sheets: Dictionary = {}  # Folder -> SpriteSheet, each loaded once and shared.
+var _map_generator: WorldMapGenerator
+var _world_run: WorldRun  # The game's world and map (étape 5a); world transitions come with the map screen.
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -82,6 +89,7 @@ func _ready() -> void:
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
+	_map_generator = WorldMapGenerator.load_from_file(WORLD_MAP_PATH)
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
 	var enemy_types: EnemyTypes = EnemyTypes.load_from_file(ENEMY_TYPES_PATH)
 	var enemy_sheets: Dictionary = {}  # Type id -> SpriteSheet.
@@ -95,7 +103,7 @@ func _ready() -> void:
 	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
 	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -108,6 +116,8 @@ func _ready() -> void:
 	_modifiers = modifiers
 	_rng = RandomNumberGenerator.new()
 	_rng.randomize()
+	_world_run = WorldRun.new(curve.waves_per_world)
+	_world_run.start_world(_map_generator.generate(_rng))
 	_hero.setup(stats, _field_rect, _bullets, rules)
 	_hero.set_visual(default_sheet, _visuals.height("hero"))
 	_crystal.global_position = _field_rect.get_center()
@@ -181,6 +191,8 @@ func _ready() -> void:
 	_hero.set_impact(_impact)
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
+	_hud.bind_enemy_types(enemy_types)
+	_hud.bind_world_run(_world_run, curve.waves_per_world)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
 	_hud.bind_stats(_hero, modifiers, economy, stats, towers)
@@ -361,12 +373,15 @@ func _end_card_choice() -> void:
 	_state.begin_build()
 
 
-## Shows the prepared wave's path and its preview text.
-func _on_wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath) -> void:
+## Shows the prepared wave's path and its preview text, and the « VAGUE FINALE ! »
+## banner when it is the last wave of its world.
+func _on_wave_prepared(wave_number: int, composition: Dictionary, path: CrystalPath) -> void:
 	_path_view.show_path(path)
 	if _decor != null:
 		_decor.show_path(path)
-	_hud.show_wave_preview(wave_number, enemy_count)
+	_hud.show_wave_preview(wave_number, composition)
+	if _world_run.is_final_wave(wave_number):
+		_hud.show_banner(FINAL_WAVE_BANNER)
 
 
 ## The crystal arrived: the towers do not carry over to the next wave.

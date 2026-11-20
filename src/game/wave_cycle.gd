@@ -8,7 +8,8 @@ class_name WaveCycle
 extends RefCounted
 
 ## Emitted when the next wave's path is ready (at the start of each BUILD phase).
-signal wave_prepared(wave_number: int, enemy_count: int, path: CrystalPath)
+## [param composition] is the wave's enemy count by type ([method WaveSpawner.composition_for]).
+signal wave_prepared(wave_number: int, composition: Dictionary, path: CrystalPath)
 
 var _state: GameState
 var _spawner: WaveSpawner
@@ -67,7 +68,7 @@ func _prepare_wave() -> void:
 	_prepared_wave = _state.waves_completed + 1
 	var wave: Dictionary = _curve.get_wave(_prepared_wave)
 	_prepared_path = CrystalPath.generate(_crystal.global_position, wave["path_length"], _field_rect, _curve.path_settings, _rng)
-	wave_prepared.emit(_prepared_wave, wave["enemy_count"], _prepared_path)
+	wave_prepared.emit(_prepared_wave, _spawner.composition_for(_prepared_wave), _prepared_path)
 
 
 func _on_wave_started(wave_number: int) -> void:

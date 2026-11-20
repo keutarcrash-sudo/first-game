@@ -93,7 +93,7 @@ func start_wave(wave_number: int, path: CrystalPath) -> void:
 		return
 	var wave: Dictionary = _curve.get_wave(wave_number)
 	_wave_number = wave_number
-	_queue = _compose_wave(wave_number, wave["enemy_count"])
+	_queue = _compose_wave(wave_number)
 	_hp_multiplier = wave["hp_multiplier"]
 	_spawn_interval = path.length() / _crystal.speed * _curve.spawn_window / _queue.size()
 	_timer = 0.0  # The first enemy appears on the next physics frame.
@@ -103,12 +103,25 @@ func start_wave(wave_number: int, path: CrystalPath) -> void:
 	wave_started.emit(wave_number)
 
 
-## The types of every enemy of the wave (goblins = [param base_count], the others by
-## [method EnemyTypes.count_for]), shuffled with the passed RNG so they share one spawn window.
-func _compose_wave(wave_number: int, base_count: int) -> Array[Dictionary]:
+## How many enemies of each type wave [param wave_number] holds (type id -> count, see
+## [method EnemyTypes.composition]): goblins = the wave's enemy_count, the others by
+## [method EnemyTypes.count_for], every count x [member WaveCurve.final_count_mult] when the
+## wave is a world's final wave (étape 5a). Empty before [method set_enemy_types].
+func composition_for(wave_number: int) -> Dictionary:
+	if _types == null or _curve == null:
+		return {}
+	var mult: float = _curve.final_count_mult if wave_number % _curve.waves_per_world == 0 else 1.0
+	return _types.composition(wave_number, _curve.get_wave(wave_number)["enemy_count"], mult)
+
+
+## The types of every enemy of the wave ([method composition_for]), shuffled with the
+## passed RNG so they share one spawn window.
+func _compose_wave(wave_number: int) -> Array[Dictionary]:
 	var queue: Array[Dictionary] = []
-	for type: Dictionary in _types.all():
-		for i: int in _types.count_for(type["id"], wave_number, base_count):
+	var counts: Dictionary = composition_for(wave_number)
+	for type_id: String in counts:
+		var type: Dictionary = _types.get_type(type_id)
+		for i: int in counts[type_id]:
 			queue.append(type)
 	for i: int in range(queue.size() - 1, 0, -1):  # Fisher-Yates.
 		var j: int = _rng.randi_range(0, i)

@@ -1,9 +1,9 @@
 {
 	"types": [
-		{ "id": "goblin", "hp_mult": 1.0, "speed_mult": 1.0, "sheet": "res://assets/sprites/goblin", "height_px": 84.0, "behaviour": "contact", "start_wave": 1, "base_count": -1 },
-		{ "id": "kamikaze", "hp_mult": 0.6, "speed_mult": 1.4, "sheet": "res://assets/sprites/zombie", "height_px": 84.0, "behaviour": "kamikaze", "start_wave": 3, "base_count": 1, "per_wave": 1.0,
+		{ "id": "goblin", "hp_mult": 1.0, "speed_mult": 1.0, "sheet": "res://assets/sprites/goblin", "height_px": 84.0, "behaviour": "contact", "display_name": "gobelin", "display_plural": "gobelins", "start_wave": 1, "base_count": -1 },
+		{ "id": "kamikaze", "hp_mult": 0.6, "speed_mult": 1.4, "sheet": "res://assets/sprites/zombie", "height_px": 84.0, "behaviour": "kamikaze", "display_name": "kamikaze", "display_plural": "kamikazes", "start_wave": 3, "base_count": 1, "per_wave": 1.0,
 			"fuse": 0.6, "radius": 90.0, "crystal_damage": 20.0, "hero_damage": 25.0 },
-		{ "id": "artilleur", "hp_mult": 1.5, "speed_mult": 0.8, "sheet": "res://assets/sprites/ufo", "height_px": 84.0, "behaviour": "artillery", "start_wave": 5, "base_count": 1, "per_wave": 0.5,
+		{ "id": "artilleur", "hp_mult": 1.5, "speed_mult": 0.8, "sheet": "res://assets/sprites/ufo", "height_px": 84.0, "behaviour": "artillery", "display_name": "artilleur", "display_plural": "artilleurs", "start_wave": 5, "base_count": 1, "per_wave": 0.5,
 			"stand_off": 350.0, "fire_interval": 3.0, "telegraph": 1.2, "radius": 70.0, "aim_spread": 60.0, "crystal_damage": 10.0, "hero_damage": 20.0 }
 	]
 }

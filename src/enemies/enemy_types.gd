@@ -7,6 +7,8 @@ extends RefCounted
 
 const BEHAVIOURS: Array[String] = ["contact", "kamikaze", "artillery"]
 const COMMON_KEYS: Array[String] = ["hp_mult", "speed_mult", "height_px"]
+## Names shown in the wave previews (étape 5a): singular and plural, non-empty strings.
+const NAME_KEYS: Array[String] = ["display_name", "display_plural"]
 const BEHAVIOUR_KEYS: Dictionary = {
 	"contact": [],
 	"kamikaze": ["fuse", "radius", "crystal_damage", "hero_damage"],
@@ -54,6 +56,10 @@ static func from_data(data: Variant, source: String) -> EnemyTypes:
 		if not type.get("sheet") is String or (type["sheet"] as String).is_empty():
 			push_error("EnemyTypes: key '%s.sheet' in '%s' must be a non-empty string." % [where, source])
 			return null
+		for key: String in NAME_KEYS:
+			if not type.get(key) is String or (type[key] as String).is_empty():
+				push_error("EnemyTypes: key '%s.%s' in '%s' must be a non-empty string." % [where, key, source])
+				return null
 		if not type.get("behaviour") is String or not BEHAVIOURS.has(type["behaviour"]):
 			push_error("EnemyTypes: key '%s.behaviour' in '%s' must be one of %s." % [where, source, BEHAVIOURS])
 			return null
@@ -101,6 +107,33 @@ func count_for(type_id: String, wave: int, base_count: int) -> int:
 		return 0
 	var base: int = base_count if int(type["base_count"]) == WAVE_BASE_COUNT else int(type["base_count"])
 	return base + floori(float(type.get("per_wave", 0.0)) * (wave - start))
+
+
+## How many enemies of each type wave [param wave] holds (étape 5a, spec §8bis):
+## type id -> count, in type order, each count [code]roundi(count_for x count_mult)[/code];
+## types with no enemy are left out. [param count_mult] is 1 for a normal wave and
+## [member WaveCurve.final_count_mult] for a world's final wave.
+func composition(wave: int, base_count: int, count_mult: float) -> Dictionary:
+	var result: Dictionary = {}
+	for type: Dictionary in _types:
+		var count: int = roundi(count_for(type["id"], wave, base_count) * count_mult)
+		if count > 0:
+			result[type["id"]] = count
+	return result
+
+
+## Text of [param counts] (a [method composition] result), e.g.
+## "15 gobelins, 7 kamikazes, 1 artilleur": singular name for 1, plural otherwise.
+func preview_text(counts: Dictionary) -> String:
+	var parts: PackedStringArray = PackedStringArray()
+	for type_id: String in counts:
+		var type: Dictionary = get_type(type_id)
+		if type.is_empty():
+			push_error("EnemyTypes: unknown type '%s'." % type_id)
+			continue
+		var count: int = counts[type_id]
+		parts.append("%d %s" % [count, type["display_name"] if count == 1 else type["display_plural"]])
+	return ", ".join(parts)
 
 
 static func _is_number(value: Variant) -> bool:

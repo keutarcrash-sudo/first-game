@@ -1,5 +1,6 @@
 ## On-screen display: crystal hit points (story 002), wave number, gold, phase
-## and the build-phase prompt (story 003), the chosen specialization (story 008). The defeat is shown by [DeathScreen]
+## and the build-phase prompt (story 003), the chosen specialization (story 008), the world
+## and the wave's rank in it, the per-type wave preview and the big banners (étape 5a). The defeat is shown by [DeathScreen]
 ## (story 007), not here. Only listens
 ## to signals; never changes game state. Extended rather than duplicated so the
 ## game keeps a single CanvasLayer.
@@ -33,6 +34,10 @@ const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const SPEC_COLOR := Color(1.0, 0.9, 0.35)
 const SPEC_RIGHT_MARGIN := 40.0
 const SPEC_TOP := 2.0
+const BANNER_FONT_SIZE := 96
+const BANNER_COLOR := Color(1.0, 0.3, 0.75)  # Neon pink, a shout over the field.
+const BANNER_SECONDS := 1.5  # Whole life of a banner, fades included.
+const BANNER_FADE_SECONDS := 0.2
 
 var _hp_label: Label
 var _info_label: Label
@@ -50,6 +55,11 @@ var _wave_preview: String = ""
 var _stats_panel: StatsPanel
 var _tower_stats: TowerStats
 var _tower_modifiers: PlayerModifiers
+var _world_run: WorldRun
+var _waves_per_world: int = 1
+var _enemy_types: EnemyTypes
+var _banner_label: Label
+var _banner_tween: Tween
 
 
 func _ready() -> void:
@@ -97,6 +107,16 @@ func _ready() -> void:
 	_prompt_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
 	NeonFonts.style_label(_prompt_label, NeonFonts.title())
 	add_child(_prompt_label)
+	_banner_label = Label.new()
+	_banner_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_banner_label.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Never blocks a click.
+	_banner_label.add_theme_font_size_override(&"font_size", BANNER_FONT_SIZE)
+	_banner_label.add_theme_color_override(&"font_color", BANNER_COLOR)
+	NeonFonts.style_label(_banner_label, NeonFonts.title())
+	_banner_label.visible = false
+	add_child(_banner_label)
 
 
 func _build_tower_ui() -> void:
@@ -224,11 +244,53 @@ func _on_health_changed(current_hp: float, max_hp: float) -> void:
 	_hp_label.text = "Cristal : %d / %d" % [ceili(current_hp), ceili(max_hp)]
 
 
-## Replaces the build prompt with the preview of the coming wave (call on each entry into BUILD).
-func show_wave_preview(wave_number: int, enemy_count: int) -> void:
-	_wave_preview = "Vague %d : %d ennemis — place tes tours, puis Espace" % [wave_number, enemy_count]
+## Replaces the build prompt with the preview of the coming wave (call on each entry into BUILD):
+## its enemies by type ([param composition], see [method WaveSpawner.composition_for]),
+## named with the types given to [method bind_enemy_types].
+func show_wave_preview(wave_number: int, composition: Dictionary) -> void:
+	var enemies: String = "%d ennemis" % _total(composition)
+	if _enemy_types != null:
+		enemies = _enemy_types.preview_text(composition)
+	_wave_preview = "Vague %d : %s — place tes tours, puis Espace" % [wave_number, enemies]
 	if _state != null:
 		_refresh_info()
+
+
+## Gives the enemy type names used by [method show_wave_preview]. Call before the first preview.
+func bind_enemy_types(types: EnemyTypes) -> void:
+	_enemy_types = types
+
+
+## Shows the world and the wave's rank in it ("Monde X — Vague Y/8") instead of the
+## plain wave number; [param waves_per_world] is [member WaveCurve.waves_per_world].
+## Call before [method bind_game_state].
+func bind_world_run(run: WorldRun, waves_per_world: int) -> void:
+	_world_run = run
+	_waves_per_world = waves_per_world
+	if _state != null:
+		_refresh_info()
+
+
+## Shows [param text] in big neon letters at the centre of the screen for about
+## [constant BANNER_SECONDS] s. Clicks go through it. A new banner replaces the current one.
+func show_banner(text: String) -> void:
+	if _banner_tween != null:
+		_banner_tween.kill()
+	_banner_label.text = text
+	_banner_label.modulate.a = 0.0
+	_banner_label.visible = true
+	_banner_tween = create_tween()
+	_banner_tween.tween_property(_banner_label, "modulate:a", 1.0, BANNER_FADE_SECONDS)
+	_banner_tween.tween_interval(BANNER_SECONDS - 2.0 * BANNER_FADE_SECONDS)
+	_banner_tween.tween_property(_banner_label, "modulate:a", 0.0, BANNER_FADE_SECONDS)
+	_banner_tween.tween_callback(_banner_label.hide)
+
+
+static func _total(composition: Dictionary) -> int:
+	var total: int = 0
+	for count: int in composition.values():
+		total += count
+	return total
 
 
 ## Shows wave number, gold, phase and the build prompt, and keeps them up to date.
@@ -264,8 +326,17 @@ func _refresh_info() -> void:
 	_build_box.visible = building
 	if _stats_panel != null:
 		_stats_panel.visible = _stats_visible()
-	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
+	_info_label.text = "%s   Or : %d   Phase : %s" % [_wave_text(building), _state.gold, phase_name]
 	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1)
 	if _wave_preview != "":
 		prompt = _wave_preview
 	_prompt_label.text = prompt if building else ""
+
+
+## "Monde X — Vague Y/8" for the wave being played, or about to be in BUILD
+## (the plain "Vague : N" before [method bind_world_run]).
+func _wave_text(building: bool) -> String:
+	var wave: int = _state.waves_completed + 1 if building else maxi(_state.wave_number, 1)
+	if _world_run == null:
+		return "Vague : %d" % wave
+	return "Monde %d — Vague %d/%d" % [_world_run.world_of(wave), _world_run.wave_in_world(wave), _waves_per_world]
