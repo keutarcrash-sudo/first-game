@@ -21,12 +21,17 @@ var _stats: DefenceStats
 var _crystal: Crystal
 var _enemies_parent: Node
 var _spawn_rect: Rect2
-var _enemy_sheet: SpriteSheet
-var _enemy_height := 0.0
+var _types: EnemyTypes
+var _sheets: Dictionary = {}  # Type id -> SpriteSheet.
+var _hero: Hero
+var _impact: ImpactFeedback
+var _hazards_parent: Node
+var _field_rect: Rect2
+var _rng: RandomNumberGenerator
+var _queue: Array[Dictionary] = []  # Types still to spawn this wave, in spawn order.
 var _state := State.IDLE
 var _timer := 0.0
 var _wave_number := 0
-var _to_spawn := 0
 var _spawn_interval := 0.0
 var _hp_multiplier := 1.0
 var _modifiers: PlayerModifiers
@@ -45,14 +50,21 @@ func setup(curve: WaveCurve, stats: DefenceStats, field_rect: Rect2, crystal: Cr
 	_crystal = crystal
 	_enemies_parent = enemies_parent
 	_spawn_rect = field_rect.grow(-stats.spawn_margin)
+	_field_rect = field_rect
 	crystal.arrived.connect(_on_crystal_arrived)
 
 
-## Sets the sprite sheet shared by every enemy of the next spawns and the death
-## animation, with the on-screen height in pixels. Without it enemies are plain discs.
-func set_enemy_visual(sheet: SpriteSheet, height_px: float) -> void:
-	_enemy_sheet = sheet
-	_enemy_height = height_px
+## Gives the spawner the enemy types of the waves ([param sheets]: type id -> SpriteSheet, each
+## loaded once by the caller, also used for the death animation), what the types need
+## ([param hero], [param impact], [param rng] for the artillery's aim) and the node that
+## holds the announced attacks ([param hazards_parent]). Call once, after [method setup].
+func set_enemy_types(types: EnemyTypes, sheets: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, rng: RandomNumberGenerator) -> void:
+	_types = types
+	_sheets = sheets
+	_hero = hero
+	_impact = impact
+	_hazards_parent = hazards_parent
+	_rng = rng
 
 
 ## Gives every enemy spawned from now on the card modifiers (Combustion, Marée montante). Optional.
@@ -64,10 +76,10 @@ func _physics_process(delta: float) -> void:
 	if _state != State.SPAWNING:
 		return
 	_timer -= delta
-	while _timer <= 0.0 and _to_spawn > 0:
+	while _timer <= 0.0 and not _queue.is_empty():
 		_spawn_enemy()
 		_timer += _spawn_interval
-	if _to_spawn == 0:
+	if _queue.is_empty():
 		_state = State.TRAVELLING
 		set_physics_process(false)
 
@@ -79,9 +91,9 @@ func start_wave(wave_number: int, path: CrystalPath) -> void:
 		return
 	var wave: Dictionary = _curve.get_wave(wave_number)
 	_wave_number = wave_number
-	_to_spawn = wave["enemy_count"]
+	_queue = _compose_wave(wave_number, wave["enemy_count"])
 	_hp_multiplier = wave["hp_multiplier"]
-	_spawn_interval = path.length() / _crystal.speed * _curve.spawn_window / _to_spawn
+	_spawn_interval = path.length() / _crystal.speed * _curve.spawn_window / _queue.size()
 	_timer = 0.0  # The first enemy appears on the next physics frame.
 	_state = State.SPAWNING
 	set_physics_process(true)
@@ -89,30 +101,48 @@ func start_wave(wave_number: int, path: CrystalPath) -> void:
 	wave_started.emit(wave_number)
 
 
+## The types of every enemy of the wave (goblins = [param base_count], the others by
+## [method EnemyTypes.count_for]), shuffled with the passed RNG so they share one spawn window.
+func _compose_wave(wave_number: int, base_count: int) -> Array[Dictionary]:
+	var queue: Array[Dictionary] = []
+	for type: Dictionary in _types.all():
+		for i: int in _types.count_for(type["id"], wave_number, base_count):
+			queue.append(type)
+	for i: int in range(queue.size() - 1, 0, -1):  # Fisher-Yates.
+		var j: int = _rng.randi_range(0, i)
+		var swap: Dictionary = queue[i]
+		queue[i] = queue[j]
+		queue[j] = swap
+	return queue
+
+
 func _spawn_enemy() -> void:
-	_to_spawn -= 1
+	var type: Dictionary = _queue.pop_back()
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
+	enemy.setup_type(type, _hero, _impact, _hazards_parent, _field_rect, _rng)
 	enemy.set_modifiers(_modifiers)
-	if _enemy_sheet != null:
-		enemy.set_visual(_enemy_sheet, _enemy_height)
+	var sheet: SpriteSheet = _sheets.get(type["id"])
+	var height: float = type["height_px"]
+	if sheet != null:
+		enemy.set_visual(sheet, height)
 	enemy.died.connect(func() -> void:
-		_play_death(enemy)
+		_play_death(enemy, sheet, height)
 		enemy_killed.emit(enemy.global_position))
 	_enemies_parent.add_child(enemy)
 
 
-## Plays the death animation where [param enemy] fell. The effect is a sibling of
+## Plays the death animation where [param enemy] fell, with the sheet of its own type. The effect is a sibling of
 ## the enemies node, never its child, so nothing mistakes it for an enemy.
-func _play_death(enemy: Enemy) -> void:
+func _play_death(enemy: Enemy, sheet: SpriteSheet, height: float) -> void:
 	var host: Node = _enemies_parent.get_parent()
-	if _enemy_sheet == null or host == null:
+	if sheet == null or host == null:
 		return
-	if not _enemy_sheet.has_animation(&"death"):
+	if not sheet.has_animation(&"death"):
 		push_error("WaveSpawner: the enemy sheet has no 'death' animation.")
 		return
 	var effect := DeathEffect.new()
-	effect.setup(_enemy_sheet, _enemy_height, enemy.facing_angle())
+	effect.setup(sheet, height, enemy.facing_angle())
 	host.add_child(effect)
 	host.move_child(effect, _enemies_parent.get_index() + 1)
 	effect.global_position = enemy.global_position
@@ -123,10 +153,14 @@ func _on_crystal_arrived() -> void:
 		return
 	_state = State.IDLE
 	set_physics_process(false)
-	_to_spawn = 0
+	_queue.clear()
 	for child: Node in _enemies_parent.get_children():
 		if child is Enemy:
 			child.queue_free()  # No died signal: no gold for these.
+	if _hazards_parent != null:
+		for zone: Node in _hazards_parent.get_children():
+			if zone is TelegraphZone:
+				(zone as TelegraphZone).cancel()  # Announced attacks vanish without striking.
 	wave_finished.emit(_wave_number)
 
 

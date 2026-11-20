@@ -24,6 +24,7 @@ const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
 const VISUALS_PATH := "res://assets/data/visuals.json"
 const DECOR_PATH := "res://assets/data/decor.json"
+const ENEMY_TYPES_PATH := "res://assets/data/enemy_types.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
 ## Seconds the hero's death animation plays before the defeat screen opens.
@@ -81,11 +82,19 @@ func _ready() -> void:
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
-	var enemy_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.enemy_sheet)
+	var enemy_types: EnemyTypes = EnemyTypes.load_from_file(ENEMY_TYPES_PATH)
+	var enemy_sheets: Dictionary = {}  # Type id -> SpriteSheet.
+	if enemy_types != null:
+		for type: Dictionary in enemy_types.all():
+			var type_sheet: SpriteSheet = _sheet_for(type["sheet"])
+			if type_sheet == null:
+				enemy_types = null
+				break
+			enemy_sheets[type["id"]] = type_sheet
 	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
 	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if default_sheet == null or enemy_sheet == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -113,7 +122,12 @@ func _ready() -> void:
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
-	_spawner.set_enemy_visual(enemy_sheet, _visuals.height("enemy"))
+	# Announced attacks: first child for now, so under every character; the floor, the path view and
+	# the decor are moved to the indexes below it afterwards, so they stay under the announcements.
+	var hazards := Node2D.new()
+	hazards.name = "Hazards"
+	add_child(hazards)
+	move_child(hazards, 0)
 	_spawner.set_modifiers(modifiers)
 	var card_effects := CardEffects.new()
 	add_child(card_effects)
@@ -149,6 +163,7 @@ func _ready() -> void:
 	_impact = ImpactFeedback.new()
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)
+	_spawner.set_enemy_types(enemy_types, enemy_sheets, _hero, _impact, hazards, _rng)
 	_impact.watch_enemies(_enemies)
 	_impact.watch_crystal(_crystal)
 	_hero.set_impact(_impact)

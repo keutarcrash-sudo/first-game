@@ -68,6 +68,14 @@ func travel(path: CrystalPath) -> void:
 	global_position = path.position_at(0.0)
 
 
+## Where the crystal will be after [param seconds] more seconds of walking its path (stopping
+## at the end), or its current position when it is not travelling.
+func predicted_position(seconds: float) -> Vector2:
+	if not _travelling or _path == null:
+		return global_position
+	return _path.position_at(minf(_distance + speed * seconds, _path.length()))
+
+
 ## Stops walking without emitting [signal arrived].
 func stop() -> void:
 	_travelling = false

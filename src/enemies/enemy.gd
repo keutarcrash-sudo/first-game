@@ -36,6 +36,8 @@ const FROZEN_TINT := Color(0.88, 0.97, 1.0)  # Whitish ice look, wins over every
 const FROZEN_TINT_AMOUNT := 0.85
 const FROZEN_OUTLINE_COLOR := Color(0.75, 0.95, 1.0)
 const FROZEN_OUTLINE_WIDTH := 7.0  # Thick outline, clearly wider than the other rings.
+const FUSE_TINT := Color(1.0, 0.1, 0.1)  # Kamikaze blink while its fuse burns.
+const FUSE_TINT_AMOUNT := 0.8
 const RING_HEIGHT_RATIO := 0.32  # With a sprite, state rings have radius height_px x this, around the silhouette centre.
 const RING_UNDER_WIDTH := 2.0  # Black under-ring: this many pixels wider on each side of every ring.
 const HIT_POSE_SECONDS := 0.2  # The hit animation plays this long, once per hit.
@@ -68,6 +70,8 @@ var _speed: float
 var _radius: float
 var _hp: float
 var _max_hp: float
+var _kamikaze: KamikazeBehaviour  # Set by setup_type for the "kamikaze" behaviour; null otherwise.
+var _artillery: ArtilleryBehaviour  # Set by setup_type for the "artillery" behaviour; null otherwise.
 
 
 ## Sets stats, hit points ([param hp]), spawn position and target. Call before adding the enemy to the tree.
@@ -81,6 +85,22 @@ func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Cry
 	var touch_distance: float = crystal.radius + _radius
 	_touch_distance_sq = touch_distance * touch_distance
 	position = start_position
+
+
+## Applies an enemy type of [EnemyTypes] on top of [method setup]: hit points and speed are
+## multiplied by the type's multipliers and the behaviour component is created
+## ("contact" = the plain goblin rules, no component). [param hazards_parent] receives the
+## announced attacks; [param field_rect] and [param rng] are used by the artillery only.
+## Call after [method setup] and before adding the enemy to the tree.
+func setup_type(type: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, field_rect: Rect2 = Rect2(), rng: RandomNumberGenerator = null) -> void:
+	_hp *= float(type["hp_mult"])
+	_max_hp = _hp
+	_speed *= float(type["speed_mult"])
+	match type["behaviour"]:
+		"kamikaze":
+			_kamikaze = KamikazeBehaviour.new(type, _crystal, hero, impact, hazards_parent)
+		"artillery":
+			_artillery = ArtilleryBehaviour.new(type, _crystal, hero, impact, hazards_parent, field_rect, rng)
 
 
 ## Gives the enemy the card modifiers read every frame (Combustion, Marée montante). Optional:
@@ -162,13 +182,25 @@ func _physics_process(delta: float) -> void:
 		_move_pushed(_push_velocity * push_time)
 	# The crystal moves, so the target is read again every frame.
 	var target: Vector2 = _crystal.global_position
-	if _frozen_left <= 0.0:
-		position = position.move_toward(target, _speed * _slow_factor * delta)
+	var fusing: bool = _kamikaze != null and _kamikaze.is_fusing()
+	if _frozen_left <= 0.0 and not fusing:
+		if _artillery != null:
+			global_position = _artillery.next_position(global_position, target, _speed * _slow_factor * delta, _radius)
+			_artillery.tick_fire(global_position, delta)
+		else:
+			position = position.move_toward(target, _speed * _slow_factor * delta)
 	if _sprite != null:
 		_update_visual(target)
+	if fusing:
+		_refresh_look()  # The fuse blinks red.
+	if _artillery != null:
+		return  # The artillery never touches the crystal: it shoots from afar.
 	if position.distance_squared_to(target) <= _touch_distance_sq:
-		_crystal.take_damage(_contact_damage)
-		queue_free()
+		if _kamikaze != null:
+			_kamikaze.begin_fuse(self)  # Stops and explodes later: no contact damage, no instant free.
+		else:
+			_crystal.take_damage(_contact_damage)
+			queue_free()
 
 
 ## Tint of the body for the current state: darker when hurt, then one fill tint
@@ -178,6 +210,8 @@ func _body_color() -> Color:
 	var color := Color(COLOR.r * shade, COLOR.g * shade, COLOR.b * shade)
 	if _sprite != null:
 		color = Color(shade, shade, shade)  # Neutral base: the sprite keeps its own colours.
+	if _kamikaze != null and _kamikaze.is_blink_red():
+		return color.lerp(FUSE_TINT, FUSE_TINT_AMOUNT)
 	if _frozen_left > 0.0:
 		color = color.lerp(FROZEN_TINT, FROZEN_TINT_AMOUNT)
 	elif is_slowed():
@@ -396,6 +430,8 @@ func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool
 	_hp -= amount
 	if _hp <= 0.0:
 		var was_burning: bool = burn_tick or _burn_left > 0.0
+		if _kamikaze != null:
+			_kamikaze.cancel()  # Killed during the fuse: no explosion.
 		died.emit()
 		if heavy:
 			died_heavy.emit()
