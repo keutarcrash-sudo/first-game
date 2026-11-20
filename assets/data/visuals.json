@@ -5,13 +5,11 @@
 		"maitre_feu": "res://assets/sprites/wizard",
 		"maitre_eau": "res://assets/sprites/witch"
 	},
-	"enemy": "res://assets/sprites/goblin",
 	"cannon": "res://assets/sprites/cannon",
 	"frost": "res://assets/sprites/frost_tower",
 	"crystal": "res://assets/sprites/crystal_cart",
 	"cell_height_px": {
 		"hero": 96.0,
-		"enemy": 84.0,
 		"cannon": 110.0,
 		"frost": 110.0,
 		"crystal": 130.0

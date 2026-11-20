@@ -22,6 +22,7 @@ var _crystal: Crystal
 var _hero: Hero
 var _impact: ImpactFeedback
 var _hazards_parent: Node
+var _state: GameState
 var _field_rect: Rect2
 var _rng: RandomNumberGenerator
 var _cooldown: float
@@ -29,7 +30,7 @@ var _cooldown: float
 
 ## [param type] is a validated artillery entry of [EnemyTypes]. [param field_rect] bounds the
 ## movement (no area = unbounded); [param rng] draws the aim offset.
-func _init(type: Dictionary, crystal: Crystal, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, field_rect: Rect2, rng: RandomNumberGenerator) -> void:
+func _init(type: Dictionary, crystal: Crystal, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, state: GameState, field_rect: Rect2, rng: RandomNumberGenerator) -> void:
 	_stand_off = type["stand_off"]
 	_fire_interval = type["fire_interval"]
 	_telegraph = type["telegraph"]
@@ -41,6 +42,7 @@ func _init(type: Dictionary, crystal: Crystal, hero: Hero, impact: ImpactFeedbac
 	_hero = hero
 	_impact = impact
 	_hazards_parent = hazards_parent
+	_state = state
 	_field_rect = field_rect
 	_rng = rng
 	_cooldown = _fire_interval
@@ -52,13 +54,17 @@ func next_position(from: Vector2, target: Vector2, max_step: float, body_radius:
 	var away: Vector2 = from - target
 	var direction: Vector2 = Vector2.RIGHT if away.length_squared() < 0.000001 else away.normalized()
 	var wanted: Vector2 = target + direction * _stand_off
-	var result: Vector2 = from.move_toward(wanted, max_step)
-	if _field_rect.has_area():
-		var inner: Rect2 = _field_rect.grow(-body_radius)
-		if inner.has_area():
-			result.x = clampf(result.x, inner.position.x, inner.end.x)
-			result.y = clampf(result.y, inner.position.y, inner.end.y)
-	return result
+	return clamp_to_field(from.move_toward(wanted, max_step), body_radius)
+
+
+## [param point] pulled back inside the field (shrunk by [param body_radius]); unchanged without a field.
+func clamp_to_field(point: Vector2, body_radius: float) -> Vector2:
+	if not _field_rect.has_area():
+		return point
+	var inner: Rect2 = _field_rect.grow(-body_radius)
+	if not inner.has_area():
+		return point
+	return Vector2(clampf(point.x, inner.position.x, inner.end.x), clampf(point.y, inner.position.y, inner.end.y))
 
 
 ## Counts the fire timer down while [param from] is in range of the crystal and fires when it runs out.
@@ -72,21 +78,23 @@ func tick_fire(from: Vector2, delta: float) -> void:
 	_fire()
 
 
+## Lights an announced shot. The impact is resolved by a static function that only holds what
+## it needs (never this object or the shooter): the shot always lands, even if the artillery died meanwhile.
 func _fire() -> void:
 	var offset: Vector2 = Vector2.from_angle(_rng.randf() * TAU) * _aim_spread * sqrt(_rng.randf())
 	var zone := TelegraphZone.new()
-	zone.setup(_radius, _telegraph, null)
-	zone.impacted.connect(_on_impacted)
+	zone.setup(_radius, _telegraph, _state)
+	zone.impacted.connect(ArtilleryBehaviour._resolve_impact.bind(_crystal, _hero, _impact, _hazards_parent, _radius, _crystal_damage, _hero_damage))
 	_hazards_parent.add_child(zone)
 	zone.global_position = _crystal.predicted_position(_telegraph) + offset
 
 
-func _on_impacted(center: Vector2) -> void:
-	if is_instance_valid(_crystal) and TelegraphZone.hits_point(center, _radius, _crystal.global_position):
-		_crystal.take_damage(_crystal_damage)
-	if is_instance_valid(_hero) and TelegraphZone.hits_body(center, _radius, _hero.global_position, _hero.body_radius()):
-		_hero.hurt(_hero_damage)
-	if is_instance_valid(_hazards_parent) and _hazards_parent.get_parent() != null:
-		PopBurst.spawn(_hazards_parent.get_parent(), center, BAM_WORD, BAM_COLOR, _radius)
-	if _impact != null:
-		_impact.shake(&"small")
+static func _resolve_impact(center: Vector2, crystal: Crystal, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, radius: float, crystal_damage: float, hero_damage: float) -> void:
+	if is_instance_valid(crystal) and TelegraphZone.hits_point(center, radius, crystal.global_position):
+		crystal.take_damage(crystal_damage)
+	if is_instance_valid(hero) and TelegraphZone.hits_body(center, radius, hero.global_position, hero.body_radius()):
+		hero.hurt(hero_damage)
+	if is_instance_valid(hazards_parent) and hazards_parent.get_parent() != null:
+		PopBurst.spawn(hazards_parent.get_parent(), center, BAM_WORD, BAM_COLOR, radius)
+	if is_instance_valid(impact):
+		impact.shake(&"small")

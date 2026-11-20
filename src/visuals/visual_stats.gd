@@ -1,12 +1,10 @@
 ## Which sprite sheet folder each object uses and how tall it is on screen
-## (assets/data/visuals.json). Every key is required.
+## (assets/data/visuals.json). Every key is required. Enemy sheets and heights live in enemy_types.json.
 class_name VisualStats
 extends RefCounted
 
-const _HEIGHT_KEYS: Array[String] = ["hero", "enemy", "cannon", "frost", "crystal"]
+const _HEIGHT_KEYS: Array[String] = ["hero", "cannon", "frost", "crystal"]
 
-## Sheet folder of the enemies.
-var enemy_sheet: String
 ## Sheet folder of the cannon tower.
 var cannon_sheet: String
 ## Sheet folder of the frost tower.
@@ -39,11 +37,10 @@ static func load_from_file(path: String) -> VisualStats:
 			push_error("VisualStats: key 'hero.%s' must be a folder path in '%s'." % [spec_id, path])
 			return null
 		stats._heroes[spec_id] = heroes[spec_id]
-	for key: String in ["enemy", "cannon", "frost", "crystal"]:
+	for key: String in ["cannon", "frost", "crystal"]:
 		if not data.get(key) is String or (data[key] as String).is_empty():
 			push_error("VisualStats: key '%s' must be a folder path in '%s'." % [key, path])
 			return null
-	stats.enemy_sheet = data["enemy"]
 	stats.cannon_sheet = data["cannon"]
 	stats.frost_sheet = data["frost"]
 	stats.crystal_sheet = data["crystal"]
@@ -66,7 +63,7 @@ func hero_sheet(spec_id: String) -> String:
 
 
 ## On-screen height in pixels of the whole cell for [param key]
-## (hero, enemy, cannon, frost, crystal). 0 if unknown.
+## (hero, cannon, frost, crystal). 0 if unknown.
 func height(key: String) -> float:
 	if not _heights.has(key):
 		push_error("VisualStats: unknown height key '%s'." % key)

@@ -26,6 +26,7 @@ var _sheets: Dictionary = {}  # Type id -> SpriteSheet.
 var _hero: Hero
 var _impact: ImpactFeedback
 var _hazards_parent: Node
+var _game_state: GameState
 var _field_rect: Rect2
 var _rng: RandomNumberGenerator
 var _queue: Array[Dictionary] = []  # Types still to spawn this wave, in spawn order.
@@ -57,13 +58,14 @@ func setup(curve: WaveCurve, stats: DefenceStats, field_rect: Rect2, crystal: Cr
 ## Gives the spawner the enemy types of the waves ([param sheets]: type id -> SpriteSheet, each
 ## loaded once by the caller, also used for the death animation), what the types need
 ## ([param hero], [param impact], [param rng] for the artillery's aim) and the node that
-## holds the announced attacks ([param hazards_parent]). Call once, after [method setup].
-func set_enemy_types(types: EnemyTypes, sheets: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, rng: RandomNumberGenerator) -> void:
+## holds the announced attacks ([param hazards_parent], which vanish when [param game_state] leaves COMBAT). Call once, after [method setup].
+func set_enemy_types(types: EnemyTypes, sheets: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, game_state: GameState, rng: RandomNumberGenerator) -> void:
 	_types = types
 	_sheets = sheets
 	_hero = hero
 	_impact = impact
 	_hazards_parent = hazards_parent
+	_game_state = game_state
 	_rng = rng
 
 
@@ -120,7 +122,7 @@ func _spawn_enemy() -> void:
 	var type: Dictionary = _queue.pop_back()
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
-	enemy.setup_type(type, _hero, _impact, _hazards_parent, _field_rect, _rng)
+	enemy.setup_type(type, _hero, _impact, _hazards_parent, _game_state, _field_rect, _rng)
 	enemy.set_modifiers(_modifiers)
 	var sheet: SpriteSheet = _sheets.get(type["id"])
 	var height: float = type["height_px"]

@@ -163,7 +163,7 @@ func _ready() -> void:
 	_impact = ImpactFeedback.new()
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)
-	_spawner.set_enemy_types(enemy_types, enemy_sheets, _hero, _impact, hazards, _rng)
+	_spawner.set_enemy_types(enemy_types, enemy_sheets, _hero, _impact, hazards, _state, _rng)
 	_impact.watch_enemies(_enemies)
 	_impact.watch_crystal(_crystal)
 	_hero.set_impact(_impact)

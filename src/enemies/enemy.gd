@@ -90,17 +90,17 @@ func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Cry
 ## Applies an enemy type of [EnemyTypes] on top of [method setup]: hit points and speed are
 ## multiplied by the type's multipliers and the behaviour component is created
 ## ("contact" = the plain goblin rules, no component). [param hazards_parent] receives the
-## announced attacks; [param field_rect] and [param rng] are used by the artillery only.
+## announced attacks and [param state] makes them vanish when the phase leaves COMBAT; [param field_rect] and [param rng] are used by the artillery only.
 ## Call after [method setup] and before adding the enemy to the tree.
-func setup_type(type: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, field_rect: Rect2 = Rect2(), rng: RandomNumberGenerator = null) -> void:
+func setup_type(type: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, state: GameState, field_rect: Rect2 = Rect2(), rng: RandomNumberGenerator = null) -> void:
 	_hp *= float(type["hp_mult"])
 	_max_hp = _hp
 	_speed *= float(type["speed_mult"])
 	match type["behaviour"]:
 		"kamikaze":
-			_kamikaze = KamikazeBehaviour.new(type, _crystal, hero, impact, hazards_parent)
+			_kamikaze = KamikazeBehaviour.new(type, _crystal, hero, impact, hazards_parent, state)
 		"artillery":
-			_artillery = ArtilleryBehaviour.new(type, _crystal, hero, impact, hazards_parent, field_rect, rng)
+			_artillery = ArtilleryBehaviour.new(type, _crystal, hero, impact, hazards_parent, state, field_rect, rng)
 
 
 ## Gives the enemy the card modifiers read every frame (Combustion, Marée montante). Optional:
@@ -180,6 +180,8 @@ func _physics_process(delta: float) -> void:
 		var push_time: float = minf(delta, _push_left)
 		_push_left -= push_time
 		_move_pushed(_push_velocity * push_time)
+		if _artillery != null:
+			global_position = _artillery.clamp_to_field(global_position, _radius)  # A push must not leave the field.
 	# The crystal moves, so the target is read again every frame.
 	var target: Vector2 = _crystal.global_position
 	var fusing: bool = _kamikaze != null and _kamikaze.is_fusing()
