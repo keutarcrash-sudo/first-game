@@ -140,6 +140,7 @@ func _ready() -> void:
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
+	_hud.bind_stats(_hero, modifiers, economy, stats)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
 	_card_screen.setup(_rarities, _ability_catalog)
@@ -207,6 +208,7 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)
+	_hud.refresh_stats()
 	var abilities: Dictionary = _ability_catalog.for_spec(spec.id)
 	var is_unlocked := func(ability_id: String) -> bool:
 		for slot: StringName in abilities:

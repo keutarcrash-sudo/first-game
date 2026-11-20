@@ -44,6 +44,7 @@ var _cards_label: Label
 var _modifiers: PlayerModifiers
 var _spec_label: Label
 var _wave_preview: String = ""
+var _stats_panel: StatsPanel
 
 
 func _ready() -> void:
@@ -163,6 +164,25 @@ func show_specialization(spec: SpecializationDef) -> void:
 	_spec_label.text = "Spécialisation : %s" % spec.display_name
 
 
+## Shows the hero's stats panel (top right, under the specialization line) during BUILD
+## and COMBAT. Call after [method bind_game_state]; call [method refresh_stats] once the hero is equipped.
+func bind_stats(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats) -> void:
+	_stats_panel = StatsPanel.new()
+	add_child(_stats_panel)
+	_stats_panel.setup(hero, modifiers, economy, stats)
+	_stats_panel.visible = _stats_visible()
+
+
+## Rereads the stats panel (the specialization lines appear when the hero is equipped).
+func refresh_stats() -> void:
+	if _stats_panel != null:
+		_stats_panel.refresh()
+
+
+func _stats_visible() -> bool:
+	return _state != null and (_state.phase == GameState.Phase.BUILD or _state.phase == GameState.Phase.COMBAT)
+
+
 ## Shows the crystal's hit points and keeps them up to date. Call after the crystal's setup.
 func bind(crystal: Crystal) -> void:
 	_on_health_changed(crystal.current_hp, crystal.max_hp)
@@ -214,6 +234,8 @@ func _refresh_info() -> void:
 	elif _state.phase == GameState.Phase.SPEC_CHOICE:
 		phase_name = "Choix de la spécialisation"
 	_build_box.visible = building
+	if _stats_panel != null:
+		_stats_panel.visible = _stats_visible()
 	_info_label.text = "Vague : %d   Or : %d   Phase : %s" % [_state.wave_number, _state.gold, phase_name]
 	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1)
 	if _wave_preview != "":
