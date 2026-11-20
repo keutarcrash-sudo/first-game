@@ -138,7 +138,9 @@ func _ready() -> void:
 	_hud.bind_modifiers(modifiers)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
+	_card_screen.setup(_rarities, _ability_catalog)
 	_card_screen.card_chosen.connect(_on_card_chosen.bind(modifiers))
+	_card_screen.reroll_requested.connect(_on_reroll_requested)
 	_state.phase_changed.connect(_on_phase_changed)
 	# Added after Enemies, so the mark is drawn over the enemies.
 	var designator := TargetDesignator.new()
@@ -201,7 +203,13 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)
-	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id)
+	var abilities: Dictionary = _ability_catalog.for_spec(spec.id)
+	var is_unlocked := func(ability_id: String) -> bool:
+		for slot: StringName in abilities:
+			if (abilities[slot] as AbilityDef).id == ability_id:
+				return _caster.is_unlocked(slot)
+		return false
+	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id, _rarities, is_unlocked)
 	if _skill_tree.has_start_card_choice(owned):
 		_state.begin_card_choice()
 		return
@@ -220,17 +228,39 @@ func _on_phase_changed(phase: GameState.Phase) -> void:
 func _open_card_choice() -> void:
 	if _state.phase != GameState.Phase.CARD_CHOICE or _crystal.current_hp <= 0.0:
 		return
-	var offer: Array[CardDef] = _card_pool.draw()
+	_card_pool.begin_choice()
+	if not _present_offer(_card_pool.draw(_choice_wave())):
+		_end_card_choice()
+
+
+## The wave about to be played, used for the rarity weights.
+func _choice_wave() -> int:
+	return _state.waves_completed + 1
+
+
+## Adds the "Nouvelle compétence" card to [param drawn] when due (it takes a slot
+## of a full offer) and shows the result. Returns false when there is nothing to offer.
+func _present_offer(drawn: Array[CardDef]) -> bool:
+	var offer: Array[CardDef] = drawn.duplicate()
 	var unlock_card: CardDef = _unlock_card_if_due()
 	if unlock_card != null:
-		var full_size: int = _catalog.offered_per_choice + _skill_tree.cards_offered_bonus(_progress.owned_ids) + _modifiers.cards_offered_bonus()
-		if offer.size() >= full_size:
+		if offer.size() >= _card_pool.offer_size():
 			offer.pop_back()
 		offer.push_front(unlock_card)
 	if offer.is_empty():
-		_end_card_choice()
+		return false
+	var cost: int = _card_pool.reroll_cost()
+	_card_screen.show_cards(offer, cost, _state.gold >= cost and _card_pool.can_draw())
+	return true
+
+
+## Pays for a reroll and replaces the offer; refused when the gold is short.
+func _on_reroll_requested() -> void:
+	if _state.phase != GameState.Phase.CARD_CHOICE or not _card_pool.can_draw():
 		return
-	_card_screen.show_cards(offer)
+	if not _state.spend_gold(_card_pool.reroll_cost()):
+		return
+	_present_offer(_card_pool.reroll(_choice_wave()))
 
 
 ## The "Nouvelle compétence" card when the next locked ability (A, E, R) is due
@@ -245,6 +275,7 @@ func _unlock_card_if_due() -> CardDef:
 	var def: AbilityDef = _caster.ability(slot)
 	var card := CardDef.new()
 	card.id = UNLOCK_CARD_PREFIX + String(slot)
+	card.rarity = &""  # No rarity: the screen draws no rarity frame for it.
 	card.display_name = "Nouvelle compétence : %s (%s)" % [def.display_name, String(slot).to_upper()]
 	card.description = def.description
 	return card
