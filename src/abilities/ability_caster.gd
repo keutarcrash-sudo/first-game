@@ -36,6 +36,7 @@ var _unlocked: Dictionary = {}  # { slot: true } for the slots that can be cast
 var _wet_dash_radius := 0.0  # > 0 while a dash_wet jump is in progress.
 var _wet_dash_done: Dictionary = {}  # { enemy instance id: true } already soaked by this jump
 var _eye_left := 0.0  # Seconds of Œil du chasseur remaining; 0 = not active.
+var _impact: ImpactFeedback  # Optional: shake and hit-stop for fireball and meteor.
 var _eye_ring: Node2D  # Yellow outline around the hero while the eye is active.
 
 
@@ -50,6 +51,11 @@ func setup(state: GameState, hero: Hero, enemies: Node2D, bullets: Node2D, field
 	_modifiers = modifiers
 	_rules = rules
 	state.phase_changed.connect(_on_phase_changed)
+
+
+## Gives the caster the feedback node handed to the explosions (fireball, meteor). Optional.
+func set_impact(impact: ImpactFeedback) -> void:
+	_impact = impact
 
 
 ## Sets the abilities of the chosen specialization, [code]{ slot: AbilityDef }[/code].
@@ -214,7 +220,7 @@ func _on_arrow_rain_enemy_inside(enemy: Enemy, delta: float, tick: Dictionary, i
 		if tick["fire"]:
 			tick["left"] = float(tick["left"]) + interval
 	if tick["fire"]:
-		enemy.take_damage(damage * _modifiers.damage_multiplier())
+		enemy.take_damage(damage * _modifiers.damage_multiplier(), true)
 
 
 func _cast_fire_wall(def: AbilityDef) -> void:
@@ -323,6 +329,7 @@ func _cast_fireball(def: AbilityDef) -> void:
 	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
 	var fireball := Fireball.new()
 	fireball.setup(def, _direction_to_mouse(), _field_rect, _enemies, float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps)
+	fireball.set_impact(_impact)
 	_bullets.add_child(fireball)
 	fireball.global_position = _hero.global_position
 
@@ -415,6 +422,7 @@ func _cast_meteor(def: AbilityDef) -> void:
 	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
 	var meteor := Meteor.new()
 	meteor.setup(_state, radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps, _enemies)
+	meteor.set_impact(_impact)
 	_bullets.add_child(meteor)
 	meteor.global_position = _target_point(float(def.values["max_range"]), radius)
 

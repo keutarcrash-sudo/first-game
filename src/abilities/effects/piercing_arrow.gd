@@ -66,8 +66,11 @@ func _on_hit(target: Node2D) -> void:
 	_hit_ids[target.get_instance_id()] = true
 	if not target.has_method(&"take_damage"):
 		return
-	target.call(&"take_damage", _damage)
-	# After the damage: Enemy.apply_mark ignores an enemy the hit just killed.
 	var enemy := target as Enemy
+	if enemy != null:
+		enemy.take_damage(_damage, true)
+	else:
+		target.call(&"take_damage", _damage)
+	# After the damage: Enemy.apply_mark ignores an enemy the hit just killed.
 	if enemy != null:
 		enemy.apply_mark(_mark_duration)

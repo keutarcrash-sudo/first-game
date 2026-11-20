@@ -52,16 +52,19 @@ func _ready() -> void:
 	_hp_label.position = HP_POSITION
 	_hp_label.add_theme_font_size_override(&"font_size", HP_FONT_SIZE)
 	_hp_label.add_theme_color_override(&"font_color", TEXT_COLOR)
+	NeonFonts.style_label(_hp_label, NeonFonts.title())
 	add_child(_hp_label)
 	_info_label = Label.new()
 	_info_label.position = INFO_POSITION
 	_info_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_info_label.add_theme_color_override(&"font_color", TEXT_COLOR)
+	NeonFonts.style_label(_info_label, NeonFonts.title())
 	add_child(_info_label)
 	_cards_label = Label.new()
 	_cards_label.position = CARDS_POSITION
 	_cards_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_cards_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
+	NeonFonts.style_label(_cards_label, NeonFonts.title())
 	add_child(_cards_label)
 	_spec_label = Label.new()
 	_spec_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -71,6 +74,7 @@ func _ready() -> void:
 	_spec_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_spec_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_spec_label.add_theme_color_override(&"font_color", SPEC_COLOR)
+	NeonFonts.style_label(_spec_label, NeonFonts.title())
 	add_child(_spec_label)
 	_prompt_label = Label.new()
 	_prompt_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -79,6 +83,7 @@ func _ready() -> void:
 	_prompt_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_prompt_label.add_theme_font_size_override(&"font_size", PROMPT_FONT_SIZE)
 	_prompt_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
+	NeonFonts.style_label(_prompt_label, NeonFonts.title())
 	add_child(_prompt_label)
 
 
@@ -103,6 +108,7 @@ func _build_tower_ui() -> void:
 	_message_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_message_label.add_theme_font_size_override(&"font_size", MESSAGE_FONT_SIZE)
 	_message_label.add_theme_color_override(&"font_color", MESSAGE_COLOR)
+	NeonFonts.style_label(_message_label, NeonFonts.title())
 	_message_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_message_label.visible = false
 	add_child(_message_label)
@@ -120,6 +126,7 @@ func _make_tower_button(group: ButtonGroup, kind: TowerStats.Kind) -> Button:
 	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused button must not react to it.
 	button.custom_minimum_size = BUTTON_SIZE
 	button.add_theme_font_size_override(&"font_size", BUTTON_FONT_SIZE)
+	button.add_theme_font_override(&"font", NeonFonts.title())
 	button.add_theme_color_override(&"font_pressed_color", BUTTON_SELECTED_COLOR)
 	button.add_theme_color_override(&"font_hover_pressed_color", BUTTON_SELECTED_COLOR)
 	button.pressed.connect(_on_tower_button_pressed.bind(kind))

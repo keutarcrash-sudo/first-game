@@ -9,8 +9,8 @@ extends Node2D
 ## Emitted when a valid placement is refused because the gold is insufficient.
 signal not_enough_gold
 
-const VALID_COLOR := Color(0.4, 1.0, 0.5, 0.35)
-const INVALID_COLOR := Color(1.0, 0.3, 0.3, 0.35)
+const VALID_COLOR := Color(0.5, 1.0, 0.6, 0.55)
+const INVALID_COLOR := Color(1.0, 0.4, 0.4, 0.55)
 const RING_WIDTH := 2.0
 const RING_POINTS := 48
 
@@ -25,6 +25,12 @@ var _rules: ProcRules
 var _modifiers: PlayerModifiers
 var _designator: TargetDesignator
 var _kind := TowerStats.Kind.CANNON
+var _cannon_sheet: SpriteSheet
+var _frost_sheet: SpriteSheet
+var _cannon_height: float
+var _frost_height: float
+var _preview: DirectionalSprite
+var _sheet_error_reported := false
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
@@ -45,6 +51,18 @@ func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crys
 	_on_phase_changed(state.phase)
 
 
+## Gives the placer the tower images and their on-screen heights in pixels, used for the preview and for every placed tower. Call once, before the first frame.
+func set_visuals(cannon_sheet: SpriteSheet, cannon_height: float, frost_sheet: SpriteSheet, frost_height: float) -> void:
+	_cannon_sheet = cannon_sheet
+	_frost_sheet = frost_sheet
+	_cannon_height = cannon_height
+	_frost_height = frost_height
+	if _preview == null:
+		_preview = DirectionalSprite.new()
+		add_child(_preview)
+	_apply_preview_sheet()
+
+
 ## Frees every placed tower (towers last one wave).
 func clear_towers() -> void:
 	for child: Node in _towers.get_children():
@@ -54,17 +72,21 @@ func clear_towers() -> void:
 ## Chooses the type of tower the next click places. The cannon is selected by default.
 func select_kind(kind: TowerStats.Kind) -> void:
 	_kind = kind
+	_apply_preview_sheet()
 
 
 func _process(_delta: float) -> void:
 	queue_redraw()
+	if _preview != null:
+		_preview.position = get_local_mouse_position()
 
 
 func _draw() -> void:
 	var mouse: Vector2 = get_local_mouse_position()
 	var radius: float = _stats.radius_of(_kind)
 	var color: Color = VALID_COLOR if _is_spot_valid(mouse, radius) else INVALID_COLOR
-	draw_circle(mouse, radius, color)
+	if _preview != null:
+		_preview.tint = color
 	draw_arc(mouse, _stats.range_of(_kind), 0.0, TAU, RING_POINTS, color, RING_WIDTH)
 
 
@@ -83,6 +105,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		not_enough_gold.emit()
 		return
 	_place(position_clicked)
+
+
+func _apply_preview_sheet() -> void:
+	if _preview == null:
+		return
+	var sheet: SpriteSheet = _cannon_sheet if _kind == TowerStats.Kind.CANNON else _frost_sheet
+	if sheet == null:
+		_report_missing_sheet()
+		_preview.visible = false
+		return
+	_preview.visible = true
+	_preview.setup(sheet, _cannon_height if _kind == TowerStats.Kind.CANNON else _frost_height)
+	_preview.play(&"idle")
 
 
 func _on_phase_changed(phase: GameState.Phase) -> void:
@@ -106,15 +141,31 @@ func _is_spot_valid(spot: Vector2, radius: float) -> bool:
 	return true
 
 
+## Reports once that a tower image was not given; the tower is then placed without its visual.
+func _report_missing_sheet() -> void:
+	if _sheet_error_reported:
+		return
+	_sheet_error_reported = true
+	push_error("TowerPlacer: tower sheets were not set (set_visuals); towers are shown without an image.")
+
+
 func _place(spot: Vector2) -> void:
 	var tower: Tower
 	if _kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
 		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator)
+		if _cannon_sheet != null:
+			cannon.set_visual(_cannon_sheet, _cannon_height)
+		else:
+			_report_missing_sheet()
 		tower = cannon
 	else:
 		var frost := FrostTower.new()
 		frost.setup(_stats, _enemies, _modifiers)
+		if _frost_sheet != null:
+			frost.set_visual(_frost_sheet, _frost_height)
+		else:
+			_report_missing_sheet()
 		tower = frost
 	tower.position = spot
 	_towers.add_child(tower)

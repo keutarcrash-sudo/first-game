@@ -29,7 +29,7 @@ func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect
 	_arena_rect = arena_rect
 	radius = stats.cannon_radius
 	attack_range = stats.cannon_range
-	_body_color = COLOR
+	_halo_color = COLOR
 
 
 func _physics_process(delta: float) -> void:
@@ -73,6 +73,7 @@ func _fire(target: Enemy) -> void:
 	var direction: Vector2 = global_position.direction_to(target.global_position)
 	if direction == Vector2.ZERO:  # An enemy walking over the tower.
 		direction = Vector2.RIGHT
+	set_facing(direction.angle())
 	var bullet := HeroBullet.new()
 	bullet.configure(
 		_stats.cannon_damage * _modifiers.damage_multiplier(), _stats.cannon_bullet_speed, _stats.cannon_bullet_max_range,

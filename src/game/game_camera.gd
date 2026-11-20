@@ -24,6 +24,12 @@ func setup(hero: Node2D, field_rect: Rect2, state: GameState) -> void:
 	_apply_phase()
 
 
+## Shifts the view by [param shake] pixels on top of the followed position
+## (screen shake). [code]Vector2.ZERO[/code] ends the shake.
+func set_shake_offset(shake: Vector2) -> void:
+	offset = shake
+
+
 func _on_phase_changed() -> void:
 	_apply_phase()
 

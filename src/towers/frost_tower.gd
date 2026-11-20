@@ -8,7 +8,7 @@
 class_name FrostTower
 extends Tower
 
-const COLOR := Color(0.4, 0.7, 1.0)
+const COLOR := Color(0.1, 0.89, 1.0)
 
 var _base_slow_factor: float
 var _base_range: float
@@ -24,7 +24,7 @@ func setup(stats: TowerStats, enemies: Node2D, modifiers: PlayerModifiers) -> vo
 	_base_range = stats.frost_range
 	radius = stats.frost_radius
 	attack_range = _base_range
-	_body_color = COLOR
+	_halo_color = COLOR
 
 
 func _physics_process(_delta: float) -> void:

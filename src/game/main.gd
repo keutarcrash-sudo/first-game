@@ -1,4 +1,4 @@
-## Arena (stories 001-003): dark background, visible arena bounds, the hero,
+## Arena (stories 001-003): neon floor with visible arena bounds ([NeonFloor]), the hero,
 ## the crystal and the wave spawner. Loads the tuning data once and hands it
 ## to each part. When the crystal is destroyed the whole tree is paused, which
 ## stops spawning, enemies, bullets and the hero, and the defeat screen opens
@@ -21,10 +21,9 @@ const CARDS_PATH := "res://assets/data/cards.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
+const VISUALS_PATH := "res://assets/data/visuals.json"
+const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
-const FLOOR_COLOR := Color(0.09, 0.09, 0.13)
-const BORDER_COLOR := Color(0.4, 0.45, 0.6)
-const BORDER_WIDTH := 4.0
 ## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
 const UNLOCK_CARD_PREFIX := "unlock_ability_"
 
@@ -46,6 +45,9 @@ var _path_view: PathView
 var _camera: GameCamera
 var _ability_catalog: AbilityCatalog
 var _caster: AbilityCaster
+var _impact: ImpactFeedback
+var _visuals: VisualStats
+var _sheets: Dictionary = {}  # Folder -> SpriteSheet, each loaded once and shared.
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -68,7 +70,14 @@ func _ready() -> void:
 	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
-	if _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	_visuals = VisualStats.load_from_file(VISUALS_PATH)
+	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
+	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
+	var enemy_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.enemy_sheet)
+	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
+	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
+	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
+	if default_sheet == null or enemy_sheet == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -82,8 +91,10 @@ func _ready() -> void:
 	_rng = RandomNumberGenerator.new()
 	_rng.randomize()
 	_hero.setup(stats, _field_rect, _bullets, rules)
+	_hero.set_visual(default_sheet, _visuals.height("hero"))
 	_crystal.global_position = _field_rect.get_center()
 	_crystal.setup(defence, _skill_tree.crystal_max_hp_bonus(owned))
+	_crystal.set_visual(crystal_sheet, _visuals.height("crystal"))
 	# The hero starts below the crystal, not on top of it.
 	_hero.global_position = _crystal.global_position + Vector2(0.0, defence.crystal_radius + stats.hero_radius + defence.hero_start_gap)
 	_hud.bind(_crystal)
@@ -92,6 +103,7 @@ func _ready() -> void:
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
+	_spawner.set_enemy_visual(enemy_sheet, _visuals.height("enemy"))
 	# The gold field sits just before Enemies, so coins are drawn under the enemies.
 	var gold_field := GoldField.new()
 	add_child(gold_field)
@@ -104,9 +116,19 @@ func _ready() -> void:
 	add_child(_path_view)
 	move_child(_path_view, 0)
 	_path_view.setup(_state)
+	# The floor goes under everything, the path view included.
+	var floor_view := NeonFloor.new()
+	add_child(floor_view)
+	move_child(floor_view, 0)
+	floor_view.setup(_field_rect)
 	_camera = GameCamera.new()
 	add_child(_camera)
 	_camera.setup(_hero, _field_rect, _state)
+	_impact = ImpactFeedback.new()
+	add_child(_impact)
+	_impact.setup(impact_stats, _camera, _state)
+	_impact.watch_enemies(_enemies)
+	_impact.watch_crystal(_crystal)
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
@@ -122,11 +144,13 @@ func _ready() -> void:
 	designator.setup(_state, _enemies, towers)
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: designator.clear())
 	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers, designator)
+	_placer.set_visuals(cannon_sheet, _visuals.height("cannon"), frost_sheet, _visuals.height("frost"))
 	_hud.bind_tower_build(towers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
 	_caster = AbilityCaster.new()
 	add_child(_caster)
+	_caster.set_impact(_impact)
 	_caster.setup(_state, _hero, _enemies, _bullets, _field_rect, modifiers, rules)
 	_hud.bind_abilities(_caster)
 	_death_screen = DeathScreen.new()
@@ -139,12 +163,17 @@ func _ready() -> void:
 	_spec_screen.specialization_chosen.connect(_on_spec_chosen)
 	_state.begin_spec_choice()
 	_spec_screen.show_specs(_specs.unlocked(_skill_tree.unlocked_spec_ids(owned)))
-	queue_redraw()
 
 
-func _draw() -> void:
-	draw_rect(_field_rect, FLOOR_COLOR)
-	draw_rect(_field_rect, BORDER_COLOR, false, BORDER_WIDTH)
+## The sheet of [param dir], loaded the first time and shared afterwards
+## ([code]null[/code] after an error, which is reported once per try).
+func _sheet_for(dir: String) -> SpriteSheet:
+	if not _sheets.has(dir):
+		var sheet: SpriteSheet = SpriteSheet.load_from_dir(dir)
+		if sheet == null:
+			return null
+		_sheets[dir] = sheet
+	return _sheets[dir]
 
 
 ## Space launches the next wave during the build phase. This node stops
@@ -163,6 +192,9 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 		_rules.activate(combo_id)
 	if spec.freeze_duration > 0.0:
 		_modifiers.enable_freeze(spec.freeze_duration, spec.freeze_cooldown)
+	var spec_sheet: SpriteSheet = _sheet_for(_visuals.hero_sheet(spec.id))
+	if spec_sheet != null:  # On a load error the default look stays.
+		_hero.set_visual(spec_sheet, _visuals.height("hero"))
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)

@@ -9,15 +9,17 @@ extends CharacterBody2D
 ## Emitted when a [method dash] ends (duration elapsed).
 signal dash_finished
 
-const BODY_COLOR := Color(0.3, 0.8, 1.0)
-const AIM_COLOR := Color(0.3, 0.8, 1.0, 0.6)
-const AIM_LINE_LENGTH := 14.0
-const AIM_LINE_WIDTH := 3.0
+const SHOOT_MAX_SPEED_SCALE := 4.0  # Fastest the shoot clip is played to fit a short fire interval.
 const HERO_LAYER := 1
 const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
 const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
 
 var _stats: HeroStats
+var _sprite: DirectionalSprite
+var _sheet: SpriteSheet
+var _shot_now := false  # A shot was fired since the last visual update (visual only).
+var _shooting := false  # The shoot clip is playing and has not ended (visual only).
+var _fire_interval := 1.0
 var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
@@ -54,6 +56,22 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 	var collision := CollisionShape2D.new()
 	collision.shape = shape
 	add_child(collision)
+
+
+## Sets the sprite sheet the hero is drawn with and its on-screen height in
+## pixels (graphics only: nothing in the game rules depends on it). May be
+## called again to change the look, for example when the specialization is chosen.
+func set_visual(sheet: SpriteSheet, height_px: float) -> void:
+	if _sprite == null:
+		_sprite = DirectionalSprite.new()
+		add_child(_sprite)
+	_sheet = sheet
+	_shooting = false
+	_sprite.setup(sheet, height_px)
+	if not _sprite.animation_finished.is_connected(_on_animation_finished):
+		_sprite.animation_finished.connect(_on_animation_finished)
+	_sprite.set_facing(_aim_direction.angle())
+	_sprite.play(&"idle")
 
 
 ## Gives the hero the weapon of [param spec] and lets it move and fire. Card
@@ -120,6 +138,8 @@ func is_dashing() -> bool:
 
 func _physics_process(delta: float) -> void:
 	var finished_dash := false
+	var was_dashing := _dash_left > 0.0
+	var moving := false
 	if _dash_left > 0.0:
 		var step: float = minf(delta, _dash_left)
 		_dash_left -= step
@@ -129,7 +149,9 @@ func _physics_process(delta: float) -> void:
 			_dash_left = 0.0
 			finished_dash = true
 	else:
-		velocity = move_direction() * _stats.hero_speed
+		var wanted: Vector2 = move_direction()
+		moving = wanted != Vector2.ZERO
+		velocity = wanted * _stats.hero_speed
 		move_and_slide()
 		global_position = global_position.clamp(_min_position, _max_position)
 
@@ -140,19 +162,49 @@ func _physics_process(delta: float) -> void:
 	_fire_cooldown -= delta
 	if _fire_cooldown <= 0.0:
 		_fire()
-		_fire_cooldown += 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
-	queue_redraw()
+		_fire_interval = 1.0 / (_archer.fire_rate() if _archer != null else _elemental.fire_rate())
+		_fire_cooldown += _fire_interval
+	_update_visual(was_dashing, moving)
 	if finished_dash:
 		dash_finished.emit()
 
 
-func _draw() -> void:
-	draw_circle(Vector2.ZERO, _stats.hero_radius, BODY_COLOR)
-	var aim_start: Vector2 = _aim_direction * _stats.hero_radius
-	draw_line(aim_start, aim_start + _aim_direction * AIM_LINE_LENGTH, AIM_COLOR, AIM_LINE_WIDTH)
+## Picks the animation (roll > shoot while still > run > idle) and the facing
+## (the dash direction while rolling, the mouse otherwise). Each shot restarts the
+## shoot clip, sped up so that it lasts about one fire interval; the pose is kept
+## until the clip ends or the hero moves.
+func _update_visual(dashing: bool, moving: bool) -> void:
+	var shot: bool = _shot_now
+	_shot_now = false
+	if _sprite == null:
+		return
+	if dashing:
+		_shooting = false
+		_sprite.set_facing(_dash_direction.angle())
+		_sprite.play(&"roll")
+		return
+	_sprite.set_facing(_aim_direction.angle())
+	if moving:
+		_shooting = false
+		_sprite.play(&"run")
+	elif shot:
+		_shooting = true
+		_sprite.play(&"shoot", true)
+		var clip_length: float = float(_sheet.frame_count(&"shoot")) / _sheet.fps(&"shoot")
+		_sprite.speed_scale = clampf(clip_length / _fire_interval, 1.0, SHOOT_MAX_SPEED_SCALE)
+	elif _shooting:
+		_sprite.play(&"shoot")
+	else:
+		_sprite.play(&"idle")
+
+
+func _on_animation_finished(anim_name: StringName) -> void:
+	if anim_name == &"shoot":
+		_shooting = false
 
 
 func _fire() -> void:
+	_shot_now = true
 	var bullet := HeroBullet.new()
 	if _elemental != null:
 		bullet.configure(_elemental.damage(), _stats.bullet_speed, _elemental.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)

@@ -1,0 +1,12 @@
+{
+  "name": "sprite-baker",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Fabrique d'images : rend les modeles 3D en planches 2D (8 directions).",
+  "dependencies": {
+    "three": "0.147.0"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

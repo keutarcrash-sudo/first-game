@@ -1,0 +1,65 @@
+{
+	"cell": [
+		128,
+		128
+	],
+	"anchor": [
+		64,
+		112
+	],
+	"directions": 8,
+	"animations": {
+		"idle": {
+			"file": "idle.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": true
+		},
+		"run": {
+			"file": "run.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": true
+		},
+		"shoot": {
+			"file": "shoot.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": false
+		},
+		"roll": {
+			"file": "roll.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": false,
+			"cell": [
+				128,
+				144
+			],
+			"anchor": [
+				64,
+				112
+			]
+		},
+		"hit": {
+			"file": "hit.png",
+			"frames": 8,
+			"fps": 12,
+			"loop": false
+		},
+		"death": {
+			"file": "death.png",
+			"frames": 10,
+			"fps": 12,
+			"loop": false,
+			"cell": [
+				192,
+				176
+			],
+			"anchor": [
+				96,
+				112
+			]
+		}
+	}
+}

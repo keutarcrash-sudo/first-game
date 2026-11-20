@@ -22,6 +22,7 @@ var _enemies: Node2D
 var _travelled := 0.0
 var _exploded := false
 var _explosion_time := 0.0
+var _impact: ImpactFeedback
 
 
 ## Sets the fireball up from [param def] (values speed, range, radius, explosion_radius),
@@ -39,6 +40,11 @@ func setup(def: AbilityDef, direction: Vector2, field_rect: Rect2, enemies: Node
 	_damage = damage
 	_burn_duration = burn_duration
 	_burn_dps = burn_dps
+
+
+## Gives the fireball the feedback node that shakes the screen when it explodes. Optional.
+func set_impact(impact: ImpactFeedback) -> void:
+	_impact = impact
 
 
 func _ready() -> void:
@@ -93,6 +99,9 @@ func _explode() -> void:
 			clampf(global_position.x, _field_rect.position.x, _field_rect.end.x),
 			clampf(global_position.y, _field_rect.position.y, _field_rect.end.y))
 	_velocity = Vector2.ZERO
+	PopBurst.spawn(get_parent(), global_position, "POW !", COLOR, _explosion_radius)
+	if _impact != null:
+		_impact.shake(&"small")
 	if _enemies != null:
 		for child: Node in _enemies.get_children():
 			var enemy := child as Enemy
@@ -100,7 +109,7 @@ func _explode() -> void:
 				continue
 			if enemy.global_position.distance_to(global_position) > _explosion_radius + enemy.radius():
 				continue
-			enemy.take_damage(_damage)
+			enemy.take_damage(_damage, true)
 			# After the damage: Enemy.apply_burn ignores an enemy the blast just killed.
 			enemy.apply_burn(_burn_duration, _burn_dps)
 	queue_redraw()
