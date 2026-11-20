@@ -28,6 +28,7 @@ const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
 const HP_POSITION := Vector2(40.0, 2.0)
+const HERO_BAR_POSITION := Vector2(300.0, 2.0)  # Right of the crystal line, before the stats panel (x = 920).
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const SPEC_COLOR := Color(1.0, 0.9, 0.35)
 const SPEC_RIGHT_MARGIN := 40.0
@@ -198,6 +199,14 @@ func bind(crystal: Crystal) -> void:
 	var pointer := CrystalPointer.new()
 	add_child(pointer)
 	pointer.setup(crystal)
+
+
+## Shows the hero's hit-point bar next to the crystal's. Call after the hero's setup.
+func bind_hero(health: HeroHealth) -> void:
+	var bar := HeroHealthBar.new()
+	bar.position = HERO_BAR_POSITION
+	add_child(bar)
+	bar.bind(health)
 
 
 func _on_health_changed(current_hp: float, max_hp: float) -> void:

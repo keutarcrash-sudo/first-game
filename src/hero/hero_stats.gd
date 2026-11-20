@@ -7,7 +7,7 @@ extends RefCounted
 const REQUIRED_KEYS := [
 	"hero_speed", "hero_radius", "fire_rate",
 	"bullet_damage", "bullet_speed", "bullet_max_range", "bullet_radius",
-	"arena_width", "arena_height",
+	"arena_width", "arena_height", "hero_max_hp", "hit_invulnerability",
 ]
 
 ## Hero movement speed, in pixels per second.
@@ -26,6 +26,10 @@ var bullet_max_range: float
 var bullet_radius: float
 ## Field size, in pixels.
 var arena_size: Vector2
+## Hero hit points at the start of a game (étape 4).
+var hero_max_hp: float
+## Seconds of invulnerability after the hero is hit (étape 4).
+var hit_invulnerability: float
 
 
 ## Reads and validates the JSON file at [param path]. Returns [code]null[/code]
@@ -56,4 +60,6 @@ static func load_from_file(path: String) -> HeroStats:
 	stats.bullet_max_range = data["bullet_max_range"]
 	stats.bullet_radius = data["bullet_radius"]
 	stats.arena_size = Vector2(data["arena_width"], data["arena_height"])
+	stats.hero_max_hp = data["hero_max_hp"]
+	stats.hit_invulnerability = data["hit_invulnerability"]
 	return stats

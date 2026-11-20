@@ -7,5 +7,7 @@
 	"bullet_max_range": 600.0,
 	"bullet_radius": 5.0,
 	"arena_width": 2400.0,
-	"arena_height": 1600.0
+	"arena_height": 1600.0,
+	"hero_max_hp": 100.0,
+	"hit_invulnerability": 0.5
 }

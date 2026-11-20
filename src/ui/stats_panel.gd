@@ -99,6 +99,8 @@ func _collect_rows() -> Array[Dictionary]:
 	rows.append(_row("speed", "Vitesse", speed, "%d px/s" % roundi(speed)))
 	var pickup: float = _economy.pickup_radius * _modifiers.pickup_radius_factor()
 	rows.append(_row("pickup", "Ramassage", pickup, "%d px" % roundi(pickup)))
+	var max_hp: float = _hero.health().max_hp
+	rows.append(_row("max_hp", "PV max", max_hp, "%d" % roundi(max_hp)))
 	if archer != null:
 		var chance: float = archer.crit_chance()
 		rows.append(_row("crit_chance", "Critique", chance, "%d %%" % roundi(chance * 100.0)))

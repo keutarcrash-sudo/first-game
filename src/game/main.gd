@@ -26,10 +26,13 @@ const VISUALS_PATH := "res://assets/data/visuals.json"
 const DECOR_PATH := "res://assets/data/decor.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const SAVE_PATH := "user://progress.json"
+## Seconds the hero's death animation plays before the defeat screen opens.
+const HERO_DEATH_SECONDS := 0.8
 ## Id prefix of the "Nouvelle compétence" cards, followed by the slot (a, e, r).
 const UNLOCK_CARD_PREFIX := "unlock_ability_"
 
 var _field_rect: Rect2
+var _lost := false  # The defeat already happened: _lose() must not run twice.
 var _cycle: WaveCycle
 var _state: GameState
 var _card_pool: CardPool  # Built once the specialization is chosen: its cards depend on it.
@@ -103,7 +106,9 @@ func _ready() -> void:
 	# The hero starts below the crystal, not on top of it.
 	_hero.global_position = _crystal.global_position + Vector2(0.0, defence.crystal_radius + stats.hero_radius + defence.hero_start_gap)
 	_hud.bind(_crystal)
-	_crystal.destroyed.connect(_on_crystal_destroyed)
+	_hud.bind_hero(_hero.health())
+	_hero.died.connect(_on_hero_died)
+	_crystal.destroyed.connect(_lose)
 	modifiers.heal_requested.connect(_crystal.heal)
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
@@ -146,6 +151,7 @@ func _ready() -> void:
 	_impact.setup(impact_stats, _camera, _state)
 	_impact.watch_enemies(_enemies)
 	_impact.watch_crystal(_crystal)
+	_hero.set_impact(_impact)
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
@@ -323,9 +329,24 @@ func _on_wave_finished(_wave_number: int) -> void:
 	_placer.clear_towers()
 
 
+## The hero died: the wave freezes (no spawns, enemies still, the crystal stops),
+## the hero's death animation plays, then the usual defeat.
+func _on_hero_died() -> void:
+	if _lost:
+		return
+	_spawner.freeze()
+	_crystal.set_physics_process(false)
+	await get_tree().create_timer(HERO_DEATH_SECONDS).timeout
+	_lose()
+
+
 ## Stops the game, banks this game's points (saved at once) and opens the defeat
-## screen. Points use only the waves and kills counted up to this moment.
-func _on_crystal_destroyed() -> void:
+## screen. Points use only the waves and kills counted up to this moment. Shared by
+## the crystal's destruction and the hero's death; runs only once.
+func _lose() -> void:
+	if _lost:
+		return
+	_lost = true
 	get_tree().paused = true
 	var earned: int = _skill_tree.points_for_game(_state.waves_completed, _state.kills)
 	_progress.total_points += earned

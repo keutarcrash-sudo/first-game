@@ -118,6 +118,17 @@ func _play_death(enemy: Enemy) -> void:
 	effect.global_position = enemy.global_position
 
 
+## Freezes the wave for good (the hero died): no more spawns, every enemy stops moving
+## and attacking, and the crystal arriving no longer ends the wave. Enemies stay on screen.
+func freeze() -> void:
+	_state = State.IDLE
+	_to_spawn = 0
+	set_physics_process(false)
+	for child: Node in _enemies_parent.get_children():
+		if child is Enemy:
+			child.set_physics_process(false)
+
+
 func _on_crystal_arrived() -> void:
 	if _state == State.IDLE:
 		return

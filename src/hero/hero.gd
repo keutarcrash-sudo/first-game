@@ -8,7 +8,14 @@ extends CharacterBody2D
 
 ## Emitted when a [method dash] ends (duration elapsed).
 signal dash_finished
+## Emitted once, when the hero's hit points reach 0 (étape 4). The hero then stops
+## moving and firing and plays its [code]death[/code] animation.
+signal died
 
+const HIT_FLASH_SECONDS := 0.12  # Red tint after a hit (visual only).
+const HIT_FLASH_COLOR := Color(1.0, 0.25, 0.25)
+const BLINK_HALF_PERIOD := 0.05  # Invulnerability blink: 10 Hz (visual only).
+const BLINK_ALPHA := 0.35
 const SHOOT_MAX_SPEED_SCALE := 4.0  # Fastest the shoot clip is played to fit a short fire interval.
 const HERO_LAYER := 1
 const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
@@ -36,6 +43,10 @@ var _fire_cooldown := 0.0
 var _dash_direction := Vector2.ZERO
 var _dash_speed := 0.0
 var _dash_left := 0.0  # Seconds of dash remaining; 0 = not dashing.
+var _health: HeroHealth
+var _impact: ImpactFeedback  # Optional: shakes the screen when the hero is hit.
+var _flash_left := 0.0  # Seconds of red tint remaining (visual only).
+var _blink_time := 0.0  # Clock of the invulnerability blink (visual only).
 
 
 ## Gives the hero its tuning values (movement, size, projectile speed and size),
@@ -48,6 +59,8 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 	_stats = stats
 	_bullet_parent = bullet_parent
 	_arena_rect = arena_rect
+	_health = HeroHealth.new(stats.hero_max_hp, stats.hit_invulnerability)
+	_health.died.connect(_on_died)
 	var margin := Vector2(stats.hero_radius, stats.hero_radius)
 	_min_position = arena_rect.position + margin
 	_max_position = arena_rect.end - margin
@@ -97,6 +110,27 @@ func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumbe
 	set_physics_process(true)
 
 
+## The hero's hit points (null before [method setup]).
+func health() -> HeroHealth:
+	return _health
+
+
+## Gives the hero the screen-shake feedback played when it is hit. Optional.
+func set_impact(impact: ImpactFeedback) -> void:
+	_impact = impact
+
+
+## Hits the hero for [param amount]. Nothing happens while jumping (dash), invulnerable
+## or dead; otherwise the hero flashes red, the screen shakes a little, and it
+## is invulnerable for a moment (it blinks).
+func hurt(amount: float) -> void:
+	if _health == null or not _health.take_hit(amount, is_dashing()):
+		return
+	_flash_left = HIT_FLASH_SECONDS
+	if _impact != null:
+		_impact.shake(&"small")
+
+
 ## The Archer's weapon, or [code]null[/code] for another specialization (or before [method equip]).
 func archer_weapon() -> ArcherWeapon:
 	return _archer
@@ -142,6 +176,8 @@ func is_dashing() -> bool:
 
 
 func _physics_process(delta: float) -> void:
+	_health.tick(delta)
+	_update_hit_visual(delta)
 	var finished_dash := false
 	var was_dashing := _dash_left > 0.0
 	var moving := false
@@ -201,6 +237,35 @@ func _update_visual(dashing: bool, moving: bool) -> void:
 		_sprite.play(&"shoot")
 	else:
 		_sprite.play(&"idle")
+
+
+## Red tint right after a hit, then the sprite blinks (alpha toggling at 10 Hz)
+## for as long as the hero is invulnerable.
+func _update_hit_visual(delta: float) -> void:
+	if _sprite == null:
+		return
+	_flash_left = maxf(_flash_left - delta, 0.0)
+	var color := HIT_FLASH_COLOR if _flash_left > 0.0 else Color.WHITE
+	if _health.is_invulnerable():
+		_blink_time += delta
+		if int(_blink_time / BLINK_HALF_PERIOD) % 2 == 1:
+			color.a = BLINK_ALPHA
+	else:
+		_blink_time = 0.0
+	_sprite.modulate = color
+
+
+## Death: the hero stops moving and firing and plays its [code]death[/code] animation.
+func _on_died() -> void:
+	set_physics_process(false)
+	_dash_left = 0.0
+	if _sprite != null:
+		_sprite.modulate = Color.WHITE
+		if _sheet != null and _sheet.has_animation(&"death"):
+			_sprite.play(&"death")
+		else:
+			push_error("Hero: the hero sheet has no 'death' animation.")
+	died.emit()
 
 
 func _on_animation_finished(anim_name: StringName) -> void:
