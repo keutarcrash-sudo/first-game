@@ -54,7 +54,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	if _sprite == null:
 		_sprite = DirectionalSprite.new()
 		add_child(_sprite)
-	_sprite.setup(sheet, height_px)
+	_sprite.setup(sheet, height_px, true)
 	_sprite.play(&"idle")
 
 

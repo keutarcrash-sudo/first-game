@@ -116,7 +116,7 @@ func _apply_preview_sheet() -> void:
 		_preview.visible = false
 		return
 	_preview.visible = true
-	_preview.setup(sheet, _cannon_height if _kind == TowerStats.Kind.CANNON else _frost_height)
+	_preview.setup(sheet, _cannon_height if _kind == TowerStats.Kind.CANNON else _frost_height, true)
 	_preview.play(&"idle")
 
 

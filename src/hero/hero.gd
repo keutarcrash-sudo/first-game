@@ -83,7 +83,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 		add_child(_sprite)
 	_sheet = sheet
 	_shooting = false
-	_sprite.setup(sheet, height_px)
+	_sprite.setup(sheet, height_px, true)
 	if not _sprite.animation_finished.is_connected(_on_animation_finished):
 		_sprite.animation_finished.connect(_on_animation_finished)
 	_sprite.set_facing(_aim_direction.angle())

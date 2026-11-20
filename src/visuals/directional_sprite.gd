@@ -1,5 +1,6 @@
 ## Draws one animation of a [SpriteSheet] in the direction the object faces.
-## The anchor of the current cell sits on the node position. The scale is
+## The anchor of the current cell sits on the node position (or, with
+## [code]center_body[/code], the middle of the root cell does). The scale is
 ## height_px / root cell height for every animation, so bigger cells (death,
 ## roll) are drawn bigger, not shrunk.
 class_name DirectionalSprite
@@ -20,6 +21,7 @@ var speed_scale: float = 1.0
 
 var _sheet: SpriteSheet
 var _scale: float = 1.0
+var _body_shift_y: float = 0.0  # Downward shift when the body is centred on the position.
 var _current: StringName = &""
 var _direction: int = 0
 var _facing_angle: float = 0.0
@@ -49,16 +51,20 @@ func _draw() -> void:
 	var tex: Texture2D = _sheet.texture(_current)
 	var cell: Vector2i = _sheet.cell_of(_current)
 	var src := Rect2(_frame() * cell.x, _direction * cell.y, cell.x, cell.y)
-	var dest := Rect2(-_sheet.anchor_of(_current) * _scale, Vector2(cell) * _scale)
+	var dest := Rect2(-_sheet.anchor_of(_current) * _scale + Vector2(0.0, _body_shift_y), Vector2(cell) * _scale)
 	draw_texture_rect_region(tex, dest, src, tint)
 
 
 ## Sets the sheet to draw and the on-screen height in pixels of the whole
 ## root cell. Stops any running animation. Keeps the last facing angle and
-## re-applies it to the new sheet's direction count.
-func setup(sheet: SpriteSheet, height_px: float) -> void:
+## re-applies it to the new sheet's direction count. With [param center_body]
+## the image is shifted down so that the vertical middle of the root cell sits on
+## the node position (the body is then centred on the collision shape); the
+## default keeps the feet anchored (decor).
+func setup(sheet: SpriteSheet, height_px: float, center_body: bool = false) -> void:
 	_sheet = sheet
 	_scale = height_px / float(sheet.cell.y)
+	_body_shift_y = (sheet.anchor.y - sheet.cell.y * 0.5) * _scale if center_body else 0.0
 	_current = &""
 	_time = 0.0
 	_finished = false
