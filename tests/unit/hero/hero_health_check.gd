@@ -9,6 +9,9 @@ const HIT := 25.0
 const JUMP_HIT := 10.0
 const BONUS_MAX := 25.0
 const REGEN := 2.0
+const RESCUE_FRACTION := 0.3  # Seconde chance (étape 5a spec §8).
+const OVERKILL_HIT := 150.0
+const AFTER_RESCUE_HIT := 40.0
 
 
 func _init() -> void:
@@ -77,4 +80,34 @@ func _run() -> String:
 	fatal.tick(1.0)
 	if fatal.current != 0.0:
 		return "no heal or regen after death"
+	return _run_rescue()
+
+
+## Seconde chance: a fatal hit (even an overkill) leaves the hero at max_hp × fraction, once per game.
+func _run_rescue() -> String:
+	var saved := HeroHealth.new(MAX_HP, INVULNERABILITY)
+	var rescues: Array[int] = [0]
+	var saved_deaths: Array[int] = [0]
+	saved.rescued.connect(func() -> void: rescues[0] += 1)
+	saved.died.connect(func() -> void: saved_deaths[0] += 1)
+	if saved.has_rescue():
+		return "no rescue before arm_rescue"
+	saved.arm_rescue(RESCUE_FRACTION)
+	if not saved.has_rescue():
+		return "rescue armed"
+	if not saved.take_hit(OVERKILL_HIT, false):
+		return "fatal hit with rescue accepted"
+	if not is_equal_approx(saved.current, MAX_HP * RESCUE_FRACTION):
+		return "rescue leaves max_hp × fraction"
+	if rescues[0] != 1 or saved_deaths[0] != 0:
+		return "rescue emits rescued, not died"
+	if not saved.is_invulnerable() or saved.has_rescue():
+		return "rescue grants invulnerability and is used up"
+	saved.arm_rescue(RESCUE_FRACTION)
+	if saved.has_rescue():
+		return "arm_rescue after use does not re-arm"
+	saved.tick(INVULNERABILITY)
+	saved.take_hit(AFTER_RESCUE_HIT, false)
+	if saved_deaths[0] != 1 or rescues[0] != 1 or saved.current != 0.0:
+		return "second fatal hit kills"
 	return ""

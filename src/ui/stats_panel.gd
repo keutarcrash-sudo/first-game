@@ -1,8 +1,10 @@
 ## Small panel, top right under the specialization line: the hero's real stats
 ## (damage, fire rate, speed, pickup range, then the lines of the chosen
-## specialization). Every value is read from the same getters the game uses, so
+## specialization, then the item lines (étape 5a) shown only when they differ from
+## the base). Every value is read from the same getters the game uses, so
 ## cards are included. A value that just went up is shown in green with "▲" for
-## [constant RAISED_SECONDS]. Display only: it never changes game state.
+## [constant RAISED_SECONDS] (for a cost or a damage taken, "went up" means "got
+## better": the compared value is the saving). Display only: it never changes game state.
 class_name StatsPanel
 extends Control
 
@@ -22,6 +24,7 @@ var _hero: Hero
 var _modifiers: PlayerModifiers
 var _economy: EconomyStats
 var _stats: HeroStats
+var _towers: TowerStats
 var _box: VBoxContainer
 var _previous: Dictionary = {}  # { row id: value at the last refresh }
 var _raised_left: Dictionary = {}  # { row id: seconds left showing the green arrow }
@@ -43,8 +46,10 @@ func _ready() -> void:
 
 ## Gives the panel what it reads and keeps it up to date on
 ## [signal PlayerModifiers.changed]. [param stats] gives the base walking speed,
-## [param economy] the base pickup radius. Call once, after the [CrystalHud] is ready.
-func setup(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats) -> void:
+## [param economy] the base pickup radius and gold per kill, [param towers] the base
+## tower prices. Call once, after the [CrystalHud] is ready.
+func setup(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats, towers: TowerStats) -> void:
+	_towers = towers
 	_hero = hero
 	_modifiers = modifiers
 	_economy = economy
@@ -124,7 +129,33 @@ func _collect_rows() -> Array[Dictionary]:
 		var freeze: float = _modifiers.freeze_duration()
 		if freeze > 0.0:
 			rows.append(_row("freeze_time", "Gel", freeze, "%.1f s" % freeze))
+	_append_item_rows(rows)
 	return rows
+
+
+## Item lines (étape 5a spec §8), each shown only when it differs from the base.
+func _append_item_rows(rows: Array[Dictionary]) -> void:
+	var tower_range: float = _modifiers.tower_range_factor()
+	if not is_equal_approx(tower_range, 1.0):
+		rows.append(_row("tower_range", "Portée des tours", tower_range, "+%d %%" % roundi((tower_range - 1.0) * 100.0)))
+	var cannon_cost: int = _modifiers.tower_cost(_towers.cannon_cost)
+	var frost_cost: int = _modifiers.tower_cost(_towers.frost_cost)
+	var saved: int = _towers.cannon_cost - cannon_cost + _towers.frost_cost - frost_cost
+	if saved != 0:
+		rows.append(_row("tower_cost", "Coût des tours", float(saved), "%d / %d or" % [cannon_cost, frost_cost]))
+	var crystal_factor: float = _modifiers.crystal_damage_factor()
+	if not is_equal_approx(crystal_factor, 1.0):
+		var reduction: float = 1.0 - crystal_factor
+		rows.append(_row("crystal_damage", "Dégâts subis par le cristal", reduction, "-%d %%" % roundi(reduction * 100.0)))
+	var gold: int = _modifiers.gold_per_kill(_economy.gold_per_kill + _modifiers.gold_per_kill_bonus())
+	if gold != _economy.gold_per_kill:
+		rows.append(_row("gold_per_kill", "Or par ennemi", float(gold), "%d" % gold))
+	var heal: float = _modifiers.hero_heal_per_wave()
+	if heal > 0.0:
+		rows.append(_row("heal_per_wave", "Soin par vague", heal, "%d PV" % roundi(heal)))
+	if _modifiers.has_flag(&"second_chance"):
+		var armed: bool = _hero.health().has_rescue()
+		rows.append(_row("second_chance", "Seconde chance", 1.0 if armed else 0.0, "prête" if armed else "utilisée"))
 
 
 func _row(id: String, label: String, value: float, text: String) -> Dictionary:

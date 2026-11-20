@@ -23,12 +23,12 @@ func setup(stats: TowerStats, enemies: Node2D, modifiers: PlayerModifiers) -> vo
 	_base_slow_factor = stats.frost_slow_factor
 	_base_range = stats.frost_range
 	radius = stats.frost_radius
-	attack_range = _base_range
+	attack_range = _base_range * modifiers.frost_range_factor() * modifiers.tower_range_factor()
 	_halo_color = COLOR
 
 
 func _physics_process(_delta: float) -> void:
-	var current_range: float = _base_range * _modifiers.frost_range_factor()
+	var current_range: float = _base_range * _modifiers.frost_range_factor() * _modifiers.tower_range_factor()
 	if not is_equal_approx(current_range, attack_range):
 		attack_range = current_range
 		queue_redraw()  # The range ring follows.

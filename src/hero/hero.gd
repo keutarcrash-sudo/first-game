@@ -14,6 +14,11 @@ signal died
 
 const HIT_FLASH_SECONDS := 0.12  # Red tint after a hit (visual only).
 const HIT_FLASH_COLOR := Color(1.0, 0.25, 0.25)
+const RESCUE_FLASH_SECONDS := 0.3  # Seconde chance: golden flash (visual only).
+const RESCUE_FLASH_COLOR := Color(1.0, 0.95, 0.4)
+const RESCUE_WORD := "SECONDE CHANCE !"
+const RESCUE_BURST_COLOR := Color(0.4, 1.0, 0.5)
+const RESCUE_BURST_RADIUS := 90.0
 const BLINK_HALF_PERIOD := 0.05  # Invulnerability blink: 10 Hz (visual only).
 const BLINK_ALPHA := 0.35
 const SHOOT_MAX_SPEED_SCALE := 4.0  # Fastest the shoot clip is played to fit a short fire interval.
@@ -45,7 +50,8 @@ var _dash_speed := 0.0
 var _dash_left := 0.0  # Seconds of dash remaining; 0 = not dashing.
 var _health: HeroHealth
 var _impact: ImpactFeedback  # Optional: shakes the screen when the hero is hit.
-var _flash_left := 0.0  # Seconds of red tint remaining (visual only).
+var _flash_left := 0.0  # Seconds of tint remaining (visual only).
+var _flash_color := HIT_FLASH_COLOR  # Tint of the current flash (visual only).
 var _blink_time := 0.0  # Clock of the invulnerability blink (visual only).
 
 
@@ -61,6 +67,7 @@ func setup(stats: HeroStats, arena_rect: Rect2, bullet_parent: Node, rules: Proc
 	_arena_rect = arena_rect
 	_health = HeroHealth.new(stats.hero_max_hp, stats.hit_invulnerability)
 	_health.died.connect(_on_died)
+	_health.rescued.connect(_on_rescued)
 	var margin := Vector2(stats.hero_radius, stats.hero_radius)
 	_min_position = arena_rect.position + margin
 	_max_position = arena_rect.end - margin
@@ -123,10 +130,17 @@ func set_impact(impact: ImpactFeedback) -> void:
 ## Hits the hero for [param amount]. Nothing happens while jumping (dash), invulnerable
 ## or dead; otherwise the hero flashes red, the screen shakes a little, and it
 ## is invulnerable for a moment (it blinks). Returns true when the hero was actually hurt.
+## A hit saved by the Seconde chance plays the rescue feedback instead ([method _on_rescued]).
 func hurt(amount: float) -> bool:
-	if _health == null or not _health.take_hit(amount, is_dashing()):
+	if _health == null:
 		return false
+	var had_rescue: bool = _health.has_rescue()
+	if not _health.take_hit(amount, is_dashing()):
+		return false
+	if had_rescue and not _health.has_rescue():
+		return true  # Rescued: _on_rescued already flashed and shook.
 	_flash_left = HIT_FLASH_SECONDS
+	_flash_color = HIT_FLASH_COLOR
 	if _impact != null:
 		_impact.shake(&"small")
 	return true
@@ -246,7 +260,7 @@ func _update_hit_visual(delta: float) -> void:
 	if _sprite == null:
 		return
 	_flash_left = maxf(_flash_left - delta, 0.0)
-	var color := HIT_FLASH_COLOR if _flash_left > 0.0 else Color.WHITE
+	var color: Color = _flash_color if _flash_left > 0.0 else Color.WHITE
 	if _health.is_invulnerable():
 		_blink_time += delta
 		if int(_blink_time / BLINK_HALF_PERIOD) % 2 == 1:
@@ -270,6 +284,16 @@ func _on_died() -> void:
 		else:
 			push_error("Hero: the hero sheet has no 'death' animation.")
 	died.emit()
+
+
+## Seconde chance (étape 5a spec §8): golden flash, « SECONDE CHANCE ! » pop burst and a
+## big shake. The usual post-hit invulnerability (and its blink) was armed by the hit.
+func _on_rescued() -> void:
+	_flash_left = RESCUE_FLASH_SECONDS
+	_flash_color = RESCUE_FLASH_COLOR
+	PopBurst.spawn(get_parent(), global_position, RESCUE_WORD, RESCUE_BURST_COLOR, RESCUE_BURST_RADIUS)
+	if _impact != null:
+		_impact.shake(&"big")
 
 
 func _on_animation_finished(anim_name: StringName) -> void:

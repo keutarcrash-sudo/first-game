@@ -48,6 +48,8 @@ var _modifiers: PlayerModifiers
 var _spec_label: Label
 var _wave_preview: String = ""
 var _stats_panel: StatsPanel
+var _tower_stats: TowerStats
+var _tower_modifiers: PlayerModifiers
 
 
 func _ready() -> void:
@@ -148,10 +150,18 @@ func _on_tower_button_pressed(kind: TowerStats.Kind) -> void:
 	tower_kind_chosen.emit(kind)
 
 
-## Writes the tower prices on the two build buttons.
-func bind_tower_build(stats: TowerStats) -> void:
-	_cannon_button.text = "Canon — %d or" % stats.cannon_cost
-	_frost_button.text = "Glace — %d or" % stats.frost_cost
+## Writes the tower prices on the two build buttons, after the item discounts of
+## [param modifiers], and rewrites them on every [signal PlayerModifiers.changed].
+func bind_tower_build(stats: TowerStats, modifiers: PlayerModifiers) -> void:
+	_tower_stats = stats
+	_tower_modifiers = modifiers
+	modifiers.changed.connect(_refresh_tower_prices)
+	_refresh_tower_prices()
+
+
+func _refresh_tower_prices() -> void:
+	_cannon_button.text = "Canon — %d or" % _tower_modifiers.tower_cost(_tower_stats.cannon_cost)
+	_frost_button.text = "Glace — %d or" % _tower_modifiers.tower_cost(_tower_stats.frost_cost)
 
 
 ## Shows the four ability boxes of [param caster], above the tower buttons.
@@ -174,11 +184,12 @@ func show_specialization(spec: SpecializationDef) -> void:
 
 
 ## Shows the hero's stats panel (top right, under the specialization line) during BUILD
-## and COMBAT. Call after [method bind_game_state]; call [method refresh_stats] once the hero is equipped.
-func bind_stats(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats) -> void:
+## and COMBAT. [param towers] gives the base tower ranges and prices for the item lines.
+## Call after [method bind_game_state]; call [method refresh_stats] once the hero is equipped.
+func bind_stats(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats, towers: TowerStats) -> void:
 	_stats_panel = StatsPanel.new()
 	add_child(_stats_panel)
-	_stats_panel.setup(hero, modifiers, economy, stats)
+	_stats_panel.setup(hero, modifiers, economy, stats, towers)
 	_stats_panel.visible = _stats_visible()
 
 

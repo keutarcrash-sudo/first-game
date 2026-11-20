@@ -28,11 +28,15 @@ func setup(stats: TowerStats, enemies: Node2D, bullets: Node2D, arena_rect: Rect
 	_bullets = bullets
 	_arena_rect = arena_rect
 	radius = stats.cannon_radius
-	attack_range = stats.cannon_range
+	attack_range = stats.cannon_range * modifiers.tower_range_factor()
 	_halo_color = COLOR
 
 
 func _physics_process(delta: float) -> void:
+	var current_range: float = _stats.cannon_range * _modifiers.tower_range_factor()
+	if not is_equal_approx(current_range, attack_range):
+		attack_range = current_range
+		queue_redraw()  # The range ring follows (items, étape 5a).
 	_cooldown = maxf(_cooldown - delta, 0.0)
 	if _cooldown > 0.0:
 		return

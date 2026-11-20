@@ -87,7 +87,7 @@ func _draw() -> void:
 	var color: Color = VALID_COLOR if _is_spot_valid(mouse, radius) else INVALID_COLOR
 	if _preview != null:
 		_preview.tint = color
-	draw_arc(mouse, _stats.range_of(_kind), 0.0, TAU, RING_POINTS, color, RING_WIDTH)
+	draw_arc(mouse, _range_of(_kind), 0.0, TAU, RING_POINTS, color, RING_WIDTH)
 
 
 ## Clicks consumed by the HUD buttons never reach this function.
@@ -101,10 +101,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Validity first: an invalid spot must never cost gold.
 	if not _is_spot_valid(position_clicked, _stats.radius_of(_kind)):
 		return
-	if not _state.spend_gold(_stats.cost_of(_kind)):
+	if not _state.spend_gold(_modifiers.tower_cost(_stats.cost_of(_kind))):
 		not_enough_gold.emit()
 		return
 	_place(position_clicked)
+
+
+## The range a tower of [param kind] would have if placed now, card and item bonuses
+## included (the same factors the towers read every frame).
+func _range_of(kind: TowerStats.Kind) -> float:
+	var factor: float = _modifiers.tower_range_factor()
+	if kind == TowerStats.Kind.FROST:
+		factor *= _modifiers.frost_range_factor()
+	return _stats.range_of(kind) * factor
 
 
 func _apply_preview_sheet() -> void:

@@ -125,6 +125,11 @@ func _ready() -> void:
 	_spawner.wave_started.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(true))
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(false))
 	modifiers.changed.connect(_apply_hero_survival.bind(modifiers))
+	# Items (étape 5a spec §8): Pansement doré heals at each wave start, Bouclier du cristal
+	# lowers the crystal's damage, Seconde chance arms the hero's one-time rescue.
+	_spawner.wave_started.connect(func(_wave_number: int) -> void: _hero.health().heal(modifiers.hero_heal_per_wave()))
+	modifiers.changed.connect(func() -> void: _crystal.set_damage_factor(modifiers.crystal_damage_factor()))
+	modifiers.items_changed.connect(_arm_second_chance.bind(modifiers))
 	_spawner.enemy_killed.connect(func(_position: Vector2) -> void: _hero.health().heal(modifiers.hero_heal_on_kill()))
 	_state = GameState.new(economy.starting_gold + _skill_tree.starting_gold_bonus(owned))
 	_cycle = WaveCycle.new()
@@ -178,7 +183,7 @@ func _ready() -> void:
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
-	_hud.bind_stats(_hero, modifiers, economy, stats)
+	_hud.bind_stats(_hero, modifiers, economy, stats, towers)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
 	_card_screen.setup(_rarities, _ability_catalog)
@@ -193,7 +198,7 @@ func _ready() -> void:
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: designator.clear())
 	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers, designator)
 	_placer.set_visuals(cannon_sheet, _visuals.height("cannon"), frost_sheet, _visuals.height("frost"))
-	_hud.bind_tower_build(towers)
+	_hud.bind_tower_build(towers, modifiers)
 	_hud.tower_kind_chosen.connect(_placer.select_kind)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
 	_caster = AbilityCaster.new()
@@ -334,6 +339,13 @@ func _apply_hero_survival(modifiers: PlayerModifiers) -> void:
 		health.add_max(extra)
 		_applied_max_hp_bonus += extra
 	health.set_regen(modifiers.hero_regen())
+
+
+## Seconde chance (étape 5a spec §8): once the item is owned, arms the hero's rescue.
+## [method HeroHealth.arm_rescue] ignores later calls once the rescue has been used.
+func _arm_second_chance(modifiers: PlayerModifiers) -> void:
+	if modifiers.has_flag(&"second_chance"):
+		_hero.health().arm_rescue(modifiers.flag_value(&"second_chance", "hp_fraction"))
 
 
 func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:

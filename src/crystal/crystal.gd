@@ -35,6 +35,7 @@ var _path: CrystalPath
 var _sprite: DirectionalSprite
 var _distance: float = 0.0
 var _travelling: bool = false
+var _damage_factor: float = 1.0
 
 
 ## Sets hit points and size from [param stats]; [param max_hp_bonus] (skill
@@ -102,11 +103,17 @@ func _physics_process(delta: float) -> void:
 	global_position = _path.position_at(_distance)
 
 
-## Removes [param amount] hit points. Ignored once the crystal is destroyed.
+## Sets the factor applied to every hit the crystal takes (Bouclier du cristal,
+## étape 5a spec §8). 1.0 = full damage, the default.
+func set_damage_factor(factor: float) -> void:
+	_damage_factor = maxf(factor, 0.0)
+
+
+## Removes [param amount] × the damage factor hit points. Ignored once the crystal is destroyed.
 func take_damage(amount: float) -> void:
 	if current_hp <= 0.0:
 		return
-	current_hp = maxf(current_hp - amount, 0.0)
+	current_hp = maxf(current_hp - amount * _damage_factor, 0.0)
 	health_changed.emit(current_hp, max_hp)
 	if current_hp <= 0.0:
 		stop()

@@ -24,7 +24,8 @@ var _prepared_wave := 0
 
 
 ## Connects to [param spawner]'s signals and to the phase changes of [param state].
-## [param modifiers] adds its gold-per-kill bonus (story 006). A finished wave
+## [param modifiers] adds its gold-per-kill bonus (story 006), then applies the item
+## multiplier (Bourse percée, étape 5a). A finished wave
 ## leads to CARD_CHOICE; whoever shows the cards then calls
 ## [method GameState.begin_build]. If the game is already in BUILD, the first
 ## wave is prepared now. Call once.
@@ -80,4 +81,4 @@ func _on_wave_finished(_wave_number: int) -> void:
 
 func _on_enemy_killed(position: Vector2) -> void:
 	_state.kills += 1
-	_gold_field.drop(position, _economy.gold_per_kill + _modifiers.gold_per_kill_bonus())
+	_gold_field.drop(position, _modifiers.gold_per_kill(_economy.gold_per_kill + _modifiers.gold_per_kill_bonus()))
