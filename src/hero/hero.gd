@@ -255,9 +255,12 @@ func _update_hit_visual(delta: float) -> void:
 	_sprite.modulate = color
 
 
-## Death: the hero stops moving and firing and plays its [code]death[/code] animation.
+## Death: the hero stops moving and firing (no more physics frames, so no input either)
+## and plays its [code]death[/code] animation. It keeps processing while the game is
+## paused for the death sequence, so the clip is seen (its sprite child inherits this).
 func _on_died() -> void:
 	set_physics_process(false)
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_dash_left = 0.0
 	if _sprite != null:
 		_sprite.modulate = Color.WHITE

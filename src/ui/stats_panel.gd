@@ -50,6 +50,7 @@ func setup(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats:
 	_economy = economy
 	_stats = stats
 	modifiers.changed.connect(refresh)
+	hero.health().changed.connect(refresh.unbind(2))
 	refresh()
 
 

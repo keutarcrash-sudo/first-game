@@ -329,14 +329,15 @@ func _on_wave_finished(_wave_number: int) -> void:
 	_placer.clear_towers()
 
 
-## The hero died: the wave freezes (no spawns, enemies still, the crystal stops),
-## the hero's death animation plays, then the usual defeat.
+## The hero died: the whole world freezes at once (the tree is paused: spawns, enemies,
+## towers, bullets, abilities), except the hero, which keeps playing its death clip
+## ([constant Node.PROCESS_MODE_ALWAYS], set by the hero itself). Then the usual defeat.
 func _on_hero_died() -> void:
 	if _lost:
 		return
-	_spawner.freeze()
-	_crystal.set_physics_process(false)
-	await get_tree().create_timer(HERO_DEATH_SECONDS).timeout
+	get_tree().paused = true
+	# Always processed, real time: a running hit-stop must not stretch the delay.
+	await get_tree().create_timer(HERO_DEATH_SECONDS, true, false, true).timeout
 	_lose()
 
 

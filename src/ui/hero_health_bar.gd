@@ -7,6 +7,7 @@ extends Control
 const BAR_SIZE := Vector2(220.0, 16.0)
 const FONT_SIZE := 20
 const LABEL_WIDTH := 190.0
+const BAR_TOP := 7.0  # Vertically centres the bar on a 20 px label line (~30 px tall).
 const BACK_COLOR := Color(0.05, 0.08, 0.15, 0.8)
 const FILL_COLOR := Color(0.2, 1.0, 0.55)
 const LOW_COLOR := Color(1.0, 0.3, 0.3)
@@ -42,7 +43,7 @@ func _on_changed(current: float, max_hp: float) -> void:
 
 
 func _draw() -> void:
-	var bar := Rect2(Vector2(LABEL_WIDTH, (_label.size.y - BAR_SIZE.y) * 0.5), BAR_SIZE)
+	var bar := Rect2(Vector2(LABEL_WIDTH, BAR_TOP), BAR_SIZE)
 	draw_rect(bar, BACK_COLOR)
 	var color: Color = LOW_COLOR if _fraction <= LOW_FRACTION else FILL_COLOR
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * _fraction, bar.size.y)), color)

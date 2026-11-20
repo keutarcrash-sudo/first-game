@@ -8,6 +8,7 @@ const INVULNERABILITY := 0.5
 const HIT := 25.0
 const JUMP_HIT := 10.0
 const BONUS_MAX := 25.0
+const REGEN := 2.0
 
 
 func _init() -> void:
@@ -40,6 +41,22 @@ func _run() -> String:
 	health.add_max(BONUS_MAX)
 	if not is_equal_approx(health.max_hp, MAX_HP + BONUS_MAX) or not is_equal_approx(health.current, MAX_HP + BONUS_MAX):
 		return "add_max raises max and heals"
+	# take_hit(0) is ignored: no change, no invulnerability, no signal.
+	var zero := HeroHealth.new(MAX_HP, INVULNERABILITY)
+	var zero_signals: Array[int] = [0]
+	zero.changed.connect(func(_c: float, _m: float) -> void: zero_signals[0] += 1)
+	if zero.take_hit(0.0, false) or zero.is_invulnerable() or zero_signals[0] != 0:
+		return "zero hit ignored"
+	# Regeneration: +REGEN per second after a hit, capped at max.
+	var regen := HeroHealth.new(MAX_HP, INVULNERABILITY)
+	regen.set_regen(REGEN)
+	regen.take_hit(HIT, false)
+	regen.tick(1.0)
+	if not is_equal_approx(regen.current, MAX_HP - HIT + REGEN):
+		return "regen adds per second"
+	regen.tick(1000.0)
+	if not is_equal_approx(regen.current, MAX_HP):
+		return "regen capped at max"
 	var deaths: Array[int] = [0]
 	var fatal := HeroHealth.new(MAX_HP, INVULNERABILITY)
 	fatal.died.connect(func() -> void: deaths[0] += 1)
@@ -50,4 +67,9 @@ func _run() -> String:
 	fatal.take_hit(HIT, false)
 	if deaths[0] != 1 or fatal.current != 0.0:
 		return "died emitted once at 0"
+	fatal.heal(HIT)
+	fatal.set_regen(REGEN)
+	fatal.tick(1.0)
+	if fatal.current != 0.0:
+		return "no heal or regen after death"
 	return ""
