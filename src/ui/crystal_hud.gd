@@ -25,6 +25,7 @@ const INFO_POSITION := Vector2(40.0, 30.0)
 const CARDS_POSITION := Vector2(40.0, 58.0)
 const CARDS_WIDTH := 840.0  # Stops before the stats panel (starts at x = 920 on 1280 px).
 const CARDS_MAX_LINES := 2
+const ITEMS_POSITION := Vector2(40.0, 116.0)  # Under the two lines of cards.
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
@@ -56,7 +57,6 @@ var _stats_panel: StatsPanel
 var _tower_stats: TowerStats
 var _tower_modifiers: PlayerModifiers
 var _world_run: WorldRun
-var _waves_per_world: int = 1
 var _enemy_types: EnemyTypes
 var _banner_label: Label
 var _banner_tween: Tween
@@ -204,7 +204,7 @@ func show_specialization(spec: SpecializationDef) -> void:
 
 
 ## Shows the hero's stats panel (top right, under the specialization line) during BUILD
-## and COMBAT. [param towers] gives the base tower ranges and prices for the item lines.
+## and COMBAT (hidden during the card, specialization, map and place screens). [param towers] gives the base tower ranges and prices for the item lines.
 ## Call after [method bind_game_state]; call [method refresh_stats] once the hero is equipped.
 func bind_stats(hero: Hero, modifiers: PlayerModifiers, economy: EconomyStats, stats: HeroStats, towers: TowerStats) -> void:
 	_stats_panel = StatsPanel.new()
@@ -262,11 +262,9 @@ func bind_enemy_types(types: EnemyTypes) -> void:
 
 
 ## Shows the world and the wave's rank in it ("Monde X — Vague Y/8") instead of the
-## plain wave number; [param waves_per_world] is [member WaveCurve.waves_per_world].
-## Call before [method bind_game_state].
-func bind_world_run(run: WorldRun, waves_per_world: int) -> void:
+## plain wave number. Call before [method bind_game_state].
+func bind_world_run(run: WorldRun) -> void:
 	_world_run = run
-	_waves_per_world = waves_per_world
 	if _state != null:
 		_refresh_info()
 
@@ -302,6 +300,14 @@ func bind_game_state(state: GameState) -> void:
 	_refresh_info()
 
 
+## Shows the row of passive items owned ([ItemBar]) under the cards line. Call once.
+func bind_items(modifiers: PlayerModifiers, health: HeroHealth) -> void:
+	var bar := ItemBar.new()
+	bar.position = ITEMS_POSITION
+	add_child(bar)
+	bar.setup(modifiers, health)
+
+
 ## Shows the cards taken and their stacks, and keeps the line up to date (story 006).
 func bind_modifiers(modifiers: PlayerModifiers) -> void:
 	_modifiers = modifiers
@@ -323,20 +329,25 @@ func _refresh_info() -> void:
 		phase_name = "Choix d'une carte"
 	elif _state.phase == GameState.Phase.SPEC_CHOICE:
 		phase_name = "Choix de la spécialisation"
+	elif _state.phase == GameState.Phase.MAP:
+		phase_name = "Carte du monde"
+	elif _state.phase == GameState.Phase.PLACE:
+		phase_name = "Lieu"
 	_build_box.visible = building
 	if _stats_panel != null:
 		_stats_panel.visible = _stats_visible()
-	_info_label.text = "%s   Or : %d   Phase : %s" % [_wave_text(building), _state.gold, phase_name]
-	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.wave_number + 1)
+	_info_label.text = "%s   Or : %d   Phase : %s" % [_wave_text(), _state.gold, phase_name]
+	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.waves_completed + 1)
 	if _wave_preview != "":
 		prompt = _wave_preview
 	_prompt_label.text = prompt if building else ""
 
 
-## "Monde X — Vague Y/8" for the wave being played, or about to be in BUILD
-## (the plain "Vague : N" before [method bind_world_run]).
-func _wave_text(building: bool) -> String:
-	var wave: int = _state.waves_completed + 1 if building else maxi(_state.wave_number, 1)
+## "Monde X — Vague Y/8" for the wave being played, or the coming one on the map, in a
+## place and in BUILD (the plain "Vague : N" before [method bind_world_run]).
+func _wave_text() -> String:
+	var coming: bool = _state.phase == GameState.Phase.BUILD or _state.phase == GameState.Phase.MAP or _state.phase == GameState.Phase.PLACE
+	var wave: int = _state.waves_completed + 1 if coming else maxi(_state.wave_number, 1)
 	if _world_run == null:
 		return "Vague : %d" % wave
-	return "Monde %d — Vague %d/%d" % [_world_run.world_of(wave), _world_run.wave_in_world(wave), _waves_per_world]
+	return "Monde %d — Vague %d/%d" % [_world_run.world_of(wave), _world_run.wave_in_world(wave), _world_run.waves_per_world()]

@@ -12,8 +12,7 @@ const GROWTH_KEYS := ["enemy_count_per_wave", "hp_multiplier_per_wave", "path_le
 var spawn_window: float
 ## Tuning values for generating the crystal's path.
 var path_settings: PathSettings
-## Waves in one world (étape 5a): wave [code]n[/code] is a world's final wave
-## when [code]n % waves_per_world == 0[/code].
+## Waves in one world (étape 5a); see [method is_final_wave].
 var waves_per_world: int
 ## Enemy count multiplier of a world's final wave, applied to every enemy type.
 var final_count_mult: float
@@ -22,6 +21,18 @@ var _waves: Array[Dictionary] = []
 var _enemy_count_per_wave: float
 var _hp_multiplier_per_wave: float
 var _path_length_per_wave: float
+
+
+## True when wave [param wave] is the last of its world (8, 16, ... with 8 waves per
+## world): [code]wave % waves_per_world == 0[/code]. The single rule, shared by
+## [WaveSpawner] (through [method is_final_wave]) and [WorldRun].
+static func is_final_wave_of(wave: int, per_world: int) -> bool:
+	return per_world > 0 and wave > 0 and wave % per_world == 0
+
+
+## True when wave [param wave] is a world's final wave ([method is_final_wave_of]).
+func is_final_wave(wave: int) -> bool:
+	return is_final_wave_of(wave, waves_per_world)
 
 
 ## Reads and validates the JSON file at [param path]. Returns [code]null[/code]

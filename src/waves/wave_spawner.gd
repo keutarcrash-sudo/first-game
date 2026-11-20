@@ -110,7 +110,7 @@ func start_wave(wave_number: int, path: CrystalPath) -> void:
 func composition_for(wave_number: int) -> Dictionary:
 	if _types == null or _curve == null:
 		return {}
-	var mult: float = _curve.final_count_mult if wave_number % _curve.waves_per_world == 0 else 1.0
+	var mult: float = _curve.final_count_mult if _curve.is_final_wave(wave_number) else 1.0
 	return _types.composition(wave_number, _curve.get_wave(wave_number)["enemy_count"], mult)
 
 

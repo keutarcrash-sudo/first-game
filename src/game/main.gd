@@ -5,9 +5,12 @@
 ## (story 007): points are added to the saved progression, the player buys
 ## permanent upgrades, and « Rejouer » reloads this scene, which applies them.
 ## Start of a game (story 008): specialization choice, then the « Départ en
-## trombe » card choice when owned, then the build phase of wave 1. Étape 5a: the game's
+## trombe » card choice when owned, then the world map, then the build phase of wave 1. Étape 5a: the game's
 ## [WorldRun] (world 1 map generated at start), « Monde X — Vague Y/8 », per-type wave
-## preview and the « VAGUE FINALE ! » banner.
+## preview and the « VAGUE FINALE ! » banner; after each card choice the world map
+## ([WorldMapScreen]): consultation before wave 1 and after a world's final wave (new
+## world, « MONDE N »), otherwise the choice of the next place (shop, treasure, rest),
+## then the build phase.
 ## Step 1 flow: build (zoomed-out camera, the wave's crystal path shown, towers
 ## placed) -> Space -> the crystal travels the path while enemies attack ->
 ## it arrives: leftovers and towers are cleared, card choice, next build.
@@ -29,8 +32,13 @@ const DECOR_PATH := "res://assets/data/decor.json"
 const ENEMY_TYPES_PATH := "res://assets/data/enemy_types.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const WORLD_MAP_PATH := "res://assets/data/world_map.json"
+const ITEMS_PATH := "res://assets/data/items.json"
 ## Banner shown when a world's final wave is announced (étape 5a, spec §5).
 const FINAL_WAVE_BANNER := "VAGUE FINALE !"
+## Banner shown when a new world starts, with its number (étape 5a, spec §5).
+const WORLD_BANNER := "MONDE %d"
+## Banner shown when an empty treasure gives gold instead, with the amount (spec §7.4).
+const TREASURE_GOLD_BANNER := "+%d OR"
 const SAVE_PATH := "user://progress.json"
 ## Seconds the hero's death animation plays before the defeat screen opens.
 const HERO_DEATH_SECONDS := 0.8
@@ -63,7 +71,14 @@ var _impact: ImpactFeedback
 var _visuals: VisualStats
 var _sheets: Dictionary = {}  # Folder -> SpriteSheet, each loaded once and shared.
 var _map_generator: WorldMapGenerator
-var _world_run: WorldRun  # The game's world and map (étape 5a); world transitions come with the map screen.
+var _world_run: WorldRun  # The game's world and map (étape 5a).
+var _enemy_types: EnemyTypes
+var _item_catalog: ItemCatalog
+var _item_pool: ItemPool  # Built once the specialization is chosen: its items depend on it.
+var _map_screen: WorldMapScreen
+var _shop_screen: ShopScreen
+var _treasure_screen: TreasureScreen
+var _rest_screen: RestScreen
 
 @onready var _towers: Node2D = $Towers
 @onready var _placer: TowerPlacer = $TowerPlacer
@@ -90,6 +105,7 @@ func _ready() -> void:
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
 	_map_generator = WorldMapGenerator.load_from_file(WORLD_MAP_PATH)
+	_item_catalog = null if _catalog == null else ItemCatalog.load_from_file(ITEMS_PATH, _rarities, _specs, rules, _ability_catalog)
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
 	var enemy_types: EnemyTypes = EnemyTypes.load_from_file(ENEMY_TYPES_PATH)
 	var enemy_sheets: Dictionary = {}  # Type id -> SpriteSheet.
@@ -103,12 +119,13 @@ func _ready() -> void:
 	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
 	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if _item_catalog == null or default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
 		return
 	_field_rect = Rect2(Vector2.ZERO, stats.arena_size)
+	_enemy_types = enemy_types
 	_progress = SaveProgress.load_from_file(SAVE_PATH, _skill_tree)
 	var owned: PackedStringArray = _progress.owned_ids
 	_rules = rules
@@ -192,9 +209,10 @@ func _ready() -> void:
 	_cycle.wave_prepared.connect(_on_wave_prepared)
 	_spawner.wave_finished.connect(_on_wave_finished)
 	_hud.bind_enemy_types(enemy_types)
-	_hud.bind_world_run(_world_run, curve.waves_per_world)
+	_hud.bind_world_run(_world_run)
 	_hud.bind_game_state(_state)
 	_hud.bind_modifiers(modifiers)
+	_hud.bind_items(modifiers, _hero.health())
 	_hud.bind_stats(_hero, modifiers, economy, stats, towers)
 	_card_screen = CardChoiceScreen.new()
 	add_child(_card_screen)
@@ -202,6 +220,7 @@ func _ready() -> void:
 	_card_screen.card_chosen.connect(_on_card_chosen.bind(modifiers))
 	_card_screen.reroll_requested.connect(_on_reroll_requested)
 	_state.phase_changed.connect(_on_phase_changed)
+	_build_world_screens()
 	# Added after Enemies, so the mark is drawn over the enemies.
 	var designator := TargetDesignator.new()
 	add_child(designator)
@@ -250,7 +269,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Equips the hero, switches on the specialization's combos, builds the card pool
 ## for it, then goes on with the start sequence: the opening card choice when
-## owned, otherwise the build phase of wave 1.
+## owned, then the world map in consultation, then the build phase of wave 1.
 func _on_spec_chosen(spec: SpecializationDef) -> void:
 	var owned: PackedStringArray = _progress.owned_ids
 	for combo_id: String in spec.combo_ids:
@@ -270,11 +289,12 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 			if (abilities[slot] as AbilityDef).id == ability_id:
 				return _caster.is_unlocked(slot)
 		return false
+	_item_pool = ItemPool.new(_item_catalog, _modifiers, _rng, spec.id, _rarities)
 	_card_pool = CardPool.new(_catalog, _modifiers, _rng, _skill_tree.unlocked_card_ids(owned), _skill_tree.cards_offered_bonus(owned), spec.id, _rarities, is_unlocked)
 	if _skill_tree.has_start_card_choice(owned):
 		_state.begin_card_choice()
 		return
-	_state.begin_build()
+	_end_card_choice()
 
 
 func _on_phase_changed(phase: GameState.Phase) -> void:
@@ -368,9 +388,137 @@ func _on_card_chosen(card: CardDef, modifiers: PlayerModifiers) -> void:
 	_end_card_choice()
 
 
-## Both after a wave and after the opening choice the game goes to BUILD.
+## After a card choice (or the specialization, without opening choice), étape 5a §5:
+## before wave 1, the map in consultation; after a world's final wave, the next world
+## (new map, « MONDE N ») in consultation; otherwise the choice of the next place.
+## Every way ends in [method GameState.begin_build], once: [signal WorldMapScreen.closed]
+## or the end of the place ([method _end_place]).
 func _end_card_choice() -> void:
-	_state.begin_build()
+	_state.begin_map()
+	if _state.waves_completed == 0:
+		_open_map(false)
+		return
+	if _world_run.is_final_wave(_state.waves_completed):
+		_world_run.world += 1
+		_world_run.start_world(_map_generator.generate(_rng))
+		_hud.show_banner(WORLD_BANNER % _world_run.world)
+		# The map covers the HUD layer: it opens once the banner has been seen.
+		get_tree().create_timer(CrystalHud.BANNER_SECONDS).timeout.connect(_open_new_world_map)
+		return
+	_open_map(not _world_run.reachable().is_empty())
+
+
+## The new world's map in consultation, after the « MONDE N » banner.
+func _open_new_world_map() -> void:
+	if _lost or _state.phase != GameState.Phase.MAP:
+		return
+	_open_map(false)
+
+
+## Shows the world map with the next wave's preview; [param choosing] false = consultation.
+func _open_map(choosing: bool) -> void:
+	var wave: int = _choice_wave()
+	var preview: String = "Vague %d : %s" % [wave, _enemy_types.preview_text(_spawner.composition_for(wave))]
+	if _world_run.is_final_wave(wave):
+		preview += " — " + FINAL_WAVE_BANNER
+	_map_screen.open(_world_run, preview, choosing)
+
+
+## Creates the map and place screens and connects them (once, in [method _ready]).
+func _build_world_screens() -> void:
+	_map_screen = WorldMapScreen.new()
+	add_child(_map_screen)
+	_map_screen.closed.connect(_on_map_closed)
+	_map_screen.place_chosen.connect(_on_place_chosen)
+	_shop_screen = ShopScreen.new()
+	add_child(_shop_screen)
+	_shop_screen.setup(_rarities)
+	_shop_screen.item_bought.connect(_on_item_bought)
+	_shop_screen.repair_requested.connect(_on_repair_requested)
+	_shop_screen.left.connect(_end_place)
+	_treasure_screen = TreasureScreen.new()
+	add_child(_treasure_screen)
+	_treasure_screen.setup(_rarities)
+	_treasure_screen.item_chosen.connect(_on_treasure_item_chosen)
+	_rest_screen = RestScreen.new()
+	add_child(_rest_screen)
+	_rest_screen.hero_chosen.connect(_on_rest_hero_chosen)
+	_rest_screen.crystal_chosen.connect(_on_rest_crystal_chosen)
+
+
+## « C'est parti ! » on the map in consultation: the build phase.
+func _on_map_closed() -> void:
+	if _state.phase == GameState.Phase.MAP:
+		_state.begin_build()
+
+
+## Moves to the chosen place and opens it (spec §7). An unreachable index (never sent
+## by the screen) shows the choice again.
+func _on_place_chosen(index: int) -> void:
+	if _state.phase != GameState.Phase.MAP:
+		return
+	if not _world_run.move_to(index):
+		_open_map(true)
+		return
+	_state.begin_place()
+	var type: StringName = _world_run.map.type_of(_world_run.column, index)
+	if type == WorldMap.SHOP:
+		_shop_screen.open(_item_pool.draw(_item_catalog.shop_slots, _choice_wave()), _item_catalog, _state.gold, _crystal_full())
+	elif type == WorldMap.TREASURE:
+		_open_treasure()
+	else:
+		_rest_screen.open(_hero.health().max_hp * _item_catalog.rest_hero_heal_fraction, _item_catalog.rest_crystal_heal)
+
+
+## Free items to pick one from; none left: the fallback gold and its banner instead.
+func _open_treasure() -> void:
+	var items: Array[ItemDef] = _item_pool.draw(_item_catalog.treasure_slots, _choice_wave())
+	if items.is_empty():
+		_state.add_gold(_item_catalog.treasure_fallback_gold)
+		_hud.show_banner(TREASURE_GOLD_BANNER % _item_catalog.treasure_fallback_gold)
+		_end_place()
+		return
+	_treasure_screen.open(items)
+
+
+func _crystal_full() -> bool:
+	return _crystal.current_hp >= _crystal.max_hp
+
+
+## Shop purchase: the gold first, then the item (the screen already took it off the stall).
+func _on_item_bought(item: ItemDef) -> void:
+	if _state.spend_gold(_item_catalog.price_of(item)):
+		_modifiers.take_item(item)
+	_shop_screen.refresh(_state.gold, _crystal_full())
+
+
+## Shop crystal repair: no limit, never above the maximum (refused when full).
+func _on_repair_requested() -> void:
+	if not _crystal_full() and _state.spend_gold(_item_catalog.crystal_repair_cost):
+		_crystal.heal(_item_catalog.crystal_repair_hp)
+	_shop_screen.refresh(_state.gold, _crystal_full())
+
+
+func _on_treasure_item_chosen(item: ItemDef) -> void:
+	_modifiers.take_item(item)
+	_end_place()
+
+
+func _on_rest_hero_chosen() -> void:
+	var health: HeroHealth = _hero.health()
+	health.heal(health.max_hp * _item_catalog.rest_hero_heal_fraction)
+	_end_place()
+
+
+func _on_rest_crystal_chosen() -> void:
+	_crystal.heal(_item_catalog.rest_crystal_heal)
+	_end_place()
+
+
+## The place is left (shop « Partir », treasure item, rest choice): the build phase.
+func _end_place() -> void:
+	if _state.phase == GameState.Phase.PLACE:
+		_state.begin_build()
 
 
 ## Shows the prepared wave's path and its preview text, and the « VAGUE FINALE ! »

@@ -18,9 +18,9 @@ var visited: PackedInt32Array = PackedInt32Array()
 var _waves_per_world: int
 
 
-## [param waves_per_world] comes from [member WaveCurve.waves_per_world] (at least 1).
-func _init(waves_per_world: int) -> void:
-	_waves_per_world = maxi(waves_per_world, 1)
+## [param per_world] comes from [member WaveCurve.waves_per_world] (at least 1).
+func _init(per_world: int) -> void:
+	_waves_per_world = maxi(per_world, 1)
 
 
 ## Shows [param new_map] and puts the player back at the start. Does not change
@@ -56,6 +56,11 @@ func move_to(index: int) -> bool:
 	return true
 
 
+## Waves in one world (read-only; [member WaveCurve.waves_per_world]).
+func waves_per_world() -> int:
+	return _waves_per_world
+
+
 ## World of wave [param wave] (1-based): waves 1 to 8 are world 1, 9 to 16 world 2.
 func world_of(wave: int) -> int:
 	return floori(float(wave - 1) / float(_waves_per_world)) + 1
@@ -66,6 +71,7 @@ func wave_in_world(wave: int) -> int:
 	return (wave - 1) % _waves_per_world + 1
 
 
-## True when wave [param wave] is the last of its world (8, 16, ...).
+## True when wave [param wave] is the last of its world (8, 16, ...); the rule is
+## [method WaveCurve.is_final_wave_of].
 func is_final_wave(wave: int) -> bool:
-	return wave % _waves_per_world == 0
+	return WaveCurve.is_final_wave_of(wave, _waves_per_world)

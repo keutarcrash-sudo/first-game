@@ -13,7 +13,9 @@ signal wave_changed(wave_number: int)
 
 ## CARD_CHOICE sits between a finished wave and BUILD: the player picks a card (story 006).
 ## SPEC_CHOICE is the specialization choice at the start of the game (story 008).
-enum Phase { COMBAT, BUILD, CARD_CHOICE, SPEC_CHOICE }
+## MAP is the world map screen and PLACE a place's screen (shop, treasure, rest), both
+## between the card choice and BUILD (étape 5a, spec §5).
+enum Phase { COMBAT, BUILD, CARD_CHOICE, SPEC_CHOICE, MAP, PLACE }
 
 ## Gold owned. Never negative.
 var gold: int
@@ -66,6 +68,16 @@ func begin_card_choice() -> void:
 ## Enters SPEC_CHOICE (start of the game, before wave 1).
 func begin_spec_choice() -> void:
 	_set_phase(Phase.SPEC_CHOICE)
+
+
+## Enters MAP (the world map is shown: consultation or choice of the next place).
+func begin_map() -> void:
+	_set_phase(Phase.MAP)
+
+
+## Enters PLACE (the player is in a shop, a treasure or a rest).
+func begin_place() -> void:
+	_set_phase(Phase.PLACE)
 
 
 ## Enters BUILD (the card, if any, is chosen).
