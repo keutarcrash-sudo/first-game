@@ -22,6 +22,8 @@ const HP_FONT_SIZE := 20
 const INFO_FONT_SIZE := 20
 const INFO_POSITION := Vector2(40.0, 30.0)
 const CARDS_POSITION := Vector2(40.0, 58.0)
+const CARDS_WIDTH := 840.0  # Stops before the stats panel (starts at x = 920 on 1280 px).
+const CARDS_MAX_LINES := 2
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
@@ -63,6 +65,12 @@ func _ready() -> void:
 	add_child(_info_label)
 	_cards_label = Label.new()
 	_cards_label.position = CARDS_POSITION
+	_cards_label.custom_minimum_size = Vector2(CARDS_WIDTH, 0.0)
+	_cards_label.size = Vector2(CARDS_WIDTH, 0.0)
+	_cards_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_cards_label.max_lines_visible = CARDS_MAX_LINES
+	_cards_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_cards_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cards_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
 	_cards_label.add_theme_color_override(&"font_color", PROMPT_COLOR)
 	NeonFonts.style_label(_cards_label, NeonFonts.title())
