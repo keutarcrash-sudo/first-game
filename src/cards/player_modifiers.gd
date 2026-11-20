@@ -111,6 +111,28 @@ func take(card: CardDef) -> void:
 				_wet_duration_bonus += float(effect["value"])
 			"freeze_duration_bonus":
 				_freeze_duration_bonus += float(effect["value"])
+			"hero_damage_bonus":
+				_hero_damage_bonus += float(effect["value"])
+			"move_speed_bonus":
+				_move_speed_bonus += float(effect["value"])
+			"pickup_radius_mult":
+				_pickup_bonus += float(effect["value"]) - 1.0
+			"gold_lifetime_bonus":
+				_gold_lifetime_bonus += float(effect["value"])
+			"cards_offered_bonus":
+				_cards_offered_bonus += roundi(effect["value"])
+			"ability_cooldown_mult":
+				var ability_id := String(effect["ability_id"])
+				_cooldown_reduction[ability_id] = float(_cooldown_reduction.get(ability_id, 0.0)) + 1.0 - float(effect["value"])
+			"ability_value_mult":
+				var mult_key := "%s/%s" % [effect["ability_id"], effect["key"]]
+				_value_mult_bonus[mult_key] = float(_value_mult_bonus.get(mult_key, 0.0)) + float(effect["value"]) - 1.0
+			"ability_value_bonus":
+				var bonus_key := "%s/%s" % [effect["ability_id"], effect["key"]]
+				_value_bonus[bonus_key] = float(_value_bonus.get(bonus_key, 0.0)) + float(effect["value"])
+			_:
+				if FLAG_EFFECTS.has(String(effect["type"])):
+					_add_flag(StringName(String(effect["type"])), effect)
 	changed.emit()
 
 
