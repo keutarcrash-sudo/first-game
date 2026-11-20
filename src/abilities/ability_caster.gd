@@ -129,7 +129,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if def == null or not is_unlocked(slot) or cooldown_left(slot) > 0.0:
 			return
 		_cast(def)
-		_cooldowns[slot] = def.cooldown
+		_cooldowns[slot] = def.cooldown * _modifiers.ability_cooldown_factor(def.id)
 		get_viewport().set_input_as_handled()
 		cooldowns_changed.emit()
 		return
@@ -155,7 +155,9 @@ func _physics_process(delta: float) -> void:
 		cooldowns_changed.emit()
 
 
-func _cast(def: AbilityDef) -> void:
+## Casts [param base_def] with its numeric values and cooldown read through the cards ([method PlayerModifiers.ability_value]).
+func _cast(base_def: AbilityDef) -> void:
+	var def: AbilityDef = _with_card_values(base_def)
 	match def.type:
 		"piercing_arrow":
 			_cast_piercing_arrow(def)
@@ -181,6 +183,21 @@ func _cast(def: AbilityDef) -> void:
 			_cast_meteor(def)
 		"tidal_wave":
 			_cast_tidal_wave(def)
+
+
+## A copy of [param def] whose values include the card bonuses at the time of the cast.
+func _with_card_values(def: AbilityDef) -> AbilityDef:
+	var copy := AbilityDef.new()
+	copy.id = def.id
+	copy.spec_id = def.spec_id
+	copy.slot = def.slot
+	copy.display_name = def.display_name
+	copy.description = def.description
+	copy.cooldown = def.cooldown
+	copy.type = def.type
+	for key: String in def.values:
+		copy.values[key] = _modifiers.ability_value(def.id, key, float(def.values[key]))
+	return copy
 
 
 ## The mouse position brought back to [param max_range] from the hero, then into the field
@@ -220,7 +237,7 @@ func _on_arrow_rain_enemy_inside(enemy: Enemy, delta: float, tick: Dictionary, i
 		if tick["fire"]:
 			tick["left"] = float(tick["left"]) + interval
 	if tick["fire"]:
-		enemy.take_damage(damage * _modifiers.damage_multiplier(), true)
+		enemy.take_damage(damage * _modifiers.hero_damage_multiplier(), true)
 
 
 func _cast_fire_wall(def: AbilityDef) -> void:
@@ -328,7 +345,7 @@ func _cast_fireball(def: AbilityDef) -> void:
 	var burn_duration: float = weapon.burn_duration() if weapon != null else 0.0
 	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
 	var fireball := Fireball.new()
-	fireball.setup(def, _direction_to_mouse(), _field_rect, _enemies, float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps)
+	fireball.setup(def, _direction_to_mouse(), _field_rect, _enemies, float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), burn_duration, burn_dps)
 	fireball.set_impact(_impact)
 	_bullets.add_child(fireball)
 	fireball.global_position = _hero.global_position
@@ -338,7 +355,7 @@ func _cast_water_wave(def: AbilityDef) -> void:
 	var weapon: ElementalWeapon = _hero.elemental_weapon()
 	var wet_duration: float = weapon.wet_duration() if weapon != null else 0.0
 	var wave := WaterWave.new()
-	wave.setup(def, _direction_to_mouse(), _enemies, float(def.values["damage"]) * _modifiers.damage_multiplier(), wet_duration, _field_rect)
+	wave.setup(def, _direction_to_mouse(), _enemies, float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), wet_duration, _field_rect)
 	_bullets.add_child(wave)
 	wave.global_position = _hero.global_position
 
@@ -349,7 +366,7 @@ func _cast_piercing_arrow(def: AbilityDef) -> void:
 	var weapon: ArcherWeapon = _hero.archer_weapon()
 	var mark: float = weapon.mark_duration() if weapon != null else 0.0
 	var arrow := PiercingArrow.new()
-	arrow.setup(def, direction, _field_rect, float(def.values["damage"]) * _modifiers.damage_multiplier(), mark)
+	arrow.setup(def, direction, _field_rect, float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), mark)
 	_bullets.add_child(arrow)
 	arrow.global_position = _hero.global_position
 
@@ -421,7 +438,7 @@ func _cast_meteor(def: AbilityDef) -> void:
 	var burn_duration: float = weapon.burn_duration() if weapon != null else 0.0
 	var burn_dps: float = weapon.burn_damage_per_second() if weapon != null else 0.0
 	var meteor := Meteor.new()
-	meteor.setup(_state, radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.damage_multiplier(), burn_duration, burn_dps, _enemies)
+	meteor.setup(_state, radius, float(def.values["delay"]), float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), burn_duration, burn_dps, _enemies)
 	meteor.set_impact(_impact)
 	_bullets.add_child(meteor)
 	meteor.global_position = _target_point(float(def.values["max_range"]), radius)

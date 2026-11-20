@@ -36,7 +36,7 @@ func draw() -> Array[CardDef]:
 		if unlocked and for_this_spec and _modifiers.can_take(card):
 			available.append(card)
 	var offer: Array[CardDef] = []
-	for i: int in mini(_catalog.offered_per_choice + _offered_bonus, available.size()):
+	for i: int in mini(_catalog.offered_per_choice + _offered_bonus + _modifiers.cards_offered_bonus(), available.size()):
 		var pick: int = _rng.randi_range(0, available.size() - 1)
 		offer.append(available[pick])
 		available.remove_at(pick)

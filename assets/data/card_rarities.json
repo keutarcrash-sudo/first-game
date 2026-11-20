@@ -1,0 +1,10 @@
+{
+	"rarities": [
+		{ "id": "common", "label": "COMMUNE", "color": "#b8b8c8", "weight": 50, "growth": 0.0 },
+		{ "id": "uncommon", "label": "PEU COMMUNE", "color": "#3bff7a", "weight": 28, "growth": 0.03 },
+		{ "id": "rare", "label": "RARE", "color": "#3b9dff", "weight": 14, "growth": 0.06 },
+		{ "id": "epic", "label": "ÉPIQUE", "color": "#b44bff", "weight": 6, "growth": 0.10 },
+		{ "id": "legendary", "label": "LÉGENDAIRE", "color": "#ff9a1f", "weight": 2, "growth": 0.12 }
+	],
+	"reroll": { "base_cost": 20, "step": 20 }
+}

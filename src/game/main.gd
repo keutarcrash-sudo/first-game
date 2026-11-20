@@ -18,6 +18,7 @@ const ECONOMY_PATH := "res://assets/data/economy.json"
 const TOWERS_PATH := "res://assets/data/towers.json"
 const PROCS_PATH := "res://assets/data/procs.json"
 const CARDS_PATH := "res://assets/data/cards.json"
+const RARITIES_PATH := "res://assets/data/card_rarities.json"
 const SKILL_TREE_PATH := "res://assets/data/skill_tree.json"
 const SPECS_PATH := "res://assets/data/specializations.json"
 const ABILITIES_PATH := "res://assets/data/abilities.json"
@@ -32,6 +33,7 @@ var _cycle: WaveCycle
 var _state: GameState
 var _card_pool: CardPool  # Built once the specialization is chosen: its cards depend on it.
 var _catalog: CardCatalog
+var _rarities: CardRarities
 var _specs: SpecializationCatalog
 var _spec_screen: SpecializationChoiceScreen
 var _rules: ProcRules
@@ -67,8 +69,9 @@ func _ready() -> void:
 	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
 	var rules: ProcRules = ProcRules.load_from_file(PROCS_PATH)
 	_specs = null if rules == null else SpecializationCatalog.load_from_file(SPECS_PATH, rules)
-	_catalog = null if _specs == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs)
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
+	_rarities = CardRarities.load_from_file(RARITIES_PATH)
+	_catalog = null if _ability_catalog == null or _rarities == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs, _rarities, _ability_catalog)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
@@ -108,7 +111,7 @@ func _ready() -> void:
 	var gold_field := GoldField.new()
 	add_child(gold_field)
 	move_child(gold_field, _enemies.get_index())
-	gold_field.setup(_state, _hero, economy)
+	gold_field.setup(_state, _hero, economy, modifiers)
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: gold_field.clear())
 	_cycle.setup(_state, _spawner, economy, modifiers, curve, _crystal, _field_rect, _rng, gold_field)
 	# The path view is moved to index 0 so it is drawn under every child (crystal, Towers, ...).
@@ -220,7 +223,7 @@ func _open_card_choice() -> void:
 	var offer: Array[CardDef] = _card_pool.draw()
 	var unlock_card: CardDef = _unlock_card_if_due()
 	if unlock_card != null:
-		var full_size: int = _catalog.offered_per_choice + _skill_tree.cards_offered_bonus(_progress.owned_ids)
+		var full_size: int = _catalog.offered_per_choice + _skill_tree.cards_offered_bonus(_progress.owned_ids) + _modifiers.cards_offered_bonus()
 		if offer.size() >= full_size:
 			offer.pop_back()
 		offer.push_front(unlock_card)

@@ -13,11 +13,13 @@ const BLINK_PERIOD := 0.25
 var _state: GameState
 var _hero: Node2D
 var _economy: EconomyStats
+var _modifiers: PlayerModifiers
 var _coins: Array[Dictionary] = []  # { position: Vector2, amount: int, age: float }
 
 
-## Gives the field its dependencies. Call once.
-func setup(state: GameState, hero: Node2D, economy: EconomyStats) -> void:
+## Gives the field its dependencies; [param modifiers] adds the pickup radius and lifetime cards. Call once.
+func setup(state: GameState, hero: Node2D, economy: EconomyStats, modifiers: PlayerModifiers) -> void:
+	_modifiers = modifiers
 	_state = state
 	_hero = hero
 	_economy = economy
@@ -28,14 +30,16 @@ func _physics_process(delta: float) -> void:
 		return
 	var hero_valid: bool = is_instance_valid(_hero)
 	var hero_position: Vector2 = _hero.global_position if hero_valid else Vector2.ZERO
-	var radius_squared: float = _economy.pickup_radius * _economy.pickup_radius
+	var radius: float = _economy.pickup_radius * _modifiers.pickup_radius_factor()
+	var radius_squared: float = radius * radius
 	var kept: Array[Dictionary] = []
 	var changed := false
-	var blink_start: float = _economy.gold_lifetime - _economy.gold_blink_time
+	var lifetime: float = _lifetime()
+	var blink_start: float = lifetime - _economy.gold_blink_time
 	for coin: Dictionary in _coins:
 		coin["age"] += delta
 		var age: float = coin["age"]
-		if age >= _economy.gold_lifetime:
+		if age >= lifetime:
 			changed = true
 			continue
 		if hero_valid and (coin["position"] as Vector2).distance_squared_to(hero_position) <= radius_squared:
@@ -53,7 +57,7 @@ func _physics_process(delta: float) -> void:
 func _draw() -> void:
 	if _economy == null:
 		return
-	var blink_start: float = _economy.gold_lifetime - _economy.gold_blink_time
+	var blink_start: float = _lifetime() - _economy.gold_blink_time
 	for coin: Dictionary in _coins:
 		var age: float = coin["age"]
 		if age >= blink_start and int((age - blink_start) / (BLINK_PERIOD * 0.5)) % 2 == 1:
@@ -61,6 +65,11 @@ func _draw() -> void:
 		var at: Vector2 = coin["position"]
 		draw_circle(at, COIN_RADIUS, COIN_COLOR)
 		draw_arc(at, COIN_RADIUS, 0.0, TAU, 24, COIN_OUTLINE_COLOR, 1.5)
+
+
+## Seconds a coin stays on the ground, card bonus included.
+func _lifetime() -> float:
+	return _economy.gold_lifetime + _modifiers.gold_lifetime_bonus()
 
 
 ## Adds a coin worth [param amount] gold at [param at] (global position; this node stays at the origin).

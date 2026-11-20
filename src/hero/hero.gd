@@ -15,6 +15,7 @@ const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
 const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
 
 var _stats: HeroStats
+var _modifiers: PlayerModifiers
 var _sprite: DirectionalSprite
 var _sheet: SpriteSheet
 var _shot_now := false  # A shot was fired since the last visual update (visual only).
@@ -80,6 +81,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 ## A new weapon type (see [constant SpecializationCatalog.WEAPON_NUMBER_KEYS])
 ## is built here from [member SpecializationDef.weapon_type].
 func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumberGenerator) -> void:
+	_modifiers = modifiers
 	match spec.weapon_type:
 		"arrows":
 			_archer = ArcherWeapon.new(spec.weapon, modifiers, rng)
@@ -151,7 +153,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		var wanted: Vector2 = move_direction()
 		moving = wanted != Vector2.ZERO
-		velocity = wanted * _stats.hero_speed
+		velocity = wanted * _stats.hero_speed * (_modifiers.move_speed_factor() if _modifiers != null else 1.0)
 		move_and_slide()
 		global_position = global_position.clamp(_min_position, _max_position)
 
