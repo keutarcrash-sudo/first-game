@@ -15,6 +15,7 @@ var _shake_strength := 0.0
 var _shake_duration := 0.0
 var _shake_end := 0.0  # Real time (seconds) at which the active shake ends.
 var _hitstop_active := false
+var _last_hitstop := -INF  # Real time (seconds) of the last accepted hit-stop.
 var _hitstop_id := 0  # Tells a stale hit-stop timer from the current one.
 var _crystal_hp := -1.0
 
@@ -55,13 +56,17 @@ func shake(kind: StringName) -> void:
 
 
 ## Slows the game for a very short real time. Does nothing when one is already
-## running, outside COMBAT, or when the tree is paused.
+## running, outside COMBAT, when the tree is paused, or when the previous one
+## started less than [code]min_interval[/code] real seconds ago.
 func hitstop() -> void:
 	if _stats == null or _hitstop_active or _state.phase != GameState.Phase.COMBAT:
 		return
 	var tree: SceneTree = get_tree()
 	if tree == null or tree.paused:
 		return
+	if _now() - _last_hitstop < _stats.hitstop_min_interval:
+		return
+	_last_hitstop = _now()
 	_hitstop_active = true
 	_hitstop_id += 1
 	Engine.time_scale = _stats.hitstop_time_scale

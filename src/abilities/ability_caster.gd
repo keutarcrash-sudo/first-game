@@ -22,6 +22,14 @@ const HUNTER_EYE_RING_WIDTH := 3.0
 const HUNTER_EYE_RING_POINTS := 32
 const TIDAL_FLASH_COLOR := Color(0.55, 0.85, 1.0, 0.6)
 const TIDAL_FLASH_DURATION := 0.3
+const BURST_RADIUS := 55.0  # Star size of the ability onomatopoeias.
+const BURST_BIG_RADIUS := 90.0  # Star size of the tidal wave.
+const BURST_ARROW_OFFSET := 50.0  # Pixels in front of the hero for the piercing arrow burst.
+const BURST_EYE_OFFSET := 30.0  # Pixels above the hero's body for the hunter eye burst.
+const BURST_WAVE_RATIO := 0.5  # The wave burst sits at this fraction of its range.
+const ARCHER_BURST_COLOR := Color(1.0, 0.89, 0.23)
+const FIRE_BURST_COLOR := Color(1.0, 0.54, 0.12)
+const WATER_BURST_COLOR := Color(0.1, 0.89, 1.0)
 
 var _state: GameState
 var _hero: Hero
@@ -225,6 +233,7 @@ func _cast_arrow_rain(def: AbilityDef) -> void:
 	zone.enemy_inside.connect(_on_arrow_rain_enemy_inside.bind(tick, float(def.values["tick_interval"]), float(def.values["damage"])))
 	_bullets.add_child(zone)
 	zone.global_position = _target_point(float(def.values["max_range"]), radius)
+	_burst(zone.global_position, "ZIP ZIP !", ARCHER_BURST_COLOR, BURST_RADIUS, &"small")
 
 
 ## Hits every enemy in the zone for [param damage] each [param interval] seconds (first hit at once).
@@ -250,6 +259,7 @@ func _cast_fire_wall(def: AbilityDef) -> void:
 	zone.setup_segment(centre - along, centre + along, float(def.values["thickness"]), float(def.values["duration"]), Hero.FIRE_BOLT_COLOR, _state, _enemies)
 	zone.enemy_inside.connect(_on_trail_enemy_inside)  # Same burn as the flame trail.
 	_bullets.add_child(zone)
+	_burst(centre, "FWOOSH !", FIRE_BURST_COLOR, BURST_RADIUS, &"small")
 
 
 func _cast_puddle(def: AbilityDef) -> void:
@@ -259,6 +269,7 @@ func _cast_puddle(def: AbilityDef) -> void:
 	zone.enemy_inside.connect(_on_puddle_enemy_inside.bind(float(def.values["slow_factor"])))
 	_bullets.add_child(zone)
 	zone.global_position = _target_point(float(def.values["max_range"]), radius)
+	_burst(zone.global_position, "PLOUF !", WATER_BURST_COLOR, BURST_RADIUS)
 
 
 func _on_puddle_enemy_inside(enemy: Enemy, _delta: float, slow_factor: float) -> void:
@@ -358,6 +369,8 @@ func _cast_water_wave(def: AbilityDef) -> void:
 	wave.setup(def, _direction_to_mouse(), _enemies, float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), wet_duration, _field_rect)
 	_bullets.add_child(wave)
 	wave.global_position = _hero.global_position
+	var direction: Vector2 = _direction_to_mouse()
+	_burst(_hero.global_position + direction * float(def.values["range"]) * BURST_WAVE_RATIO, "SPLASH !", WATER_BURST_COLOR, BURST_RADIUS, &"small")
 
 
 func _cast_piercing_arrow(def: AbilityDef) -> void:
@@ -369,6 +382,7 @@ func _cast_piercing_arrow(def: AbilityDef) -> void:
 	arrow.setup(def, direction, _field_rect, float(def.values["damage"]) * _modifiers.hero_damage_multiplier(), mark)
 	_bullets.add_child(arrow)
 	arrow.global_position = _hero.global_position
+	_burst(_hero.global_position + direction * BURST_ARROW_OFFSET, "TCHAK !", ARCHER_BURST_COLOR, BURST_RADIUS, &"small")
 
 
 ## Enemies alive inside the rectangle the camera shows now (the viewport rectangle
@@ -398,6 +412,7 @@ func _cast_hunter_eye(def: AbilityDef) -> void:
 		_eye_ring.draw.connect(_draw_eye_ring)
 		_hero.add_child(_eye_ring)
 	_mark_on_screen()
+	_burst(_hero.global_position + Vector2(0.0, -(_hero.body_radius() + BURST_EYE_OFFSET)), "FOCUS !", ARCHER_BURST_COLOR, BURST_RADIUS)
 
 
 func _draw_eye_ring() -> void:
@@ -453,6 +468,7 @@ func _cast_tidal_wave(def: AbilityDef) -> void:
 		enemy.apply_wet(wet_duration)
 		enemy.force_freeze(freeze_duration)
 	_flash_screen()
+	_burst(_hero.global_position, "SPLOOSH !", WATER_BURST_COLOR, BURST_BIG_RADIUS, &"big", true)
 
 
 ## A full-screen colour that fades out, on its own CanvasLayer (screen space).
@@ -469,3 +485,15 @@ func _flash_screen() -> void:
 	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(rect, "modulate:a", 0.0, TIDAL_FLASH_DURATION)
 	tween.tween_callback(layer.queue_free)
+
+
+## Comic burst with [param word] at [param at]; optionally shakes the screen
+## ([param shake_kind], empty = none) and triggers a hit-stop ([param stop]).
+func _burst(at: Vector2, word: String, color: Color, radius: float, shake_kind: StringName = &"", stop: bool = false) -> void:
+	PopBurst.spawn(_bullets, at, word, color, radius)
+	if _impact == null:
+		return
+	if shake_kind != &"":
+		_impact.shake(shake_kind)
+	if stop:
+		_impact.hitstop()
