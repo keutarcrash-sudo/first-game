@@ -27,6 +27,8 @@ const TEXT_SPACING := 14
 const REROLL_FONT_SIZE := 24
 const RARITY_FONT_SIZE := 26
 const UNAFFORDABLE_COLOR := Color(1.0, 0.3, 0.3)
+const DISABLED_COLOR := Color(0.5, 0.5, 0.55)
+const SPARKLE_SIZE := 10.0
 const CARD_BG_COLOR := Color(0.1, 0.1, 0.16)
 const CARD_BG_HOVER_COLOR := Color(0.16, 0.16, 0.24)
 const FRAME_WIDTH := 4
@@ -94,20 +96,23 @@ func setup(rarities: CardRarities, abilities: AbilityCatalog) -> void:
 
 ## Shows [param cards] (one clickable card each) and waits for a click. Cards
 ## narrow when needed so the whole row fits the screen width. The reroll button
-## shows [param reroll_cost] and is greyed, price in red, unless [param can_afford]
-## (enough gold and at least one card left to draw). Can be called again to
+## shows [param reroll_cost]; it is greyed with the price in red when
+## [param can_afford] is false (not enough gold), and greyed only when
+## [param can_draw] is false (no card left to draw). Can be called again to
 ## replace the cards after a reroll.
-func show_cards(cards: Array[CardDef], reroll_cost: int, can_afford: bool) -> void:
+func show_cards(cards: Array[CardDef], reroll_cost: int, can_afford: bool, can_draw: bool = true) -> void:
 	_reroll_button.text = "Relancer (%d or)" % reroll_cost
-	_reroll_button.disabled = not can_afford
-	_reroll_button.add_theme_color_override(&"font_disabled_color", TEXT_COLOR if can_afford else UNAFFORDABLE_COLOR)
+	_reroll_button.disabled = not can_afford or not can_draw
+	_reroll_button.add_theme_color_override(&"font_disabled_color", UNAFFORDABLE_COLOR if not can_afford else DISABLED_COLOR)
 	for child: Node in _row.get_children():
 		_row.remove_child(child)
 		child.queue_free()
 	var free_width: float = get_viewport().get_visible_rect().size.x - 2.0 * SCREEN_SIDE_MARGIN - CARD_SPACING * (cards.size() - 1)
 	var card_width: float = minf(CARD_SIZE.x, free_width / cards.size())
 	for card: CardDef in cards:
-		_row.add_child(_make_card(card, card_width))
+		var button: Button = _make_card(card, card_width)
+		_row.add_child(button)
+		_start_pulse(button)
 	visible = true
 
 
@@ -174,12 +179,46 @@ func _apply_frame(button: Button, color: Color, pulse: bool) -> void:
 	if pulse:
 		for style: StyleBoxFlat in [normal, hover]:
 			style.shadow_color = Color(color, 0.8)
-		var tween: Tween = button.create_tween().set_loops()  # Bound to the button: stops when it is freed.
-		tween.set_parallel(true)
-		tween.tween_property(normal, "shadow_size", PULSE_MAX_SIZE, PULSE_HALF_PERIOD).from(PULSE_MIN_SIZE)
-		tween.tween_property(hover, "shadow_size", PULSE_MAX_SIZE, PULSE_HALF_PERIOD).from(PULSE_MIN_SIZE)
-		tween.chain().tween_property(normal, "shadow_size", PULSE_MIN_SIZE, PULSE_HALF_PERIOD)
-		tween.tween_property(hover, "shadow_size", PULSE_MIN_SIZE, PULSE_HALF_PERIOD)
+		var sparkles: Array[ColorRect] = []
+		var width: float = button.custom_minimum_size.x
+		var spots: Array[Vector2] = [Vector2(2.0, 2.0), Vector2(width - 2.0, 14.0), Vector2(6.0, CARD_SIZE.y - 10.0), Vector2(width - 8.0, CARD_SIZE.y - 2.0)]
+		for spot: Vector2 in spots:
+			var sparkle := ColorRect.new()  # A small diamond.
+			sparkle.size = Vector2(SPARKLE_SIZE, SPARKLE_SIZE)
+			sparkle.pivot_offset = sparkle.size / 2.0
+			sparkle.rotation = PI / 4.0
+			sparkle.position = spot - sparkle.size / 2.0
+			sparkle.color = color.lightened(0.5)
+			sparkle.modulate.a = 0.0
+			sparkle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			button.add_child(sparkle)
+			sparkles.append(sparkle)
+		button.set_meta(&"pulse_styles", [normal, hover])
+		button.set_meta(&"sparkles", sparkles)
+
+
+## Starts the pulse and the sparkle twinkle of a legendary card. Needs the card to
+## be in the scene tree, so it runs once the card has been added to the row.
+func _start_pulse(button: Button) -> void:
+	if not button.is_inside_tree() or not button.has_meta(&"pulse_styles"):
+		return
+	var tween: Tween = button.create_tween()  # Bound to the button: stops when it is freed.
+	if tween == null:
+		return
+	tween.set_loops()
+	tween.set_parallel(true)
+	var styles: Array = button.get_meta(&"pulse_styles")
+	for style: StyleBoxFlat in styles:
+		tween.tween_property(style, "shadow_size", PULSE_MAX_SIZE, PULSE_HALF_PERIOD).from(PULSE_MIN_SIZE)
+	var sparkles: Array = button.get_meta(&"sparkles")
+	for i: int in sparkles.size():
+		var sparkle: ColorRect = sparkles[i]
+		tween.tween_property(sparkle, "modulate:a", 1.0, PULSE_HALF_PERIOD).from(0.0).set_delay(0.15 * i)
+	tween.chain()
+	for style: StyleBoxFlat in styles:
+		tween.tween_property(style, "shadow_size", PULSE_MIN_SIZE, PULSE_HALF_PERIOD)
+	for sparkle: ColorRect in sparkles:
+		tween.tween_property(sparkle, "modulate:a", 0.0, PULSE_HALF_PERIOD)
 
 
 func _frame_style(color: Color, background: Color) -> StyleBoxFlat:

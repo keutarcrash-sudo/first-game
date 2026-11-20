@@ -13,7 +13,20 @@ func _init() -> void:
 		print("RARITY OK")
 	else:
 		print("RARITY FAIL: %s" % failed)
-	quit()
+	quit(0 if failed.is_empty() else 1)
+
+
+## Share of rare, epic and legendary cards over many draws on [param wave].
+func _high_share(rarities: CardRarities, wave: int) -> float:
+	var pool: CardPool = _pool(_big_cards(), PlayerModifiers.new(null), rarities, func(_id: String) -> bool: return true)
+	var high := 0
+	var total := 0
+	for i: int in 2000:
+		for card: CardDef in pool.draw(wave):
+			total += 1
+			if card.rarity in [&"rare", &"epic", &"legendary"]:
+				high += 1
+	return float(high) / float(total)
 
 
 func _card(id: String, rarity: StringName) -> CardDef:
@@ -122,6 +135,41 @@ func _run() -> String:
 	cost_pool.begin_choice()
 	if cost_pool.reroll_cost() != first_cost:
 		return "reroll_cost_resets"
+
+	# Legendary taken: reroll() never offers one either.
+	for i: int in 200:
+		for card: CardDef in no_legend_pool.reroll(5):
+			if card.rarity == &"legendary":
+				return "legendary_after_taken_reroll"
+
+	# Exclusions: other spec, locked by default, max_stacks reached.
+	var other_spec: CardDef = _card("other_spec", &"common")
+	other_spec.requires_spec = "mage"
+	var locked: CardDef = _card("locked", &"common")
+	locked.locked_by_default = true
+	var maxed: CardDef = _card("maxed", &"common")
+	maxed.max_stacks = 1
+	var excl_mods := PlayerModifiers.new(null)
+	excl_mods.take(maxed)
+	var excl_cards: Array[CardDef] = [other_spec, locked, maxed, _card("fine", &"common")]
+	var excl_pool: CardPool = _pool(excl_cards, excl_mods, rarities, always)  # spec id "" so "mage" is another spec.
+	for i: int in 50:
+		var ids: Array[String] = []
+		for card: CardDef in excl_pool.draw(1):
+			ids.append(card.id)
+		if ids != ["fine"]:
+			return "exclusions_%s" % str(ids)
+
+	# Empty pool.
+	var empty_pool: CardPool = _pool([], PlayerModifiers.new(null), rarities, always)
+	if not empty_pool.draw(1).is_empty():
+		return "empty_pool_draw"
+	if empty_pool.can_draw():
+		return "empty_pool_can_draw"
+
+	# Wave growth: higher rarities are more frequent on wave 8 than on wave 1.
+	if _high_share(rarities, 8) <= _high_share(rarities, 1):
+		return "wave_growth"
 
 	# Wave 1: commons are about half of the cards (weight 50 out of 100).
 	var stats_pool: CardPool = _pool(_big_cards(), PlayerModifiers.new(null), rarities, always)

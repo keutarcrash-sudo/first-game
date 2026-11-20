@@ -250,7 +250,7 @@ func _present_offer(drawn: Array[CardDef]) -> bool:
 	if offer.is_empty():
 		return false
 	var cost: int = _card_pool.reroll_cost()
-	_card_screen.show_cards(offer, cost, _state.gold >= cost and _card_pool.can_draw())
+	_card_screen.show_cards(offer, cost, _state.gold >= cost, _card_pool.can_draw())
 	return true
 
 

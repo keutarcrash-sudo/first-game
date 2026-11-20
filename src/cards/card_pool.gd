@@ -84,7 +84,10 @@ func reroll(wave: int) -> Array[CardDef]:
 func _available() -> Array[CardDef]:
 	var available: Array[CardDef] = []
 	var no_more_legendary: bool = _modifiers.took_legendary()
+	var known: Array[StringName] = _rarities.order()
 	for card: CardDef in _catalog.cards:
+		if not known.has(card.rarity):
+			continue
 		if card.locked_by_default and not _unlocked_ids.has(card.id):
 			continue
 		if not card.requires_spec.is_empty() and card.requires_spec != _spec_id:
