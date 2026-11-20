@@ -11,6 +11,9 @@ extends Area2D
 signal died
 ## Emitted right after [signal died] when the killing blow was heavy (critical hit, ability).
 signal died_heavy
+## Emitted right after [signal died]: where the enemy fell and whether it was burning / frozen at that instant
+## (cards Brasier éternel and Zéro absolu, see [CardEffects]).
+signal died_with_state(position: Vector2, was_burning: bool, was_frozen: bool)
 
 const COLOR := Color(1.0, 0.35, 0.3)  # Disc colour, only used when no sprite sheet was given.
 const DAMAGED_DARKEN := 0.55  # Colour brightness at 0 HP, scaled up to 1 at full HP.
@@ -43,6 +46,8 @@ var _hit_left := 0.0  # Seconds of hit pose remaining (visual only).
 
 var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
+var _burn_full_duration := 0.0  # Duration given by the last apply_burn call.
+var _modifiers: PlayerModifiers  # Card bonuses (Combustion, Marée montante); null = none.
 var _mark_left := 0.0  # Seconds of « marqué » remaining (story 008).
 
 var _wet_left := 0.0  # Seconds of « trempé » remaining (story 009).
@@ -76,6 +81,12 @@ func setup(stats: DefenceStats, hp: float, start_position: Vector2, crystal: Cry
 	var touch_distance: float = crystal.radius + _radius
 	_touch_distance_sq = touch_distance * touch_distance
 	position = start_position
+
+
+## Gives the enemy the card modifiers read every frame (Combustion, Marée montante). Optional:
+## without them no card acts on it. Call before adding the enemy to the tree.
+func set_modifiers(modifiers: PlayerModifiers) -> void:
+	_modifiers = modifiers
 
 
 ## Draws the enemy with [param sheet] at [param height_px] on screen instead of a disc
@@ -113,6 +124,8 @@ func _physics_process(delta: float) -> void:
 		return
 	# The slow is only what the towers asked for since the last frame: when no
 	# tower refreshes it, it ends here, together with the blue tint.
+	if _wet_left > 0.0 and _modifiers != null and _modifiers.has_flag(&"wet_slow"):
+		apply_slow(_modifiers.flag_value(&"wet_slow", "factor"))  # Marée montante; the strongest slow wins.
 	var was_slowed: bool = is_slowed()
 	_slow_factor = _requested_slow_factor
 	_requested_slow_factor = 1.0
@@ -122,7 +135,7 @@ func _physics_process(delta: float) -> void:
 		# Damage over time goes through _damage, without the hit pose (a burn kill still emits died) and triggers no combo.
 		var burn_time: float = minf(delta, _burn_left)
 		_burn_left -= burn_time
-		_damage(_burn_damage_per_second * burn_time, false)
+		_damage(_burn_damage_per_second * burn_time, false, false, true)
 		if is_queued_for_deletion():
 			return
 		if _burn_left <= 0.0:
@@ -264,8 +277,19 @@ func apply_burn(duration: float, damage_per_second: float) -> void:
 	var was_burning: bool = _burn_left > 0.0
 	_burn_left = duration
 	_burn_damage_per_second = damage_per_second
+	_burn_full_duration = duration
 	if not was_burning:
 		_refresh_look()
+
+
+## Seconds of the last burn given to this enemy (0 if never burnt): what Brasier éternel passes on.
+func burn_full_duration() -> float:
+	return _burn_full_duration
+
+
+## Burn damage per second currently in effect (0 if never burnt).
+func burn_damage_per_second() -> float:
+	return _burn_damage_per_second
 
 
 ## Marks the enemy for [param duration] seconds (story 008, Archer critical hit).
@@ -362,14 +386,20 @@ func take_damage(amount: float, heavy: bool = false) -> void:
 
 
 ## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
-func _damage(amount: float, show_hit: bool, heavy: bool = false) -> void:
+## [param burn_tick]: the burn's own damage, amplified by Combustion even if the burn ends this very tick.
+## Combustion (+value on every source while burning) multiplies with the combos already in [param amount].
+func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool = false) -> void:
 	if is_queued_for_deletion():
 		return
+	if (burn_tick or _burn_left > 0.0) and _modifiers != null and _modifiers.has_flag(&"burning_vulnerability"):
+		amount *= 1.0 + _modifiers.flag_value(&"burning_vulnerability", "value")
 	_hp -= amount
 	if _hp <= 0.0:
+		var was_burning: bool = burn_tick or _burn_left > 0.0
 		died.emit()
 		if heavy:
 			died_heavy.emit()
+		died_with_state.emit(global_position, was_burning, _frozen_left > 0.0)
 		queue_free()
 	else:
 		if show_hit and _sprite != null and _hit_left <= 0.0:

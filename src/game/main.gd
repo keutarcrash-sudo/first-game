@@ -107,6 +107,10 @@ func _ready() -> void:
 	_cycle = WaveCycle.new()
 	_spawner.setup(curve, defence, _field_rect, _crystal, _enemies)
 	_spawner.set_enemy_visual(enemy_sheet, _visuals.height("enemy"))
+	_spawner.set_modifiers(modifiers)
+	var card_effects := CardEffects.new()
+	add_child(card_effects)
+	card_effects.setup(_enemies, modifiers)
 	# The gold field sits just before Enemies, so coins are drawn under the enemies.
 	var gold_field := GoldField.new()
 	add_child(gold_field)

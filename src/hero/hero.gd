@@ -13,6 +13,7 @@ const SHOOT_MAX_SPEED_SCALE := 4.0  # Fastest the shoot clip is played to fit a 
 const HERO_LAYER := 1
 const FIRE_BOLT_COLOR := Color(1.0, 0.55, 0.15)
 const WATER_JET_COLOR := Color(0.35, 0.65, 1.0)
+const GHOST_PIERCE := 1000000  # Flèches fantômes: « all enemies » in practice.
 
 var _stats: HeroStats
 var _modifiers: PlayerModifiers
@@ -25,6 +26,7 @@ var _bullet_parent: Node
 var _arena_rect: Rect2
 var _rules: ProcRules
 var _archer: ArcherWeapon
+var _rng: RandomNumberGenerator
 var _elemental: ElementalWeapon
 var _bullet_color := HeroBullet.COLOR
 var _min_position: Vector2
@@ -82,6 +84,7 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 ## is built here from [member SpecializationDef.weapon_type].
 func equip(spec: SpecializationDef, modifiers: PlayerModifiers, rng: RandomNumberGenerator) -> void:
 	_modifiers = modifiers
+	_rng = rng
 	match spec.weapon_type:
 		"arrows":
 			_archer = ArcherWeapon.new(spec.weapon, modifiers, rng)
@@ -207,8 +210,8 @@ func _on_animation_finished(anim_name: StringName) -> void:
 
 func _fire() -> void:
 	_shot_now = true
-	var bullet := HeroBullet.new()
 	if _elemental != null:
+		var bullet := HeroBullet.new()
 		bullet.configure(_elemental.damage(), _stats.bullet_speed, _elemental.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
 		bullet.set_proc_source(&"hero", _rules)
 		bullet.set_pierce(_elemental.pierce())
@@ -218,10 +221,29 @@ func _fire() -> void:
 		_bullet_parent.add_child(bullet)
 		bullet.global_position = global_position
 		return
+	_fire_arrow(true)
+
+
+## Fires one Archer arrow. [param primary]: a normal shot (consumes a pending Roulade critical and can
+## trigger Tir en rafale); the rafale's second arrow is not primary: it can crit but never starts a rafale.
+func _fire_arrow(primary: bool) -> void:
+	var bullet := HeroBullet.new()
 	bullet.configure(_archer.damage(), _stats.bullet_speed, _archer.max_range(), _stats.bullet_radius, _aim_direction, _arena_rect)
 	bullet.set_proc_source(&"hero", _rules)
-	bullet.set_pierce(_archer.pierce())
+	var ghost: bool = _modifiers != null and _modifiers.has_flag(&"ghost_arrows")
+	bullet.set_pierce(GHOST_PIERCE if ghost else _archer.pierce())
 	bullet.set_archer(_archer)
-	bullet.set_guaranteed_crit(_archer.take_forced_crit())
+	if primary:
+		bullet.set_guaranteed_crit(_archer.take_forced_crit())
+		if _modifiers != null and _modifiers.has_flag(&"burst_on_crit"):
+			bullet.set_on_crit(_on_arrow_crit)
 	_bullet_parent.add_child(bullet)
 	bullet.global_position = global_position
+
+
+## Tir en rafale: a critical hit of a normal arrow fires a second arrow at once with the card's chance.
+func _on_arrow_crit() -> void:
+	if _archer == null or _rng == null or _modifiers == null:
+		return
+	if _rng.randf() < _modifiers.flag_value(&"burst_on_crit", "chance"):
+		_fire_arrow(false)
