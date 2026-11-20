@@ -18,6 +18,7 @@ var max_hp: float
 var _invulnerability := 0.0  # Seconds of invulnerability granted by a hit.
 var _invulnerable_left := 0.0
 var _regen_per_second := 0.0
+var _regen_active := false
 var _dead := false
 
 
@@ -46,7 +47,7 @@ func take_hit(amount: float, dashing: bool) -> bool:
 ## Lowers the invulnerability by [param delta] seconds and applies the regeneration.
 func tick(delta: float) -> void:
 	_invulnerable_left = maxf(_invulnerable_left - delta, 0.0)
-	if _regen_per_second > 0.0 and not _dead and current < max_hp:
+	if _regen_active and _regen_per_second > 0.0 and not _dead and current < max_hp:
 		heal(_regen_per_second * delta)
 
 
@@ -74,6 +75,11 @@ func add_max(amount: float) -> void:
 ## Sets the regeneration, in hit points per second (0 = none).
 func set_regen(per_second: float) -> void:
 	_regen_per_second = maxf(per_second, 0.0)
+
+
+## Switches the regeneration on (during waves) or off (between waves). Off at start.
+func set_regen_active(active: bool) -> void:
+	_regen_active = active
 
 
 ## True while a recent hit still protects the hero.

@@ -74,11 +74,12 @@ func _on_impacted(center: Vector2) -> void:
 	var hero_hit: bool = is_instance_valid(_hero) and TelegraphZone.hits_body(center, _radius, _hero.global_position, _hero.body_radius())
 	if is_instance_valid(_crystal):
 		_crystal.take_damage(_crystal_damage)
+	var hero_hurt := false
 	if hero_hit:
-		_hero.hurt(_hero_damage)
+		hero_hurt = _hero.hurt(_hero_damage)
 	if is_instance_valid(_hazards_parent) and _hazards_parent.get_parent() != null:
 		PopBurst.spawn(_hazards_parent.get_parent(), center, BOOM_WORD, BOOM_COLOR, _radius)
 	if is_instance_valid(_impact):
-		_impact.shake(&"big" if hero_hit else &"small")
+		_impact.shake(&"big" if hero_hurt else &"small")
 	if is_instance_valid(_enemy) and not _enemy.is_queued_for_deletion():
 		_enemy.queue_free()  # Not through died: no gold.

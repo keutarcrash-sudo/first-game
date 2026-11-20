@@ -122,13 +122,14 @@ func set_impact(impact: ImpactFeedback) -> void:
 
 ## Hits the hero for [param amount]. Nothing happens while jumping (dash), invulnerable
 ## or dead; otherwise the hero flashes red, the screen shakes a little, and it
-## is invulnerable for a moment (it blinks).
-func hurt(amount: float) -> void:
+## is invulnerable for a moment (it blinks). Returns true when the hero was actually hurt.
+func hurt(amount: float) -> bool:
 	if _health == null or not _health.take_hit(amount, is_dashing()):
-		return
+		return false
 	_flash_left = HIT_FLASH_SECONDS
 	if _impact != null:
 		_impact.shake(&"small")
+	return true
 
 
 ## The Archer's weapon, or [code]null[/code] for another specialization (or before [method equip]).

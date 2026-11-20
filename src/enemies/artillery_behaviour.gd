@@ -84,17 +84,24 @@ func _fire() -> void:
 	var offset: Vector2 = Vector2.from_angle(_rng.randf() * TAU) * _aim_spread * sqrt(_rng.randf())
 	var zone := TelegraphZone.new()
 	zone.setup(_radius, _telegraph, _state)
-	zone.impacted.connect(ArtilleryBehaviour._resolve_impact.bind(_crystal, _hero, _impact, _hazards_parent, _radius, _crystal_damage, _hero_damage))
+	zone.impacted.connect(Callable(ArtilleryBehaviour, &"_resolve_impact").bind(_crystal, _hero, _impact, _hazards_parent, _radius, _crystal_damage, _hero_damage))
 	_hazards_parent.add_child(zone)
 	zone.global_position = _crystal.predicted_position(_telegraph) + offset
 
 
-static func _resolve_impact(center: Vector2, crystal: Crystal, hero: Hero, impact: ImpactFeedback, hazards_parent: Node, radius: float, crystal_damage: float, hero_damage: float) -> void:
-	if is_instance_valid(crystal) and TelegraphZone.hits_point(center, radius, crystal.global_position):
-		crystal.take_damage(crystal_damage)
-	if is_instance_valid(hero) and TelegraphZone.hits_body(center, radius, hero.global_position, hero.body_radius()):
-		hero.hurt(hero_damage)
-	if is_instance_valid(hazards_parent) and hazards_parent.get_parent() != null:
-		PopBurst.spawn(hazards_parent.get_parent(), center, BAM_WORD, BAM_COLOR, radius)
-	if is_instance_valid(impact):
-		impact.shake(&"small")
+static func _resolve_impact(center: Vector2, crystal_node: Object, hero_node: Object, impact_node: Object, hazards_node: Object, radius: float, crystal_damage: float, hero_damage: float) -> void:
+	# Loosely typed: a node freed since the shot was fired must not break the call.
+	if is_instance_valid(crystal_node):
+		var crystal := crystal_node as Crystal
+		if TelegraphZone.hits_point(center, radius, crystal.global_position):
+			crystal.take_damage(crystal_damage)
+	if is_instance_valid(hero_node):
+		var hero := hero_node as Hero
+		if TelegraphZone.hits_body(center, radius, hero.global_position, hero.body_radius()):
+			hero.hurt(hero_damage)
+	if is_instance_valid(hazards_node):
+		var hazards_parent := hazards_node as Node
+		if hazards_parent.get_parent() != null:
+			PopBurst.spawn(hazards_parent.get_parent(), center, BAM_WORD, BAM_COLOR, radius)
+	if is_instance_valid(impact_node):
+		(impact_node as ImpactFeedback).shake(&"small")

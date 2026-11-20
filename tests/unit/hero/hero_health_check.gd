@@ -52,6 +52,10 @@ func _run() -> String:
 	regen.set_regen(REGEN)
 	regen.take_hit(HIT, false)
 	regen.tick(1.0)
+	if not is_equal_approx(regen.current, MAX_HP - HIT):
+		return "regen inactive: no heal"
+	regen.set_regen_active(true)
+	regen.tick(1.0)
 	if not is_equal_approx(regen.current, MAX_HP - HIT + REGEN):
 		return "regen adds per second"
 	regen.tick(1000.0)
@@ -69,6 +73,7 @@ func _run() -> String:
 		return "died emitted once at 0"
 	fatal.heal(HIT)
 	fatal.set_regen(REGEN)
+	fatal.set_regen_active(true)
 	fatal.tick(1.0)
 	if fatal.current != 0.0:
 		return "no heal or regen after death"

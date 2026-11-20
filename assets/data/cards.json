@@ -696,7 +696,7 @@
 			"id": "regeneration",
 			"rarity": "rare",
 			"display_name": "Régénération",
-			"description": "Le héros récupère 1 PV par seconde.",
+			"description": "Le héros récupère 1 PV par seconde pendant les vagues.",
 			"combines_with": "",
 			"max_stacks": 1,
 			"effects": [
