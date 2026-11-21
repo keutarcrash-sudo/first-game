@@ -151,6 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		_cast(def)
 		_cooldowns[slot] = def.cooldown * _modifiers.ability_cooldown_factor(def.id)
+		_cooldown_totals[slot] = _cooldowns[slot]
 		get_viewport().set_input_as_handled()
 		cooldowns_changed.emit()
 		return

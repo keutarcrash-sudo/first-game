@@ -25,6 +25,8 @@ const KEY_TAG_BORDER := 3.0
 const KEY_TAG_SHADOW := Vector2(3.0, 3.0)
 ## Share of the key tag height that rises above the top of the disc (< 0.5, see plan).
 const KEY_TAG_RISE := 0.4
+## Smallest font size a long name may shrink to.
+const MIN_NAME_FONT_SIZE := 10
 
 var _caster: AbilityCaster
 var _style: AbilityBarStyle
@@ -71,6 +73,8 @@ func _process(delta: float) -> void:
 		# specialization or a phase change never pops.
 		if in_combat and before > 0.0 and left <= 0.0 and _caster.is_unlocked(slot):
 			_pop_start[slot] = _time
+		elif _pop_start.has(slot) and _time - float(_pop_start[slot]) >= _style.pop_duration:
+			_pop_start.erase(slot)  # Pop over.
 		if _caster.ability(slot) != null and _caster.is_unlocked(slot):
 			animated = true  # Breathing, clock or pop: all move every frame.
 	if animated:
@@ -103,7 +107,6 @@ func _disc_scale(slot: StringName, unlocked: bool) -> float:
 		var since: float = _time - float(_pop_start[slot])
 		if since < _style.pop_duration:
 			return _style.pop_scale(since)
-		_pop_start.erase(slot)
 	if _caster.cooldown_left(slot) > 0.0:
 		return 1.0
 	return _style.breath_scale(_time)
@@ -179,7 +182,7 @@ func _draw_name(def: AbilityDef, unlocked: bool, center: Vector2, font: Font) ->
 	var font_size: int = _style.name_font_size
 	var width: float = font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	if width > room:
-		font_size = maxi(1, floori(font_size * room / width))
+		font_size = maxi(MIN_NAME_FONT_SIZE, floori(font_size * room / width))
 	var baseline := Vector2(center.x - room * 0.5, _style.disc_diameter + _style.name_gap + font.get_ascent(font_size))
 	var color: Color = INK_COLOR if unlocked else LOCKED_INK_COLOR
 	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_CENTER, room, font_size, outline, Color.BLACK)
