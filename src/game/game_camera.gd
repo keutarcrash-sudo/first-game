@@ -94,12 +94,18 @@ func _follow_hero(weight: float) -> void:
 	var base_y: float = hero_pos.y
 	if float(limit_bottom - limit_top) >= half_height * 2.0:
 		base_y = clampf(base_y, limit_top + half_height, limit_bottom - half_height)
+	# Lowest centre that keeps the hero HERO_TOP_MARGIN below the top: the hero wins.
+	var hero_max_y: float = hero_pos.y + half_height - HERO_TOP_MARGIN / zoom.y
 	var target: float = 0.0
 	if is_instance_valid(_crystal):
 		# Centre needed for the crystal's bottom to stay above the band.
 		var needed_y: float = _crystal.global_position.y + CRYSTAL_HALF_HEIGHT / zoom.y + band - half_height
-		# Lowest centre that keeps the hero HERO_TOP_MARGIN below the top: the hero wins.
-		var hero_max_y: float = hero_pos.y + half_height - HERO_TOP_MARGIN / zoom.y
-		target = maxf(minf(needed_y, hero_max_y) - base_y, 0.0)
+		# Shift only when it really frees the crystal; otherwise CrystalPointer shows it.
+		if needed_y <= hero_max_y:
+			target = maxf(needed_y - base_y, 0.0)
 	_shift = lerpf(_shift, target, clampf(weight, 0.0, 1.0))
+	# Hard caps: the hero's top margin always holds, and no shift past the bottom
+	# limit (Camera2D would clamp it, leaving a hidden shift to unwind later).
+	_shift = minf(_shift, maxf(hero_max_y - base_y, 0.0))
+	_shift = minf(_shift, maxf(limit_bottom - half_height - base_y, 0.0))
 	global_position = Vector2(hero_pos.x, base_y + _shift)

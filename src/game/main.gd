@@ -424,11 +424,12 @@ func _open_map(choosing: bool) -> void:
 	_map_screen.open(_world_run, preview, choosing, _rest_tooltip())
 
 
-## The rest places' tooltip on the map, with the current hit points.
+## The rest places' tooltip on the map, with the current hit points (rounded down,
+## so « 99/100 » is shown whenever the rest still has something to heal).
 func _rest_tooltip() -> String:
 	var health: HeroHealth = _hero.health()
 	return "Repos — Héros %d/%d · Cristal %d/%d" % [
-		roundi(health.current), roundi(health.max_hp), roundi(_crystal.current_hp), roundi(_crystal.max_hp)]
+		floori(health.current), floori(health.max_hp), floori(_crystal.current_hp), floori(_crystal.max_hp)]
 
 
 ## Creates the map and place screens and connects them (once, in [method _ready]).

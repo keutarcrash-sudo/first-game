@@ -66,6 +66,8 @@ func move_to(index: int) -> bool:
 ## Puts the player back where they were before the last [method move_to]
 ## ([member column], [member node], [member visited]). One level only: returns
 ## [code]false[/code] and changes nothing when there is no move to undo.
+## Only valid right after a [method move_to] (a new one replaces the saved
+## position); an undo or [method start_world] consumes it.
 func undo_move() -> bool:
 	if not _can_undo:
 		return false
