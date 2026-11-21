@@ -26,11 +26,11 @@
     "key_labels": { "primary": "CLIC D.", "a": "A", "e": "E", "r": "R" },
     "disc_diameter": 72.0, "spacing": 34.0, "outline_px": 5.0, "shadow_offset": [6.0, 6.0], "glow_alpha": 0.45,
     "name_font_size": 18, "key_font_size": 18, "cooldown_font_size": 34, "name_gap": 6.0,
-    "bottom_margin": 120.0, "band_margin": 8.0,
+    "bottom_margin": 120.0, "band_margin": 18.0,
     "breath": { "period": 1.6, "amount": 0.05 },
     "pop": { "duration": 0.25, "scale": 1.25 } }
   ```
-- Hauteur de la bande = `bottom_margin + disc_diameter + name_gap + name_font_size × 1.2 + band_margin` (le nom est sous la pastille ; l'étiquette de touche dépasse en haut de moins de la moitié de sa hauteur et reste dans la marge).
+- Hauteur de la bande = `bottom_margin + disc_diameter + name_gap + name_font_size × 1.2 + band_margin` (band_margin relevé à 18 après relecture : étiquette penchée et pop) (le nom est sous la pastille ; l'étiquette de touche dépasse en haut de moins de la moitié de sa hauteur et reste dans la marge).
 - Respiration : échelle `1 + amount × (0.5 − 0.5 cos(2π t / period))` (de 1 à 1 + amount). Pop : à la fin d'une recharge, échelle qui décroît de `pop.scale` à 1 sur `pop.duration` (ease-out), avec un flash blanc qui s'éteint sur la même durée ; pendant le pop, pas de respiration.
 - Horloge : part sombre = `cooldown_left / cooldown_total`, partant de midi dans le sens des aiguilles d'une montre ; chiffre = `ceili(cooldown_left)`.
 - `AbilityCaster` gagne `cooldown_total(slot) -> float` : la recharge réelle (avec les cartes) enregistrée au moment du lancer ; 0 si aucune.
@@ -68,7 +68,7 @@ Godot indisponible dans la session : le contrôle `tests/unit/ui/ability_bar_sty
 
 - [ ] **Step 1: Write `ability_bar_style_check.gd`.** Avec le vrai fichier :
   - `color_of(&"a") == Color("#19e3ff")` ;
-  - `bottom_band_height() == 120 + 72 + 6 + 18 × 1.2 + 8` ;
+  - `bottom_band_height() == 120 + 72 + 6 + 18 × 1.2 + 18` ;
   - `breath_scale(0) == 1`, `breath_scale(0.8)` ≈ 1.05, `breath_scale(1.6)` ≈ 1 ;
   - `pop_scale(0) == 1.25`, `pop_scale(0.25) == 1`, `pop_scale(-1) == 1` ;
   - `pop_flash(0) == 1`, `pop_flash(0.25) == 0` ;
