@@ -9,6 +9,8 @@ const KEY_LABELS := {&"primary": "Clic droit", &"a": "A", &"e": "E", &"r": "R"}
 const BOX_SIZE := Vector2(150.0, 56.0)
 const BOX_SPACING := 12.0
 const BOTTOM_MARGIN := 120.0  # Just above the tower buttons.
+## Gap kept between the top of the bar and anything that must stay visible above it.
+const BAND_MARGIN := 8.0
 const KEY_FONT_SIZE := 14
 const NAME_FONT_SIZE := 16
 const COOLDOWN_FONT_SIZE := 26
@@ -34,6 +36,13 @@ func setup(caster: AbilityCaster) -> void:
 	offset_bottom = -BOTTOM_MARGIN
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_redraw()
+
+
+## Height in screen pixels of the bottom HUD band (tower buttons, this bar and a
+## small margin): what lies below it on screen is hidden. The one source of this
+## value; [GameCamera] keeps the crystal above it.
+static func bottom_band_height() -> float:
+	return BOTTOM_MARGIN + BOX_SIZE.y + BAND_MARGIN
 
 
 func _process(_delta: float) -> void:

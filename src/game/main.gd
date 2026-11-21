@@ -198,7 +198,7 @@ func _ready() -> void:
 		_decor.setup(decor_stats, _field_rect, _crystal.global_position, _rng)
 	_camera = GameCamera.new()
 	add_child(_camera)
-	_camera.setup(_hero, _field_rect, _state)
+	_camera.setup(_hero, _crystal, _field_rect, _state, AbilityBar.bottom_band_height())
 	_impact = ImpactFeedback.new()
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)
