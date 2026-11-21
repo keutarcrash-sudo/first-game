@@ -184,11 +184,11 @@ func _refresh_tower_prices() -> void:
 	_frost_button.text = "Glace — %d or" % _tower_modifiers.tower_cost(_tower_stats.frost_cost)
 
 
-## Shows the four ability boxes of [param caster], above the tower buttons.
-func bind_abilities(caster: AbilityCaster) -> void:
+## Shows the four ability discs of [param caster], drawn with [param style], above the tower buttons.
+func bind_abilities(caster: AbilityCaster, style: AbilityBarStyle) -> void:
 	var bar := AbilityBar.new()
 	add_child(bar)
-	bar.setup(caster)
+	bar.setup(caster, style)
 
 
 ## Shows "Pas assez d'or" for about a second.
