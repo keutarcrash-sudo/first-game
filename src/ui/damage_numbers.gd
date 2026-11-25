@@ -18,6 +18,7 @@ var _drawn: Array[Dictionary] = []
 func setup(model: DamageNumberModel, state: GameState) -> void:
 	_model = model
 	state.phase_changed.connect(_on_phase_changed)
+	set_process(model.enabled)  # Switched off: no cost at all.
 
 
 func _ready() -> void:
@@ -78,3 +79,5 @@ func _now() -> float:
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	if phase != GameState.Phase.COMBAT and _model != null:
 		_model.clear()
+		_drawn.clear()
+		queue_redraw()  # Erase now: a paused tree (defeat) would not run _process.
