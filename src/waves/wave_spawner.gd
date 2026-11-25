@@ -36,6 +36,7 @@ var _wave_number := 0
 var _spawn_interval := 0.0
 var _hp_multiplier := 1.0
 var _modifiers: PlayerModifiers
+var _damage_numbers: DamageNumbers
 
 
 func _ready() -> void:
@@ -131,12 +132,18 @@ func _compose_wave(wave_number: int) -> Array[Dictionary]:
 	return queue
 
 
+## Gives every enemy spawned from now on the node that shows its damage numbers. Optional.
+func set_damage_numbers(numbers: DamageNumbers) -> void:
+	_damage_numbers = numbers
+
+
 func _spawn_enemy() -> void:
 	var type: Dictionary = _queue.pop_back()
 	var enemy := Enemy.new()
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
 	enemy.setup_type(type, _hero, _impact, _hazards_parent, _game_state, _field_rect, _rng)
 	enemy.set_modifiers(_modifiers)
+	enemy.set_damage_numbers(_damage_numbers)
 	var sheet: SpriteSheet = _sheets.get(type["id"])
 	var height: float = type["height_px"]
 	if sheet != null:

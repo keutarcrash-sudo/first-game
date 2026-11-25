@@ -10,8 +10,6 @@ extends Area2D
 
 const COLOR := Color(1.0, 0.9, 0.35)
 const ENEMY_LAYER := 2  # Bit value of physics layer 2, "enemies".
-const CRIT_COLOR := Color(1.0, 0.95, 0.2)
-const CRIT_EFFECT_OFFSET := Vector2(0.0, 26.0)  # Below the combo label when both show on one hit.
 
 ## Damage dealt to the target hit.
 var damage: float
@@ -128,8 +126,7 @@ func _on_hit(target: Node2D) -> void:
 		if crit:
 			if _on_crit.is_valid():
 				_on_crit.call_deferred()  # Deferred: it adds an arrow, inside a physics signal.
-			dealt *= _archer.crit_multiplier()
-			_show_effect(target, CRIT_EFFECT_OFFSET, "CRIT !", CRIT_COLOR)
+			dealt *= _archer.crit_multiplier()  # The yellow « N! » damage number replaces the old « CRIT ! » label.
 		if _rules != null and enemy != null:
 			# Resolved now, at impact: the state is the one the enemy has this instant.
 			var proc: ProcRules.Result = _rules.resolve(_source, enemy.has_state)
@@ -137,7 +134,8 @@ func _on_hit(target: Node2D) -> void:
 				dealt *= proc.multiplier
 				_show_effect(target, Vector2.ZERO, "×%s" % String.num(proc.multiplier), ProcEffect.COLOR)
 		if enemy != null:
-			enemy.take_damage(dealt, crit)  # A critical kill is a heavy one.
+			# A critical kill is a heavy one; the source only picks the damage number's colour.
+			enemy.take_damage(dealt, crit, &"cannon" if _source == &"cannon" else &"hero", crit)
 		else:
 			target.call(&"take_damage", dealt)
 		# After the hit, so this bullet's own combo ignores its burn or mark; both ignore an enemy the hit killed.
