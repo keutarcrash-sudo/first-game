@@ -13,6 +13,8 @@ signal items_changed
 signal heal_requested(amount: float)
 ## Emitted when a card asks the hero to recover [param amount] hit points.
 signal hero_heal_requested(amount: float)
+## Emitted once each time a « free_tower » card is taken (Tour de renfort).
+signal free_tower_requested
 
 ## Cooldown reductions never go below this share of the base cooldown (-75 % at most).
 const MIN_COOLDOWN_FACTOR := 0.25
@@ -41,6 +43,8 @@ var _wet_duration_bonus := 0.0
 var _freeze_duration_bonus := 0.0
 var _freeze_base_duration := 0.0
 var _freeze_cooldown := 0.0
+var _frozen_vulnerability_bonus := 0.0
+var _tier3_fire_rate_bonus := 0.0  # « Surcharge ».
 var _hero_damage_bonus := 0.0
 var _move_speed_bonus := 0.0
 var _pickup_bonus := 0.0  # Sum of (multiplier - 1) over the cards taken.
@@ -60,6 +64,7 @@ var _tower_range_bonus := 0.0
 var _hero_heal_per_wave := 0.0
 var _crystal_reduction := 0.0
 var _tower_cost_mult := 1.0
+var _upgrade_cost_mult := 1.0
 var _gold_kill_mult := 1.0
 
 
@@ -122,6 +127,19 @@ func tower_range_factor() -> float:
 ## Price of a tower with base price [param base] after item discounts, rounded.
 func tower_cost(base: int) -> int:
 	return roundi(base * _tower_cost_mult)
+
+
+## Factor applied to tower purchase prices (product of the item discounts,
+## Plans d'ingénieur); 1.0 for none. Handed to [method TowerReserve.price_of_next].
+func tower_cost_factor() -> float:
+	return _tower_cost_mult
+
+
+## Factor applied to tower upgrade prices: the purchase discounts times the card
+## discounts (Ingénieur chevronné, [code]upgrade_cost_mult[/code]); 1.0 for none.
+## Handed to [method TowerReserve.upgrade_cost] and [method TowerReserve.try_upgrade].
+func upgrade_cost_factor() -> float:
+	return _tower_cost_mult * _upgrade_cost_mult
 
 
 ## Factor applied to damage the crystal takes: 1 minus the item reductions, never below 0.1.
@@ -262,6 +280,12 @@ func _apply_effect(effect: Dictionary) -> void:
 			_wet_duration_bonus += float(effect["value"])
 		"freeze_duration_bonus":
 			_freeze_duration_bonus += float(effect["value"])
+		"frozen_vulnerability_bonus":
+			_frozen_vulnerability_bonus += float(effect["value"])
+		"free_tower":
+			free_tower_requested.emit()
+		"tier3_fire_rate_bonus":
+			_tier3_fire_rate_bonus += float(effect["value"])
 		"hero_damage_bonus":
 			_hero_damage_bonus += float(effect["value"])
 		"move_speed_bonus":
@@ -289,6 +313,8 @@ func _apply_effect(effect: Dictionary) -> void:
 			_crystal_reduction += float(effect["value"])
 		"tower_cost_mult":
 			_tower_cost_mult *= float(effect["value"])
+		"upgrade_cost_mult":
+			_upgrade_cost_mult *= float(effect["value"])
 		"gold_per_kill_mult":
 			_gold_kill_mult *= float(effect["value"])
 		_:
@@ -387,6 +413,24 @@ func freeze_duration() -> float:
 ## Seconds after a freeze during which the enemy cannot be frozen again.
 func freeze_cooldown() -> float:
 	return _freeze_cooldown
+
+
+## Extra damage fraction taken by a frozen enemy, on top of the towers' base value
+## (« Gel mordant »: 0.25 = +25 % more). 0 without the card.
+func frozen_vulnerability_bonus() -> float:
+	return _frozen_vulnerability_bonus
+
+
+## Extra seconds given to every freeze by « Gel profond » alone (the frost towers add it
+## to their own freeze; [method freeze_duration] already includes it). 0 without the card.
+func freeze_duration_bonus() -> float:
+	return _freeze_duration_bonus
+
+
+## Factor applied to the fire interval of level 3 towers that shoot (the cannon),
+## « Surcharge »: 1 / 1.2 = 20 % faster. 1 without the card.
+func tier3_fire_rate_factor() -> float:
+	return 1.0 / (1.0 + _tier3_fire_rate_bonus)
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".

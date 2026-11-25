@@ -57,6 +57,14 @@ var _wet_left := 0.0  # Seconds of « trempé » remaining (story 009).
 var _frozen_left := 0.0  # Seconds of « gelé » remaining: the enemy cannot move.
 var _freeze_cooldown_left := 0.0  # Seconds during which the enemy cannot be frozen again.
 var _freeze_cooldown_after := 0.0  # Cooldown that starts when the current freeze ends.
+var _frozen_vulnerability := 0.0  # Extra damage fraction while frozen (towers.json), see set_frozen_vulnerability.
+var _chill := ChillRules.new()  # Time spent in the frost towers' zones (towers T1).
+var _chill_dwell_needed := INF  # Lowest dwell asked for since the last physics step; INF = no frost zone.
+var _chill_duration := 0.0  # Freeze asked for along with that dwell.
+var _chill_cooldown := 0.0
+var _chill_tower_id := -1
+var _last_freezer_id := -1  # Id of the last tower that froze this enemy; -1 = none.
+var _last_burner_id := -1  # Id of the last cannon whose shells burnt this enemy; -1 = none.
 
 var _push_left := 0.0  # Seconds of push remaining (étape 3a, Vague).
 var _push_velocity := Vector2.ZERO  # Pixels per second added to the walk while pushed.
@@ -108,6 +116,13 @@ func setup_type(type: Dictionary, hero: Hero, impact: ImpactFeedback, hazards_pa
 ## without them no card acts on it. Call before adding the enemy to the tree.
 func set_modifiers(modifiers: PlayerModifiers) -> void:
 	_modifiers = modifiers
+
+
+## Sets the extra damage fraction taken while frozen, whatever froze the enemy
+## ([member TowerStats.frozen_vulnerability], 0.25 = +25 %). Without this call a frozen
+## enemy takes no extra damage. Call before adding the enemy to the tree.
+func set_frozen_vulnerability(value: float) -> void:
+	_frozen_vulnerability = value
 
 
 ## Gives the enemy the node that shows the damage it takes. Optional: without it no
@@ -183,6 +198,7 @@ func _physics_process(delta: float) -> void:
 		if _frozen_left <= 0.0:
 			_freeze_cooldown_left = _freeze_cooldown_after
 			_refresh_look()
+	_tick_chill(delta)
 	if _push_left > 0.0:
 		var push_time: float = minf(delta, _push_left)
 		_push_left -= push_time
@@ -289,6 +305,31 @@ func apply_slow(factor: float) -> void:
 	_requested_slow_factor = minf(_requested_slow_factor, factor)
 
 
+## Asks for the frost towers' freeze for the next physics step only: towers call it every
+## physics frame while the enemy is in range. Once the enemy has spent [param dwell_needed]
+## seconds in at least one zone (several towers do not add up), it is frozen with
+## [method freeze_from]. The lowest [param dwell_needed] asked for in the frame wins (Blizzard),
+## together with its [param duration], [param cooldown] and [param tower_id].
+func apply_chill(dwell_needed: float, duration: float, cooldown: float, tower_id: int) -> void:
+	if dwell_needed >= _chill_dwell_needed:
+		return
+	_chill_dwell_needed = dwell_needed
+	_chill_duration = duration
+	_chill_cooldown = cooldown
+	_chill_tower_id = tower_id
+
+
+## Id of the last tower that froze this enemy ([method freeze_from], [method try_freeze]); -1 if none.
+func last_freezer_id() -> int:
+	return _last_freezer_id
+
+
+## Id of the last cannon whose shells burnt this enemy ([method apply_burn]); -1 if none.
+## Burns from other sources do not clear it.
+func last_burner_id() -> int:
+	return _last_burner_id
+
+
 ## True while a tower is slowing this enemy (as of this enemy's last physics
 ## step). Meant to be read by other effects, such as the cannon combo.
 func is_slowed() -> bool:
@@ -313,11 +354,15 @@ func has_state(state: StringName) -> bool:
 
 
 ## Sets the enemy on fire for [param duration] seconds, taking [param damage_per_second]
-## per second. A new call refreshes the duration; it never stacks.
-func apply_burn(duration: float, damage_per_second: float) -> void:
+## per second. A new call refreshes the duration; it never stacks. [param burner_id] is the
+## id of the cannon whose shell lit it, -1 for any other source (see [method last_burner_id]);
+## -1 keeps the cannon remembered so far, so other fires (hero, Brasier éternel) add to it.
+func apply_burn(duration: float, damage_per_second: float, burner_id: int = -1) -> void:
 	if is_queued_for_deletion():
 		return
 	var was_burning: bool = _burn_left > 0.0
+	if burner_id >= 0:
+		_last_burner_id = burner_id
 	_burn_left = duration
 	_burn_damage_per_second = damage_per_second
 	_burn_full_duration = duration
@@ -371,12 +416,27 @@ func apply_wet(duration: float) -> void:
 ## « trempé + glace = gelé » (story 009): if the enemy is wet, not frozen and not
 ## in its freeze cooldown, freezes it (it cannot move; it can still be hit and die)
 ## for [param duration] seconds, then forbids a new freeze for [param cooldown]
-## seconds. Returns [code]true[/code] when the enemy was frozen by this call.
-func try_freeze(duration: float, cooldown: float) -> bool:
-	if is_queued_for_deletion() or _wet_left <= 0.0 or _frozen_left > 0.0 or _freeze_cooldown_left > 0.0:
+## seconds. Returns [code]true[/code] when the enemy was frozen by this call. Shares the
+## frozen state and the cooldown with the frost towers' freeze ([method freeze_from]);
+## [param tower_id] is the tower asking, -1 if none.
+func try_freeze(duration: float, cooldown: float, tower_id: int = -1) -> bool:
+	if _wet_left <= 0.0:
+		return false
+	return freeze_from(duration, cooldown, tower_id)
+
+
+## Freezes the enemy for [param duration] seconds unless it is already frozen or in its
+## freeze cooldown; [param cooldown] seconds without a new freeze start when it ends.
+## [param tower_id] is remembered as [method last_freezer_id]. Used by the frost towers
+## (through [method apply_chill]) and by the level 3 shards. Returns [code]true[/code]
+## when the enemy was frozen by this call.
+func freeze_from(duration: float, cooldown: float, tower_id: int) -> bool:
+	if is_queued_for_deletion() or not _chill.can_freeze(_frozen_left > 0.0, _freeze_cooldown_left):
 		return false
 	_frozen_left = duration
 	_freeze_cooldown_after = cooldown
+	_last_freezer_id = tower_id
+	_chill.reset()
 	_push_left = 0.0  # A frozen enemy stops dead, even mid-push.
 	_refresh_look()
 	return true
@@ -385,10 +445,13 @@ func try_freeze(duration: float, cooldown: float) -> bool:
 ## Freezes the enemy for [param duration] seconds whatever its freeze cooldown or
 ## wetness (étape 3b, Raz-de-marée); same look and rules as [method try_freeze]. A
 ## freeze already running is only extended, never shortened. The cooldown that
-## follows the freeze is left unchanged.
+## follows the freeze is left unchanged. A new freeze (not an extension) forgets the
+## tower that froze last: [method last_freezer_id] becomes -1.
 func force_freeze(duration: float) -> void:
 	if is_queued_for_deletion():
 		return
+	if _frozen_left <= 0.0:
+		_last_freezer_id = -1
 	_frozen_left = maxf(_frozen_left, duration)
 	_freeze_cooldown_left = 0.0
 	_push_left = 0.0
@@ -411,6 +474,18 @@ func push(offset: Vector2, duration: float, bounds: Rect2 = Rect2()) -> void:
 	_push_left = duration
 
 
+## Counts the time spent in the frost zones asked for since the last step ([method apply_chill])
+## and freezes the enemy once it reaches the dwell. The time only counts while a freeze may
+## start: while frozen or in the cooldown it stays at 0.
+func _tick_chill(delta: float) -> void:
+	var chilled: bool = _chill_dwell_needed < INF
+	if not _chill.can_freeze(_frozen_left > 0.0, _freeze_cooldown_left):
+		_chill.reset()
+	elif _chill.tick(delta, chilled, _chill_dwell_needed):
+		freeze_from(_chill_duration, _chill_cooldown, _chill_tower_id)
+	_chill_dwell_needed = INF
+
+
 func _move_pushed(step: Vector2) -> void:
 	var target: Vector2 = global_position + step
 	if _push_bounds.has_area():
@@ -431,13 +506,16 @@ func take_damage(amount: float, heavy: bool = false, source: StringName = &"hero
 
 ## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
 ## [param burn_tick]: the burn's own damage, amplified by Combustion even if the burn ends this very tick.
-## Combustion (+value on every source while burning) multiplies with the combos already in [param amount].
+## Combustion (+value on every source while burning) multiplies with the combos already in [param amount],
+## and so does the frozen vulnerability (towers' base + « Gel mordant », whatever froze the enemy).
 ## The amount removed (after Combustion) is reported to the damage numbers with [param source] and [param crit].
 func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool = false, source: StringName = &"hero", crit: bool = false) -> void:
 	if is_queued_for_deletion():
 		return
 	if (burn_tick or _burn_left > 0.0) and _modifiers != null and _modifiers.has_flag(&"burning_vulnerability"):
 		amount *= 1.0 + _modifiers.flag_value(&"burning_vulnerability", "value")
+	var bonus: float = 0.0 if _modifiers == null else _modifiers.frozen_vulnerability_bonus()
+	amount *= ChillRules.damage_factor(_frozen_left > 0.0, _frozen_vulnerability, bonus)
 	_hp -= amount
 	if is_instance_valid(_damage_numbers):
 		_damage_numbers.report(self, amount, source, crit)

@@ -106,6 +106,8 @@ func _run_items() -> String:
 		return "gold_per_kill_item"
 	if mods.tower_cost(50) != 40:
 		return "tower_cost_item"
+	if not is_equal_approx(mods.tower_cost_factor(), 0.8) or not is_equal_approx(mods.upgrade_cost_factor(), 0.8):
+		return "tower_cost_factors_item"
 	if not is_equal_approx(mods.tower_range_factor(), 1.2):
 		return "tower_range_factor_item"
 	if not is_equal_approx(mods.crystal_damage_factor(), 0.85):
@@ -120,6 +122,24 @@ func _run_items() -> String:
 		return "items_changed_signals"
 	if not mods.has_flag(&"second_chance") or not is_equal_approx(mods.flag_value(&"second_chance", "hp_fraction"), 0.3):
 		return "flag_second_chance"
+	mods.take(_card("ingenieur_chevronne", {"type": "upgrade_cost_mult", "value": 0.75}))
+	if not is_equal_approx(mods.tower_cost_factor(), 0.8) or not is_equal_approx(mods.upgrade_cost_factor(), 0.6):
+		return "upgrade_cost_factor_card"
+	if not is_equal_approx(mods.tier3_fire_rate_factor(), 1.0) or not is_equal_approx(mods.frozen_vulnerability_bonus(), 0.0):
+		return "tower_card_readers_default"
+	mods.take(_card("surcharge", {"type": "tier3_fire_rate_bonus", "value": 0.2}, &"rare"))
+	if not is_equal_approx(mods.tier3_fire_rate_factor(), 1.0 / 1.2):
+		return "tier3_fire_rate_factor"
+	mods.take(_card("gel_mordant", {"type": "frozen_vulnerability_bonus", "value": 0.25}, &"uncommon"))
+	if not is_equal_approx(mods.frozen_vulnerability_bonus(), 0.25):
+		return "frozen_vulnerability_bonus_card"
+	var free_count: Array[int] = [0]
+	mods.free_tower_requested.connect(func() -> void: free_count[0] += 1)
+	var renfort: CardDef = _card("tour_de_renfort", {"type": "free_tower"}, &"rare")
+	mods.take(renfort)
+	mods.take(renfort)
+	if free_count[0] != 2:
+		return "free_tower_requested_per_take"
 	var heavy := PlayerModifiers.new(null)
 	for i: int in 3:
 		heavy.take_item(_item("shield_%d" % i, {"type": "crystal_damage_reduction", "value": 0.5}))

@@ -22,6 +22,7 @@ var _source: StringName
 var _rules: ProcRules
 var _burn_duration := 0.0
 var _burn_damage_per_second := 0.0
+var _burner_id := -1  # Id of the cannon that fired this shell (see Enemy.last_burner_id); -1 = other.
 var _hits_left := 1  # Enemies this projectile can still hit.
 var _hit_ids: Dictionary = {}  # Instance ids of the targets already hit.
 var _archer: ArcherWeapon
@@ -39,10 +40,13 @@ func set_proc_source(source: StringName, rules: ProcRules) -> void:
 
 
 ## Makes the bullet set its target burning at impact (story 006). Burning is not
-## a bullet hit: it triggers no combo. Call before adding the bullet to the tree.
-func set_burn(duration: float, damage_per_second: float) -> void:
+## a bullet hit: it triggers no combo. [param burner_id] is the id of the cannon tower
+## that fired it (towers T1, Incendiaire level 3), -1 for any other shooter. Call before
+## adding the bullet to the tree.
+func set_burn(duration: float, damage_per_second: float, burner_id: int = -1) -> void:
 	_burn_duration = duration
 	_burn_damage_per_second = damage_per_second
+	_burner_id = burner_id
 
 
 ## Makes the bullet soak its target (state « trempé ») for [param duration] seconds
@@ -140,7 +144,7 @@ func _on_hit(target: Node2D) -> void:
 			target.call(&"take_damage", dealt)
 		# After the hit, so this bullet's own combo ignores its burn or mark; both ignore an enemy the hit killed.
 		if enemy != null and _burn_duration > 0.0:
-			enemy.apply_burn(_burn_duration, _burn_damage_per_second)
+			enemy.apply_burn(_burn_duration, _burn_damage_per_second, _burner_id)
 		if enemy != null and _wet_duration > 0.0:
 			enemy.apply_wet(_wet_duration)
 		if enemy != null and crit:

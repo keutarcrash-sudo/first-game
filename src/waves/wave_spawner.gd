@@ -37,6 +37,7 @@ var _spawn_interval := 0.0
 var _hp_multiplier := 1.0
 var _modifiers: PlayerModifiers
 var _damage_numbers: DamageNumbers
+var _frozen_vulnerability := 0.0
 
 
 func _ready() -> void:
@@ -73,6 +74,12 @@ func set_enemy_types(types: EnemyTypes, sheets: Dictionary, hero: Hero, impact: 
 ## Gives every enemy spawned from now on the card modifiers (Combustion, Marée montante). Optional.
 func set_modifiers(modifiers: PlayerModifiers) -> void:
 	_modifiers = modifiers
+
+
+## Gives every enemy spawned from now on the extra damage fraction it takes while frozen
+## ([member TowerStats.frozen_vulnerability]). Optional: 0 without this call.
+func set_frozen_vulnerability(value: float) -> void:
+	_frozen_vulnerability = value
 
 
 func _physics_process(delta: float) -> void:
@@ -143,6 +150,7 @@ func _spawn_enemy() -> void:
 	enemy.setup(_stats, _stats.enemy_base_hp * _hp_multiplier, _random_spawn_point(), _crystal)
 	enemy.setup_type(type, _hero, _impact, _hazards_parent, _game_state, _field_rect, _rng)
 	enemy.set_modifiers(_modifiers)
+	enemy.set_frozen_vulnerability(_frozen_vulnerability)
 	enemy.set_damage_numbers(_damage_numbers)
 	var sheet: SpriteSheet = _sheets.get(type["id"])
 	var height: float = type["height_px"]
