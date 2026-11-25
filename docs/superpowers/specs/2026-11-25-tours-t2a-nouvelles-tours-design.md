@@ -94,6 +94,56 @@ Toutes les valeurs sont dans les données.
 - Chaque tour a sa planche d'images, produite par la fabrique d'images (`tools/sprite_baker/`) avec les pièces Kenney présentes (`tower-round-*`, `tower-square-*`, `weapon-cannon`) et des formes simples faites dans la fabrique, en couleurs néon : bobine et sphère pour la Tesla, buse pour le lance-flammes, tube court et large pour le mortier, antenne et cristal pour l'amplificateur.
 - Effets visuels dessinés en code, légers : éclair en ligne brisée néon, cône de feu en particules ou polygone animé, obus en arc avec ombre et cercle d'annonce, aura de l'amplificateur en anneau pulsé et petit lien lumineux vers les tours boostées.
 
+## 8bis. Précisions (relecture du design)
+
+- **Identifiants des tours** *(choix de Claude)* : chaque tour a un identifiant texte (`cannon`, `frost`, `tesla`, `flamethrower`, `mortar`, `amplifier`), avec sa propre section dans les données et ses clés requises par branche. La sauvegarde n'est pas touchée, car elle ne contient rien sur les tours.
+- **Boutons d'achat** *(choix de Claude)* :
+  - Six boutons de 220 px ne tiennent pas en largeur. Les boutons deviennent des **pastilles compactes** : icône de la tour, prix dessous, gris si l'or manque.
+  - Ils tiennent sur une ligne, et la bande du bas en construction reste mesurée au même endroit.
+  - Seules les tours débloquées ont un bouton.
+- **« Tour de renfort »** *(choix de Claude)* : elle ne donne qu'une tour **débloquée**, celle du type le moins possédé.
+- **Brûlures qui se croisent** *(choix de Claude)* :
+  - Une nouvelle brûlure **garde la plus forte** des deux (dégâts par seconde) et la durée la plus longue, au lieu de remplacer.
+  - Le lance-flammes ne remplace pas l'identifiant du dernier canon brûleur : le combo Incendiaire continue de marcher.
+  - **Napalm niveau 3** : la brûlure du lance-flammes peut monter jusqu'à ×2 ses dégâts sur un même ennemi qui reste dans le cône.
+- **Amplificateur** *(choix de Claude)* :
+  - Chaque bonus prend **le plus fort** des amplificateurs qui touchent la tour, séparément : dégâts, cadence, durée des états. Deux Cadence ne s'additionnent pas ; une Cadence et un Catalyseur s'appliquent tous les deux.
+  - « +30 % plus vite » veut dire **intervalle ÷ 1,3**. La cadence se multiplie avec Surcharge et Canon rapide.
+  - Le lance-flammes boosté en cadence fait **+30 % de dégâts par seconde**. La glace n'est pas concernée par la cadence.
+- **Catalyseur** *(choix de Claude)* :
+  - Il compte pour la tour qui pose l'état, si elle est dans la zone au moment où elle le pose.
+  - Il allonge : la brûlure, le gel des tours (y compris les éclats de niveau 3), le trempé (Blizzard niveau 3), l'étourdissement de la Tesla et la **durée de vie du cratère** du mortier.
+  - Le temps d'attente avant de regeler reste compté à la fin du gel.
+- **Cartes existantes et nouvelles tours** *(choix de Claude)* :
+  - « Balles lourdes » : toutes les tours qui font des dégâts.
+  - « Surcharge » : toutes les tours qui tirent, au niveau 3 (canon, Tesla, lance-flammes, mortier).
+  - « Canon rapide » et « Munitions incendiaires » restent pour le **canon seulement**, comme leur nom l'indique.
+- **Étourdissement** *(choix de Claude)* :
+  - C'est un nouvel état : l'ennemi ne bouge plus, ne frappe pas le cristal, et l'artilleur ne tire pas.
+  - La mèche d'un kamikaze déjà allumée continue.
+  - Il annule une poussée en cours, comme le gel, et compte comme un état pour les combos (`stunned`).
+- **Souffle** *(choix de Claude)* : il repousse d'environ 60 px par seconde dans l'axe du cône tant que l'ennemi est dedans. La poussée est ignorée sur un ennemi gelé ou étourdi. La valeur est dans les données.
+- **Cibles** *(choix de Claude)* :
+  - Toutes les tours qui visent tirent en priorité sur l'**ennemi désigné** s'il est à portée, sinon sur le plus proche.
+  - Le mortier vise l'endroit où l'ennemi se trouve au moment du tir.
+  - Rebonds de la Tesla :
+    - jamais deux fois le même ennemi par éclair ;
+    - pleins dégâts à chaque saut ;
+    - l'étourdissement de la branche Arc touche tous les ennemis de la chaîne.
+- **Chiffres de dégâts** *(choix de Claude)* :
+  - Les coups des nouvelles tours s'affichent en **cyan** comme le canon.
+  - Les dégâts continus (cône de feu) sont **regroupés** comme la brûlure.
+- **Plans** *(choix de Claude)* :
+  - Les cartes portent une valeur « vague minimale » (2) et un effet « débloquer la tour ».
+  - Le jeu garde une seule liste de tours débloquées, partagée par les cartes, le trésor et l'affichage.
+  - Le trésor peut proposer **au plus un plan** parmi ses trois choix.
+  - Prendre un plan au trésor retire la carte correspondante du tirage.
+  - Le magasin ne vend pas de plans.
+  - Les plans n'apparaissent pas dans la rangée d'objets : la tour débloquée apparaît dans les boutons d'achat.
+  - Leurs noms sont « Plans : Tesla »… à ne pas confondre avec l'objet « Plans d'ingénieur ».
+- **Annonce du mortier** *(choix de Claude)* : le cercle au sol réutilise les annonces existantes, avec une couleur **cyan** pour un tir ami (et non rouge).
+- **Fabrique d'images** *(réponse du projet)* : les formes faites dans la fabrique sont de petits constructeurs dans `tools/sprite_baker/page.html`, appelés par `recipes.json`.
+
 ## 9. Approches envisagées
 
 | Approche | Pour | Contre |
@@ -117,4 +167,4 @@ Toutes les valeurs sont dans les données.
 
 ## 12. Questions ouvertes
 
-Aucune.
+Aucune (points de relecture tranchés au §8bis).
