@@ -11,7 +11,7 @@
 	"key_font_size": 18,
 	"cooldown_font_size": 34,
 	"name_gap": 6.0,
-	"bottom_margin": 120.0,
+	"bottom_margin": 12.0,
 	"band_margin": 18.0,
 	"breath": { "period": 1.6, "amount": 0.05 },
 	"pop": { "duration": 0.25, "scale": 1.25 }

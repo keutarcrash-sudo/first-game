@@ -41,6 +41,10 @@ const CARDS_LINE_HEIGHT := 30.0  # A 20 px Bungee line is about 30 px tall.
 const ITEMS_POSITION := Vector2(LEFT_MARGIN, CARDS_TOP + CARDS_MAX_LINES * CARDS_LINE_HEIGHT + 6.0)  # Under the cards.
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
+## Height of a text line as a share of its font size.
+const LINE_HEIGHT_RATIO := 1.2
+## Gap kept between the top of the tower buttons and the field in BUILD.
+const BUILD_BAND_MARGIN := 18.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const SPEC_COLOR := Color(1.0, 0.9, 0.35)
@@ -71,6 +75,7 @@ var _world_run: WorldRun
 var _enemy_types: EnemyTypes
 var _banner_label: Label
 var _banner_tween: Tween
+var _ability_bar: AbilityBar  # Shown in COMBAT only (abilities are cast in COMBAT only).
 
 
 func _ready() -> void:
@@ -204,6 +209,14 @@ static func top_band_height() -> float:
 	return TOP_BAND_HEIGHT
 
 
+## Height in screen pixels of the bottom HUD band in BUILD: the prompt line, the
+## tower buttons above it and a small margin. BUILD keeps the field above it
+## ([GameCamera]); the ability bar is hidden in BUILD.
+static func build_bottom_band_height() -> float:
+	var prompt_top: float = PROMPT_BOTTOM_MARGIN + PROMPT_FONT_SIZE * LINE_HEIGHT_RATIO
+	return maxf(BUTTON_BOTTOM_MARGIN, prompt_top) + BUTTON_SIZE.y + BUILD_BAND_MARGIN
+
+
 ## Width in screen pixels kept free on each side of the field in BUILD: the wider of
 ## the left column (cards, items) and the right one (stats panel), margins included.
 static func side_column_width() -> float:
@@ -212,11 +225,13 @@ static func side_column_width() -> float:
 	return maxf(left, right) + COLUMN_GAP
 
 
-## Shows the four ability discs of [param caster], drawn with [param style], above the tower buttons.
+## Shows the four ability discs of [param caster], drawn with [param style], at the
+## bottom of the screen, in COMBAT only.
 func bind_abilities(caster: AbilityCaster, style: AbilityBarStyle) -> void:
-	var bar := AbilityBar.new()
-	add_child(bar)
-	bar.setup(caster, style)
+	_ability_bar = AbilityBar.new()
+	add_child(_ability_bar)
+	_ability_bar.setup(caster, style)
+	_ability_bar.visible = _state != null and _state.phase == GameState.Phase.COMBAT
 
 
 ## Shows "Pas assez d'or" for about a second.
@@ -363,6 +378,8 @@ func _refresh_info() -> void:
 	elif _state.phase == GameState.Phase.PLACE:
 		phase_name = "Lieu"
 	_build_box.visible = building
+	if _ability_bar != null:
+		_ability_bar.visible = _state.phase == GameState.Phase.COMBAT
 	if _stats_panel != null:
 		_stats_panel.visible = _stats_visible()
 	_info_label.text = "%s · Or %d · %s" % [_wave_text(), _state.gold, phase_name]

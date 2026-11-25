@@ -21,7 +21,7 @@ func _run() -> String:
 		return "real file loads"
 	if style.color_of(&"a") != Color("#19e3ff"):
 		return "color_of a is cyan"
-	if not is_equal_approx(style.bottom_band_height(), 120.0 + 72.0 + 6.0 + 18.0 * 1.2 + 18.0):
+	if not is_equal_approx(style.bottom_band_height(), 12.0 + 72.0 + 6.0 + 18.0 * 1.2 + 18.0):
 		return "bottom_band_height formula"
 	if not is_equal_approx(style.breath_scale(0.0), 1.0):
 		return "breath_scale(0) is 1"

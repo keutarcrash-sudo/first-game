@@ -52,9 +52,9 @@ func setup(caster: AbilityCaster, style: AbilityBarStyle) -> void:
 	queue_redraw()
 
 
-## Height in screen pixels of the bottom HUD band (tower buttons, this bar and a
-## small margin): what lies below it on screen is hidden. The one source of this
-## value; [GameCamera] keeps the crystal above it.
+## Height in screen pixels of the bottom HUD band in COMBAT (this bar and a small
+## margin): what lies below it on screen is hidden. The one source of this value;
+## [GameCamera] keeps the crystal above it.
 static func bottom_band_height(style: AbilityBarStyle) -> float:
 	return style.bottom_band_height()
 
