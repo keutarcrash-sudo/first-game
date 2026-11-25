@@ -35,6 +35,7 @@ const WORLD_MAP_PATH := "res://assets/data/world_map.json"
 const ITEMS_PATH := "res://assets/data/items.json"
 const ABILITY_BAR_PATH := "res://assets/data/ability_bar.json"
 const DAMAGE_NUMBERS_PATH := "res://assets/data/damage_numbers.json"
+const CURSOR_PATH := "res://assets/data/cursor.json"
 ## Banner shown when a world's final wave is announced (étape 5a, spec §5).
 const FINAL_WAVE_BANNER := "VAGUE FINALE !"
 ## Banner shown when a new world starts, with its number (étape 5a, spec §5).
@@ -216,6 +217,14 @@ func _ready() -> void:
 		add_child(damage_numbers)
 		damage_numbers.setup(damage_number_model, _state)
 		_spawner.set_damage_numbers(damage_numbers)
+	# The styled cursor is optional too: a missing or invalid cursor.json (error already
+	# logged) leaves the system mouse cursor.
+	var cursor_art: CursorArt = CursorArt.load_from_file(CURSOR_PATH)
+	if cursor_art != null:
+		var cursor := CursorController.new()
+		cursor.name = "CursorController"
+		add_child(cursor)
+		cursor.setup(cursor_art, _state, _enemies)
 	_impact.watch_enemies(_enemies)
 	_impact.watch_crystal(_crystal)
 	_hero.set_impact(_impact)

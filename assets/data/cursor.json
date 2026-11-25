@@ -1,0 +1,22 @@
+{
+	"crosshair": {
+		"size": 40,
+		"color": "#19e3ff",
+		"hover_color": "#ff2e88",
+		"outline": "#000000",
+		"arm_length": 11,
+		"gap": 6,
+		"hover_gap": 3,
+		"thickness": 3,
+		"outline_px": 2,
+		"dot_radius": 2
+	},
+	"arrow": {
+		"size": 36,
+		"color": "#ffe14d",
+		"outline": "#000000",
+		"outline_px": 3,
+		"shadow_offset": 3
+	},
+	"hover_check_interval": 0.1
+}
