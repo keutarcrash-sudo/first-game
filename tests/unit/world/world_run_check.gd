@@ -51,6 +51,16 @@ func _run() -> String:
 	run.start_world(map)
 	if run.reachable() != PackedInt32Array([0, 1]):
 		return "from the start, all of column 0 is reachable"
+	if run.undo_move():
+		return "nothing to undo before any move"
+	if not run.move_to(1):
+		return "moving into column 0 before an undo"
+	if not run.undo_move() or run.column != -1 or run.node != -1 or not run.visited.is_empty():
+		return "undo_move puts the player back at the start"
+	if run.undo_move():
+		return "undo_move undoes one move only"
+	if run.reachable() != PackedInt32Array([0, 1]):
+		return "after an undo, all of column 0 is reachable again"
 	if run.move_to(2) or run.column != -1:
 		return "a place outside column 0 is refused"
 	if not run.move_to(0) or run.column != 0 or run.node != 0:
@@ -61,10 +71,16 @@ func _run() -> String:
 		return "moving along a link"
 	if not run.reachable().is_empty() or run.move_to(0):
 		return "nothing after the last column"
+	if not run.undo_move() or run.column != 0 or run.node != 0 or run.visited != PackedInt32Array([0]):
+		return "undo_move goes back one column along the path"
+	if not run.move_to(0) or run.column != 1 or run.visited != PackedInt32Array([0, 0]):
+		return "move_to works again after an undo"
 	run.world += 1
 	run.start_world(map)
 	if run.column != -1 or run.node != -1 or not run.visited.is_empty() or run.world != 2:
 		return "start_world puts the player back at the start"
 	if run.reachable().size() != 2:
 		return "start_world makes column 0 reachable again"
+	if run.undo_move():
+		return "start_world clears the undo"
 	return ""

@@ -40,6 +40,7 @@ var _modifiers: PlayerModifiers
 var _rules: ProcRules
 var _abilities: Dictionary = {}  # { slot: AbilityDef }
 var _cooldowns: Dictionary = {}  # { slot: seconds left }
+var _cooldown_totals: Dictionary = {}  # { slot: full cooldown (cards included) set at the last cast }
 var _unlocked: Dictionary = {}  # { slot: true } for the slots that can be cast
 var _wet_dash_radius := 0.0  # > 0 while a dash_wet jump is in progress.
 var _wet_dash_done: Dictionary = {}  # { enemy instance id: true } already soaked by this jump
@@ -71,6 +72,7 @@ func set_impact(impact: ImpactFeedback) -> void:
 func equip(abilities: Dictionary) -> void:
 	_abilities = abilities
 	_cooldowns.clear()
+	_cooldown_totals.clear()
 	_unlocked.clear()
 	for slot: StringName in abilities:
 		_cooldowns[slot] = 0.0
@@ -110,6 +112,17 @@ func cooldown_left(slot: StringName) -> float:
 	return float(_cooldowns.get(slot, 0.0))
 
 
+## Full cooldown of [param slot] as set at its last cast (cards included), so a clock
+## can start full; 0 when it was never cast since [method equip].
+func cooldown_total(slot: StringName) -> float:
+	return float(_cooldown_totals.get(slot, 0.0))
+
+
+## True while the game is in COMBAT, the only phase where cooldowns run.
+func is_in_combat() -> bool:
+	return _state != null and _state.phase == GameState.Phase.COMBAT
+
+
 ## Leaving COMBAT cancels a jump in progress and its pending effects (flame trail, soaking).
 func _on_phase_changed(phase: GameState.Phase) -> void:
 	if phase == GameState.Phase.COMBAT:
@@ -138,6 +151,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 		_cast(def)
 		_cooldowns[slot] = def.cooldown * _modifiers.ability_cooldown_factor(def.id)
+		_cooldown_totals[slot] = _cooldowns[slot]
 		get_viewport().set_input_as_handled()
 		cooldowns_changed.emit()
 		return

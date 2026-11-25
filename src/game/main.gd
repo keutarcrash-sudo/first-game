@@ -33,6 +33,7 @@ const ENEMY_TYPES_PATH := "res://assets/data/enemy_types.json"
 const IMPACT_PATH := "res://assets/data/impact.json"
 const WORLD_MAP_PATH := "res://assets/data/world_map.json"
 const ITEMS_PATH := "res://assets/data/items.json"
+const ABILITY_BAR_PATH := "res://assets/data/ability_bar.json"
 ## Banner shown when a world's final wave is announced (étape 5a, spec §5).
 const FINAL_WAVE_BANNER := "VAGUE FINALE !"
 ## Banner shown when a new world starts, with its number (étape 5a, spec §5).
@@ -104,6 +105,7 @@ func _ready() -> void:
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
+	var bar_style: AbilityBarStyle = AbilityBarStyle.load_from_file(ABILITY_BAR_PATH)
 	_map_generator = WorldMapGenerator.load_from_file(WORLD_MAP_PATH)
 	_item_catalog = null if _catalog == null else ItemCatalog.load_from_file(ITEMS_PATH, _rarities, _specs, rules, _ability_catalog)
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
@@ -119,7 +121,7 @@ func _ready() -> void:
 	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
 	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if _item_catalog == null or default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if _item_catalog == null or default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or bar_style == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -198,7 +200,7 @@ func _ready() -> void:
 		_decor.setup(decor_stats, _field_rect, _crystal.global_position, _rng)
 	_camera = GameCamera.new()
 	add_child(_camera)
-	_camera.setup(_hero, _field_rect, _state)
+	_camera.setup(_hero, _crystal, _field_rect, _state, AbilityBar.bottom_band_height(bar_style))
 	_impact = ImpactFeedback.new()
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)
@@ -236,7 +238,7 @@ func _ready() -> void:
 	add_child(_caster)
 	_caster.set_impact(_impact)
 	_caster.setup(_state, _hero, _enemies, _bullets, _field_rect, modifiers, rules)
-	_hud.bind_abilities(_caster)
+	_hud.bind_abilities(_caster, bar_style)
 	_death_screen = DeathScreen.new()
 	add_child(_death_screen)
 	_death_screen.setup(_skill_tree)
@@ -421,7 +423,15 @@ func _open_map(choosing: bool) -> void:
 	var preview: String = "Vague %d : %s" % [wave, _enemy_types.preview_text(_spawner.composition_for(wave))]
 	if _world_run.is_final_wave(wave):
 		preview += " — " + FINAL_WAVE_BANNER
-	_map_screen.open(_world_run, preview, choosing)
+	_map_screen.open(_world_run, preview, choosing, _rest_tooltip())
+
+
+## The rest places' tooltip on the map, with the current hit points (rounded down,
+## so « 99/100 » is shown whenever the rest still has something to heal).
+func _rest_tooltip() -> String:
+	var health: HeroHealth = _hero.health()
+	return "Repos — Héros %d/%d · Cristal %d/%d" % [
+		floori(health.current), floori(health.max_hp), floori(_crystal.current_hp), floori(_crystal.max_hp)]
 
 
 ## Creates the map and place screens and connects them (once, in [method _ready]).
@@ -444,6 +454,7 @@ func _build_world_screens() -> void:
 	add_child(_rest_screen)
 	_rest_screen.hero_chosen.connect(_on_rest_hero_chosen)
 	_rest_screen.crystal_chosen.connect(_on_rest_crystal_chosen)
+	_rest_screen.back_requested.connect(_on_rest_back_requested)
 
 
 ## « C'est parti ! » on the map in consultation: the build phase.
@@ -467,7 +478,8 @@ func _on_place_chosen(index: int) -> void:
 	elif type == WorldMap.TREASURE:
 		_open_treasure()
 	else:
-		_rest_screen.open(_hero.health().max_hp * _item_catalog.rest_hero_heal_fraction, _item_catalog.rest_crystal_heal)
+		var health: HeroHealth = _hero.health()
+		_rest_screen.open(health.max_hp * _item_catalog.rest_hero_heal_fraction, _item_catalog.rest_crystal_heal, health.current >= health.max_hp, _crystal_full())
 
 
 ## Free items to pick one from; none left: the fallback gold and its banner instead.
@@ -513,6 +525,19 @@ func _on_rest_hero_chosen() -> void:
 func _on_rest_crystal_chosen() -> void:
 	_crystal.heal(_item_catalog.rest_crystal_heal)
 	_end_place()
+
+
+## « Retour à la carte » from a rest where hero and crystal are both full (the
+## only place offering it: no free peeking at a shop or a treasure). The move is
+## undone and the same choice is shown again.
+func _on_rest_back_requested() -> void:
+	if _state.phase != GameState.Phase.PLACE:
+		return
+	if not _world_run.undo_move():
+		_end_place()  # Never expected: leave the place rather than stay stuck on a hidden screen.
+		return
+	_state.begin_map()
+	_open_map(true)
 
 
 ## The place is left (shop « Partir », treasure item, rest choice): the build phase.

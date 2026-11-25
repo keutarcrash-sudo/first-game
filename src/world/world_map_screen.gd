@@ -59,6 +59,7 @@ const PREVIEW_COLOR := Color(0.55, 0.9, 1.0)
 const HINT_COLOR := Color(1.0, 0.9, 0.35)
 
 var _run: WorldRun
+var _rest_tooltip := ""
 var _choosing := false
 var _reachable: PackedInt32Array = PackedInt32Array()
 var _open_places: Dictionary = {}  # Vector2i(column, index) -> true: places still reachable ahead.
@@ -145,9 +146,11 @@ func _process(_delta: float) -> void:
 ## and enemies) in the bottom-left corner. [param choosing] [code]true[/code]: the
 ## reachable places blink and a click on one emits [signal place_chosen];
 ## [code]false[/code]: consultation, closed by « C'est parti ! » ([signal closed]).
-## The screen must be in the tree.
-func open(run: WorldRun, preview_text: String, choosing: bool) -> void:
+## [param rest_tooltip] is the rest places' tooltip (built by the caller, with the
+## current hit points); empty = the generic line. The screen must be in the tree.
+func open(run: WorldRun, preview_text: String, choosing: bool, rest_tooltip: String = "") -> void:
 	_run = run
+	_rest_tooltip = rest_tooltip
 	_choosing = choosing
 	_reachable = run.reachable() if choosing else PackedInt32Array()
 	_open_places = _places_ahead(run)
@@ -195,7 +198,8 @@ func _rebuild_buttons() -> void:
 			button.flat = true
 			button.focus_mode = Control.FOCUS_NONE
 			button.custom_minimum_size = Vector2(PLACE_RADIUS, PLACE_RADIUS) * 2.0
-			button.tooltip_text = _tooltip(_run.map.type_of(column, index))
+			var type: StringName = _run.map.type_of(column, index)
+			button.tooltip_text = _rest_tooltip if type == WorldMap.REST and not _rest_tooltip.is_empty() else _tooltip(type)
 			if _is_choosable(place):
 				button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			button.pressed.connect(_on_place_pressed.bind(place))

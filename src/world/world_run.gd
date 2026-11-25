@@ -16,6 +16,9 @@ var node: int = -1
 var visited: PackedInt32Array = PackedInt32Array()
 
 var _waves_per_world: int
+var _can_undo: bool = false  # A move_to can be undone (one level).
+var _previous_column: int = -1
+var _previous_node: int = -1
 
 
 ## [param per_world] comes from [member WaveCurve.waves_per_world] (at least 1).
@@ -30,6 +33,7 @@ func start_world(new_map: WorldMap) -> void:
 	column = -1
 	node = -1
 	visited = PackedInt32Array()
+	_can_undo = false
 
 
 ## Indexes, in the next column, of the places the player can enter now: all of
@@ -50,9 +54,27 @@ func reachable() -> PackedInt32Array:
 func move_to(index: int) -> bool:
 	if not reachable().has(index):
 		return false
+	_previous_column = column
+	_previous_node = node
+	_can_undo = true
 	column += 1
 	node = index
 	visited.append(index)
+	return true
+
+
+## Puts the player back where they were before the last [method move_to]
+## ([member column], [member node], [member visited]). One level only: returns
+## [code]false[/code] and changes nothing when there is no move to undo.
+## Only valid right after a [method move_to] (a new one replaces the saved
+## position); an undo or [method start_world] consumes it.
+func undo_move() -> bool:
+	if not _can_undo:
+		return false
+	column = _previous_column
+	node = _previous_node
+	visited.resize(visited.size() - 1)
+	_can_undo = false
 	return true
 
 
