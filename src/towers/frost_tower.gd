@@ -85,6 +85,6 @@ func _is_blizzard() -> bool:
 	return _record.level >= 2 and _record.branch == BLIZZARD
 
 
-## Number [param key] of the Blizzard branch (validated by [TowerStats]).
+## Number [param key] of the Blizzard branch (required and validated by [constant TowerStats.BRANCH_KEYS]).
 func _blizzard_number(key: String) -> float:
 	return float(_stats.branch_value(TowerStats.Kind.FROST, BLIZZARD, key))

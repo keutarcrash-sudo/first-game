@@ -122,6 +122,6 @@ func _fire_shell(direction: Vector2, branch: StringName) -> void:
 	bullet.global_position = global_position
 
 
-## Number [param key] of branch [param branch] of the cannon (validated by [TowerStats]).
+## Number [param key] of branch [param branch] of the cannon (required and validated by [constant TowerStats.BRANCH_KEYS]).
 func _branch_number(branch: StringName, key: String) -> float:
 	return float(_stats.branch_value(TowerStats.Kind.CANNON, branch, key))

@@ -6,7 +6,8 @@
 ##   which respects the freeze cooldown).
 ## Chains are allowed (a blast that kills an enemy burning or frozen from the same branch
 ## sets it off in turn) and capped per frame by a [ChainLimiter]; the effects past the cap
-## are dropped. Like [CardEffects], the effects are deferred out of the death signal.
+## are dropped. The cap counts process frames ([method Engine.get_process_frames]).
+## Like [CardEffects], the effects are deferred out of the death signal.
 class_name TowerEffects
 extends Node
 
@@ -26,7 +27,7 @@ var _limiter: ChainLimiter
 
 
 ## Watches every enemy added under [param enemies_parent]. [param stats] gives the branch values
-## and the chain cap, [param modifiers] the cards (« Munitions incendiaires »), and
+## and the chain cap, [param modifiers] the cards (« Munitions incendiaires », damage, « Gel profond »), and
 ## [param records] is called with no argument at each death and returns the towers' records
 ## (a Dictionary id -> [TowerRecord]). Call once.
 func setup(enemies_parent: Node2D, stats: TowerStats, modifiers: PlayerModifiers, records: Callable) -> void:
@@ -42,7 +43,8 @@ func setup(enemies_parent: Node2D, stats: TowerStats, modifiers: PlayerModifiers
 
 func _on_enemy_added(node: Node) -> void:
 	var enemy := node as Enemy
-	if enemy != null and not enemy.died_with_state.is_connected(_on_enemy_died):
+	if enemy != null:
+		# An enemy enters the tree once (it is never re-parented), so it is connected once.
 		enemy.died_with_state.connect(_on_enemy_died.bind(enemy))
 
 
@@ -74,7 +76,7 @@ func _explode(at: Vector2, cannon_id: int) -> void:
 	if not _limiter.try_consume(Engine.get_process_frames()):
 		return
 	var radius: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "l3_explosion_radius")
-	var damage: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "l3_explosion_damage")
+	var damage: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "l3_explosion_damage") * _modifiers.damage_multiplier()
 	var duration: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "burn_duration")
 	if _modifiers.burn_duration() > 0.0:
 		duration *= _value(TowerStats.Kind.CANNON, INCENDIAIRE, "card_duration_mult")
@@ -93,8 +95,8 @@ func _shatter(at: Vector2, frost_id: int, freezes: bool) -> void:
 	if not _limiter.try_consume(Engine.get_process_frames()):
 		return
 	var radius: float = _value(TowerStats.Kind.FROST, ECLATS, "shard_radius")
-	var damage: float = _value(TowerStats.Kind.FROST, ECLATS, "shard_damage")
-	var freeze: float = _value(TowerStats.Kind.FROST, ECLATS, "l3_shard_freeze")
+	var damage: float = _value(TowerStats.Kind.FROST, ECLATS, "shard_damage") * _modifiers.damage_multiplier()
+	var freeze: float = _value(TowerStats.Kind.FROST, ECLATS, "l3_shard_freeze") + _modifiers.freeze_duration_bonus()
 	_show(at, SHARD_WORD, SHARD_COLOR, radius)
 	for enemy: Enemy in _living_enemies_near(at, radius):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
@@ -122,6 +124,6 @@ func _show(at: Vector2, word: String, color: Color, radius: float) -> void:
 		PopBurst.spawn(_enemies.get_parent(), at, word, color, radius * VISUAL_RADIUS_RATIO)
 
 
-## Number [param key] of branch [param branch] of a tower of [param kind] (validated by [TowerStats]).
+## Number [param key] of branch [param branch] of a tower of [param kind] (required and validated by [constant TowerStats.BRANCH_KEYS]).
 func _value(kind: TowerStats.Kind, branch: StringName, key: String) -> float:
 	return float(_stats.branch_value(kind, branch, key))

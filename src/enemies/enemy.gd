@@ -64,7 +64,7 @@ var _chill_duration := 0.0  # Freeze asked for along with that dwell.
 var _chill_cooldown := 0.0
 var _chill_tower_id := -1
 var _last_freezer_id := -1  # Id of the last tower that froze this enemy; -1 = none.
-var _last_burner_id := -1  # Id of the cannon whose shells gave the last burn; -1 = none.
+var _last_burner_id := -1  # Id of the last cannon whose shells burnt this enemy; -1 = none.
 
 var _push_left := 0.0  # Seconds of push remaining (étape 3a, Vague).
 var _push_velocity := Vector2.ZERO  # Pixels per second added to the walk while pushed.
@@ -324,8 +324,8 @@ func last_freezer_id() -> int:
 	return _last_freezer_id
 
 
-## Id of the cannon whose shells gave the last burn ([method apply_burn]); -1 if none or if
-## the last burn came from another source.
+## Id of the last cannon whose shells burnt this enemy ([method apply_burn]); -1 if none.
+## Burns from other sources do not clear it.
 func last_burner_id() -> int:
 	return _last_burner_id
 
@@ -355,12 +355,14 @@ func has_state(state: StringName) -> bool:
 
 ## Sets the enemy on fire for [param duration] seconds, taking [param damage_per_second]
 ## per second. A new call refreshes the duration; it never stacks. [param burner_id] is the
-## id of the cannon whose shell lit it, -1 for any other source (see [method last_burner_id]).
+## id of the cannon whose shell lit it, -1 for any other source (see [method last_burner_id]);
+## -1 keeps the cannon remembered so far, so other fires (hero, Brasier éternel) add to it.
 func apply_burn(duration: float, damage_per_second: float, burner_id: int = -1) -> void:
 	if is_queued_for_deletion():
 		return
 	var was_burning: bool = _burn_left > 0.0
-	_last_burner_id = burner_id
+	if burner_id >= 0:
+		_last_burner_id = burner_id
 	_burn_left = duration
 	_burn_damage_per_second = damage_per_second
 	_burn_full_duration = duration

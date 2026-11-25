@@ -133,4 +133,12 @@ func _run_invalid() -> String:
 	(((no_label["branches"] as Dictionary)["frost"] as Dictionary)["blizzard"] as Dictionary).erase("label")
 	if TowerStats.from_data(no_label, "no_label") != null:
 		return "branch without label refused"
+	var no_key: Dictionary = (base as Dictionary).duplicate(true)
+	(((no_key["branches"] as Dictionary)["cannon"] as Dictionary)["incendiaire"] as Dictionary).erase("l3_explosion_damage")
+	if TowerStats.from_data(no_key, "no_key") != null:
+		return "branch without a required key refused"
+	var no_branch: Dictionary = (base as Dictionary).duplicate(true)
+	((no_branch["branches"] as Dictionary)["frost"] as Dictionary).erase("eclats")
+	if TowerStats.from_data(no_branch, "no_branch") != null:
+		return "missing required branch refused"
 	return ""

@@ -25,6 +25,18 @@ const FREEZE_KEYS := ["dwell", "duration", "cooldown", "frozen_vulnerability"]
 const CHAIN_KEYS := ["max_per_frame"]
 ## JSON key of each tower kind in the [code]branches[/code] section.
 const KIND_KEYS := {Kind.CANNON: "cannon", Kind.FROST: "frost"}
+## Keys every branch read by the code must carry: tower key -> branch id -> keys
+## ([code]label[/code] is a string, the others positive numbers).
+const BRANCH_KEYS := {
+	"cannon": {
+		"incendiaire": ["label", "burn_duration", "burn_dps", "card_duration_mult", "l3_explosion_radius", "l3_explosion_damage"],
+		"perforant": ["label", "pierce_total", "l3_shots", "l3_spread_degrees"],
+	},
+	"frost": {
+		"blizzard": ["label", "range_mult", "dwell", "l3_wet_duration"],
+		"eclats": ["label", "shard_radius", "shard_damage", "l3_shard_freeze"],
+	},
+}
 ## Number of upgrade costs: level 1 -> 2, then level 2 -> 3.
 const UPGRADE_COUNT := 2
 
@@ -196,7 +208,8 @@ static func _read_upgrade_costs(reserve: Dictionary, path: String) -> Array[int]
 ## Returns the validated [code]branches[/code] section keyed by [enum Kind], or
 ## an empty dictionary after printing an error. Every kind needs at least one
 ## branch; every branch needs a non-empty [code]label[/code] string, and all
-## its other values must be positive numbers.
+## its other values must be positive numbers. The branches and keys of
+## [constant BRANCH_KEYS] are required.
 static func _read_branches(data: Dictionary, path: String) -> Dictionary:
 	if not data.get("branches") is Dictionary:
 		push_error("TowerStats: section 'branches' is missing in '%s'." % path)
@@ -226,6 +239,12 @@ static func _read_branches(data: Dictionary, path: String) -> Dictionary:
 					push_error("TowerStats: key '%s.%s' in '%s' must be a positive number (got %s)." % [where, key, path, value])
 					return {}
 			kind_branches[StringName(id)] = values
+		var required: Dictionary = BRANCH_KEYS.get(kind_key, {})
+		for id: String in required:
+			for key: String in required[id]:
+				if not (kind_branches.get(StringName(id), {}) as Dictionary).has(key):
+					push_error("TowerStats: key 'branches.%s.%s.%s' is missing in '%s'." % [kind_key, id, key, path])
+					return {}
 		result[kind] = kind_branches
 	return result
 
