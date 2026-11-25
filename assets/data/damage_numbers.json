@@ -1,0 +1,11 @@
+{
+	"enabled": true,
+	"colors": { "hero": "#ffffff", "cannon": "#19e3ff", "burn": "#ff9a1f", "crit": "#ffe14d" },
+	"font_size": 22,
+	"crit_font_size": 32,
+	"lifetime": 0.7,
+	"rise_px": 34.0,
+	"group_interval": 0.5,
+	"jitter_px": 12.0,
+	"max_on_screen": 60
+}
