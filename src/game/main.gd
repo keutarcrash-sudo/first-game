@@ -154,7 +154,7 @@ func _ready() -> void:
 	_crystal.destroyed.connect(_lose)
 	modifiers.heal_requested.connect(_crystal.heal)
 	modifiers.hero_heal_requested.connect(_hero.health().heal)
-	modifiers.free_tower_requested.connect(func() -> void: _reserve.add_free(_reserve.least_owned_kind()))
+	modifiers.free_tower_requested.connect(_on_free_tower_requested)
 	_hero.health().set_regen_active(false)
 	_spawner.wave_started.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(true))
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(false))
@@ -649,3 +649,9 @@ func _on_upgrade_clicked(upgrade_id: String) -> void:
 func _on_replay_pressed() -> void:
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+
+
+## « Tour de renfort »: a free base tower of the least owned kind joins the reserve.
+func _on_free_tower_requested() -> void:
+	if _reserve != null:
+		_reserve.add_free(_reserve.least_owned_kind())

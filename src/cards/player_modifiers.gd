@@ -282,6 +282,10 @@ func _apply_effect(effect: Dictionary) -> void:
 			_freeze_duration_bonus += float(effect["value"])
 		"frozen_vulnerability_bonus":
 			_frozen_vulnerability_bonus += float(effect["value"])
+		"free_tower":
+			free_tower_requested.emit()
+		"tier3_fire_rate_bonus":
+			_tier3_fire_rate_bonus += float(effect["value"])
 		"hero_damage_bonus":
 			_hero_damage_bonus += float(effect["value"])
 		"move_speed_bonus":
