@@ -93,7 +93,7 @@ func close() -> void:
 
 
 ## The record shown, or [code]null[/code] when closed.
-func record() -> TowerRecord:
+func shown_record() -> TowerRecord:
 	return _record
 
 

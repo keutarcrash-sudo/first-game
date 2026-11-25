@@ -20,6 +20,9 @@ signal tower_clicked(record: TowerRecord, screen_position: Vector2)
 ## Emitted when the selection changes ([method select_record], [method select_purchase],
 ## a placement, a pick-up or the end of a wave).
 signal selection_changed
+## Emitted when a click on the field only dismisses the open upgrade panel
+## ([method set_panel_open]); nothing is placed or bought.
+signal panel_dismiss_requested
 
 const VALID_COLOR := Color(0.5, 1.0, 0.6, 0.55)
 const INVALID_COLOR := Color(1.0, 0.4, 0.4, 0.55)
@@ -47,6 +50,7 @@ var _reserve: TowerReserve
 var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (read by TowerEffects).
 var _tower_nodes: Dictionary = {}  # id -> Tower node of the placed towers.
 var _selected_record: TowerRecord  # Reserve tower placed by the next click; null = buy _kind.
+var _panel_open: bool = false  # A field click then only dismisses the upgrade panel.
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
@@ -81,7 +85,8 @@ func set_visuals(cannon_sheet: SpriteSheet, cannon_height: float, frost_sheet: S
 
 
 ## Removes every placed tower from the map and puts it back in the reserve with its
-## level and branch (end of wave). The selection falls back to buying.
+## level and branch (end of wave). The selection moves to a waiting tower of the
+## selected kind, or buying that kind when none waits.
 func return_all_towers() -> void:
 	for child: Node in _towers.get_children():
 		_towers.remove_child(child)
@@ -89,8 +94,7 @@ func return_all_towers() -> void:
 	_records.clear()
 	_tower_nodes.clear()
 	_reserve.return_all()
-	_selected_record = null
-	selection_changed.emit()
+	_select_next_waiting(_kind)  # The next build starts with a free reserve tower when one waits.
 
 
 ## Removes the placed tower of [param record] from the map and puts it back in the
@@ -130,6 +134,13 @@ func select_purchase(kind: TowerStats.Kind) -> void:
 	_kind = kind
 	_apply_preview_sheet()
 	selection_changed.emit()
+
+
+## Tells the placer whether the upgrade panel is open: while it is, a click on the
+## field emits [signal panel_dismiss_requested] instead of placing or buying (a click
+## on a placed tower still emits [signal tower_clicked]).
+func set_panel_open(open: bool) -> void:
+	_panel_open = open
 
 
 ## The reserve tower the next click places, or [code]null[/code] when it buys.
@@ -175,6 +186,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		tower_clicked.emit(clicked, click.position)
 		return
+	if _panel_open:
+		get_viewport().set_input_as_handled()
+		panel_dismiss_requested.emit()
+		return
 	# Validity next: an invalid spot must never cost gold.
 	if not _is_spot_valid(position_clicked, _stats.radius_of(_kind)):
 		return
@@ -199,6 +214,9 @@ func _range_of(kind: TowerStats.Kind) -> float:
 	var factor: float = _modifiers.tower_range_factor()
 	if kind == TowerStats.Kind.FROST:
 		factor *= _modifiers.frost_range_factor()
+		var record: TowerRecord = _selected_record
+		if record != null and record.level >= 2 and record.branch == FrostTower.BLIZZARD:
+			factor *= float(_stats.branch_value(TowerStats.Kind.FROST, FrostTower.BLIZZARD, "range_mult"))
 	return _stats.range_of(kind) * factor
 
 

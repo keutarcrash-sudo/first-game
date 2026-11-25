@@ -2,7 +2,8 @@
 ## the map, showing its type, its level and the first letter of its branch. A
 ## click on an icon asks for that tower to be placed by the next click on the
 ## field ([signal record_chosen], wired to [method TowerPlacer.select_record]).
-## Display only: it never changes the reserve.
+## Display only: it never changes the reserve. When the towers do not fit its width,
+## the last icon becomes a "+N" counter, so the bar never runs off-screen.
 class_name TowerReserveBar
 extends HBoxContainer
 
@@ -43,6 +44,7 @@ func setup(reserve: TowerReserve, placer: TowerPlacer, stats: TowerStats) -> voi
 	_reserve = reserve
 	_placer = placer
 	reserve.changed.connect(_queue_rebuild)
+	resized.connect(_queue_rebuild)
 	placer.selection_changed.connect(_queue_rebuild)
 	_rebuild()
 
@@ -71,8 +73,26 @@ func _rebuild() -> void:
 		remove_child(child)
 		child.queue_free()
 	var selected: TowerRecord = _placer.selected_record()
-	for record: TowerRecord in _reserve.available():
-		add_child(_make_icon(record, record == selected))
+	var waiting: Array[TowerRecord] = _reserve.available()
+	var fits: int = maxi(1, floori((size.x + ICON_SPACING) / (ICON_SIZE.x + ICON_SPACING)))
+	var shown: int = waiting.size() if waiting.size() <= fits else fits - 1
+	for i: int in shown:
+		add_child(_make_icon(waiting[i], waiting[i] == selected))
+	if shown < waiting.size():
+		add_child(_make_overflow_label(waiting.size() - shown))
+
+
+func _make_overflow_label(hidden: int) -> Label:
+	var label := Label.new()
+	label.text = "+%d" % hidden
+	label.custom_minimum_size = ICON_SIZE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override(&"font_size", FONT_SIZE)
+	label.add_theme_color_override(&"font_color", SELECTED_COLOR)
+	NeonFonts.style_label(label, NeonFonts.title())
+	return label
 
 
 func _make_icon(record: TowerRecord, selected: bool) -> Button:

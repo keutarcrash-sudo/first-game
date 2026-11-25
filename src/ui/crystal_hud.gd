@@ -214,12 +214,17 @@ func bind_tower_build(stats: TowerStats, modifiers: PlayerModifiers, reserve: To
 	placer.selection_changed.connect(_refresh_tower_selection)
 	_reserve_bar = TowerReserveBar.new()
 	_reserve_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	# Kept clear of the side columns so a long reserve never runs off-screen or under them.
+	_reserve_bar.offset_left = side_column_width()
+	_reserve_bar.offset_right = -side_column_width()
 	_reserve_bar.offset_bottom = -(BUTTON_BOTTOM_MARGIN + BUTTON_SIZE.y + RESERVE_BAR_GAP)
 	_reserve_bar.offset_top = _reserve_bar.offset_bottom - TowerReserveBar.HEIGHT
 	_reserve_bar.visible = _build_box.visible
 	add_child(_reserve_bar)
 	_reserve_bar.setup(reserve, placer, stats)
 	_reserve_bar.record_chosen.connect(reserve_record_chosen.emit)
+	if _stats_panel != null:
+		_stats_panel.bind_reserve(reserve)
 	_upgrade_panel = TowerUpgradePanel.new()
 	add_child(_upgrade_panel)
 	_upgrade_panel.setup(stats, reserve, modifiers, state)
@@ -244,8 +249,11 @@ func _refresh_tower_prices() -> void:
 func _write_price(button: Button, text_format: String, price: int, gold: int) -> void:
 	button.text = text_format % price
 	var color: Color = BUTTON_SHORT_COLOR if gold < price else TEXT_COLOR
+	var pressed_color: Color = BUTTON_SHORT_COLOR if gold < price else BUTTON_SELECTED_COLOR
 	button.add_theme_color_override(&"font_color", color)
 	button.add_theme_color_override(&"font_hover_color", color)
+	button.add_theme_color_override(&"font_pressed_color", pressed_color)
+	button.add_theme_color_override(&"font_hover_pressed_color", pressed_color)
 
 
 ## Presses the purchase button of the kind the placer buys, none while it places a reserve tower.
