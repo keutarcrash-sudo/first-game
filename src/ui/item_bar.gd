@@ -1,5 +1,5 @@
-## Row of the passive items owned (étape 5a, spec §8): one neon [ItemIcon] per
-## item, in the order taken; hovering an icon shows its name and effect. The
+## Rows of the passive items owned (étape 5a, spec §8): one neon [ItemIcon] per
+## item, in the order taken, wrapped at [member wrap_width]; hovering an icon shows its name and effect. The
 ## Seconde chance icon goes grey once the rescue has been used. Display only:
 ## reads [PlayerModifiers] and [HeroHealth], never changes them.
 class_name ItemBar
@@ -10,8 +10,11 @@ const RESCUE_EFFECT := "second_chance"
 const ICON_DIAMETER := 40.0
 const ICON_SPACING := 8
 
+## Width (screen px) past which the icons wrap onto a new row. Set it before [method setup].
+var wrap_width: float = 1000.0
+
 var _modifiers: PlayerModifiers
-var _row: HBoxContainer
+var _row: HFlowContainer
 var _rescue_used := false
 
 
@@ -21,8 +24,10 @@ func setup(modifiers: PlayerModifiers, health: HeroHealth) -> void:
 	_modifiers = modifiers
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if _row == null:
-		_row = HBoxContainer.new()
-		_row.add_theme_constant_override(&"separation", ICON_SPACING)
+		_row = HFlowContainer.new()
+		_row.add_theme_constant_override(&"h_separation", ICON_SPACING)
+		_row.add_theme_constant_override(&"v_separation", ICON_SPACING)
+		_row.custom_minimum_size = Vector2(maxf(wrap_width, ICON_DIAMETER), 0.0)
 		_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_row)
 	modifiers.items_changed.connect(_rebuild)

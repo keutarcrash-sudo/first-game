@@ -1,12 +1,13 @@
-## Hero hit-point bar (étape 4, spec §5): a neon bar with a "Héros : x / y" label,
-## drawn next to the crystal's hit points in the HUD. Display only: it listens to
-## [signal HeroHealth.changed] and never changes game state.
+## Hit-point line of the HUD (étape 4, spec §5): a "Héros x/y" label followed by a
+## neon bar. The top-left block of [CrystalHud] stacks two of them: the crystal's
+## ([member title] "Cristal", fed by [method show_values]) and the hero's
+## ([method bind]). Display only: it never changes game state.
 class_name HeroHealthBar
 extends Control
 
-const BAR_SIZE := Vector2(220.0, 16.0)
+const BAR_SIZE := Vector2(200.0, 16.0)
 const FONT_SIZE := 20
-const LABEL_WIDTH := 190.0
+const LABEL_WIDTH := 230.0  # Room for "Cristal 999/999" in the Bungee title font.
 const BAR_TOP := 7.0  # Vertically centres the bar on a 20 px label line (~30 px tall).
 const BACK_COLOR := Color(0.05, 0.08, 0.15, 0.8)
 const FILL_COLOR := Color(0.2, 1.0, 0.55)
@@ -14,6 +15,9 @@ const LOW_COLOR := Color(1.0, 0.3, 0.3)
 const LOW_FRACTION := 0.3
 const BORDER_COLOR := Color(0.55, 0.9, 1.0)
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
+
+## Name written before the values. Set it before adding the bar to the tree.
+var title: String = "Héros"
 
 var _label: Label
 var _fraction := 1.0
@@ -36,9 +40,14 @@ func bind(health: HeroHealth) -> void:
 	health.changed.connect(_on_changed)
 
 
+## Shows [param current] out of [param max_hp] (label and bar). Call after the bar is in the tree.
+func show_values(current: float, max_hp: float) -> void:
+	_on_changed(current, max_hp)
+
+
 func _on_changed(current: float, max_hp: float) -> void:
 	_fraction = clampf(current / max_hp, 0.0, 1.0) if max_hp > 0.0 else 0.0
-	_label.text = "Héros : %d / %d" % [ceili(current), ceili(max_hp)]
+	_label.text = "%s %d/%d" % [title, ceili(current), ceili(max_hp)]
 	queue_redraw()
 
 

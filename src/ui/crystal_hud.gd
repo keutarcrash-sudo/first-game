@@ -19,28 +19,39 @@ const MESSAGE_FONT_SIZE := 28
 const MESSAGE_BOTTOM_MARGIN := 186.0  # Above the ability bar.
 const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
 const MESSAGE_SECONDS := 1.0
-const HP_FONT_SIZE := 20
 const INFO_FONT_SIZE := 20
-const INFO_POSITION := Vector2(40.0, 30.0)
-const CARDS_POSITION := Vector2(40.0, 58.0)
-const CARDS_WIDTH := 840.0  # Stops before the stats panel (starts at x = 920 on 1280 px).
-const CARDS_MAX_LINES := 2
-const ITEMS_POSITION := Vector2(40.0, 116.0)  # Under the two lines of cards.
+## Layout (1280 x 720 reference, everything anchored top-left or top-right so it
+## holds at any ratio with the [code]expand[/code] stretch):
+## top band (height [constant TOP_BAND_HEIGHT]): crystal line, hero line, wave line on
+## the left, specialization line on the right. Under it, the left column (width
+## [constant LEFT_COLUMN_WIDTH]) holds the cards then the items, the right column the
+## stats panel ([constant StatsPanel.WIDTH]). BUILD fits the field between the
+## bands and the columns ([method top_band_height], [method side_column_width]).
+const LEFT_MARGIN := 40.0
+const TOP_BAND_HEIGHT := 100.0  # Three 30 px lines from y = 4, plus a small gap.
+const LEFT_COLUMN_WIDTH := 290.0
+const COLUMN_GAP := 16.0  # Kept between a side column and the field in BUILD.
+const HP_POSITION := Vector2(LEFT_MARGIN, 4.0)
+const HERO_BAR_POSITION := Vector2(LEFT_MARGIN, 34.0)  # Under the crystal line.
+const INFO_POSITION := Vector2(LEFT_MARGIN, 64.0)  # Under the hero line, last line of the band.
+const CARDS_TOP := TOP_BAND_HEIGHT + 4.0
+const CARDS_POSITION := Vector2(LEFT_MARGIN, CARDS_TOP)
+const CARDS_MAX_LINES := 3
+const CARDS_LINE_HEIGHT := 28.0
+const ITEMS_POSITION := Vector2(LEFT_MARGIN, CARDS_TOP + CARDS_MAX_LINES * CARDS_LINE_HEIGHT + 6.0)  # Under the cards.
 const PROMPT_FONT_SIZE := 32
 const PROMPT_BOTTOM_MARGIN := 24.0
 const PROMPT_COLOR := Color(0.55, 0.9, 1.0)
-const HP_POSITION := Vector2(40.0, 2.0)
-const HERO_BAR_POSITION := Vector2(300.0, 2.0)  # Right of the crystal line, before the stats panel (x = 920).
 const TEXT_COLOR := Color(0.9, 0.95, 1.0)
 const SPEC_COLOR := Color(1.0, 0.9, 0.35)
 const SPEC_RIGHT_MARGIN := 40.0
-const SPEC_TOP := 2.0
+const SPEC_TOP := 4.0
 const BANNER_FONT_SIZE := 96
 const BANNER_COLOR := Color(1.0, 0.3, 0.75)  # Neon pink, a shout over the field.
 const BANNER_SECONDS := 1.5  # Whole life of a banner, fades included.
 const BANNER_FADE_SECONDS := 0.2
 
-var _hp_label: Label
+var _hp_bar: HeroHealthBar
 var _info_label: Label
 var _prompt_label: Label
 var _state: GameState
@@ -64,12 +75,10 @@ var _banner_tween: Tween
 
 func _ready() -> void:
 	_build_tower_ui()
-	_hp_label = Label.new()
-	_hp_label.position = HP_POSITION
-	_hp_label.add_theme_font_size_override(&"font_size", HP_FONT_SIZE)
-	_hp_label.add_theme_color_override(&"font_color", TEXT_COLOR)
-	NeonFonts.style_label(_hp_label, NeonFonts.title())
-	add_child(_hp_label)
+	_hp_bar = HeroHealthBar.new()
+	_hp_bar.title = "Cristal"
+	_hp_bar.position = HP_POSITION
+	add_child(_hp_bar)
 	_info_label = Label.new()
 	_info_label.position = INFO_POSITION
 	_info_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
@@ -78,8 +87,8 @@ func _ready() -> void:
 	add_child(_info_label)
 	_cards_label = Label.new()
 	_cards_label.position = CARDS_POSITION
-	_cards_label.custom_minimum_size = Vector2(CARDS_WIDTH, 0.0)
-	_cards_label.size = Vector2(CARDS_WIDTH, 0.0)
+	_cards_label.custom_minimum_size = Vector2(LEFT_COLUMN_WIDTH, 0.0)
+	_cards_label.size = Vector2(LEFT_COLUMN_WIDTH, 0.0)
 	_cards_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_cards_label.max_lines_visible = CARDS_MAX_LINES
 	_cards_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -89,9 +98,13 @@ func _ready() -> void:
 	NeonFonts.style_label(_cards_label, NeonFonts.title())
 	add_child(_cards_label)
 	_spec_label = Label.new()
-	_spec_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	# Right half of the top band only, so a long name never runs into the hit-point lines.
+	_spec_label.anchor_left = 0.5
+	_spec_label.anchor_right = 1.0
 	_spec_label.offset_top = SPEC_TOP
 	_spec_label.offset_right = -SPEC_RIGHT_MARGIN
+	_spec_label.clip_text = true
+	_spec_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_spec_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_spec_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_spec_label.add_theme_font_size_override(&"font_size", INFO_FONT_SIZE)
@@ -184,6 +197,21 @@ func _refresh_tower_prices() -> void:
 	_frost_button.text = "Glace — %d or" % _tower_modifiers.tower_cost(_tower_stats.frost_cost)
 
 
+## Height in screen pixels of the top HUD band (crystal and hero lines, wave line,
+## specialization line): BUILD keeps the field below it ([GameCamera]). Twin of
+## [method AbilityBar.bottom_band_height].
+static func top_band_height() -> float:
+	return TOP_BAND_HEIGHT
+
+
+## Width in screen pixels kept free on each side of the field in BUILD: the wider of
+## the left column (cards, items) and the right one (stats panel), margins included.
+static func side_column_width() -> float:
+	var left: float = LEFT_MARGIN + LEFT_COLUMN_WIDTH
+	var right: float = StatsPanel.RIGHT_MARGIN + StatsPanel.WIDTH
+	return maxf(left, right) + COLUMN_GAP
+
+
 ## Shows the four ability discs of [param caster], drawn with [param style], above the tower buttons.
 func bind_abilities(caster: AbilityCaster, style: AbilityBarStyle) -> void:
 	var bar := AbilityBar.new()
@@ -232,7 +260,7 @@ func bind(crystal: Crystal) -> void:
 	pointer.setup(crystal)
 
 
-## Shows the hero's hit-point bar next to the crystal's. Call after the hero's setup.
+## Shows the hero's hit-point line under the crystal's. Call after the hero's setup.
 func bind_hero(health: HeroHealth) -> void:
 	var bar := HeroHealthBar.new()
 	bar.position = HERO_BAR_POSITION
@@ -241,7 +269,7 @@ func bind_hero(health: HeroHealth) -> void:
 
 
 func _on_health_changed(current_hp: float, max_hp: float) -> void:
-	_hp_label.text = "Cristal : %d / %d" % [ceili(current_hp), ceili(max_hp)]
+	_hp_bar.show_values(current_hp, max_hp)
 
 
 ## Replaces the build prompt with the preview of the coming wave (call on each entry into BUILD):
@@ -300,10 +328,11 @@ func bind_game_state(state: GameState) -> void:
 	_refresh_info()
 
 
-## Shows the row of passive items owned ([ItemBar]) under the cards line. Call once.
+## Shows the passive items owned ([ItemBar]) under the cards, wrapped to the left column. Call once.
 func bind_items(modifiers: PlayerModifiers, health: HeroHealth) -> void:
 	var bar := ItemBar.new()
 	bar.position = ITEMS_POSITION
+	bar.wrap_width = LEFT_COLUMN_WIDTH
 	add_child(bar)
 	bar.setup(modifiers, health)
 
@@ -336,7 +365,7 @@ func _refresh_info() -> void:
 	_build_box.visible = building
 	if _stats_panel != null:
 		_stats_panel.visible = _stats_visible()
-	_info_label.text = "%s   Or : %d   Phase : %s" % [_wave_text(), _state.gold, phase_name]
+	_info_label.text = "%s · Or %d · %s" % [_wave_text(), _state.gold, phase_name]
 	var prompt: String = "Construction — Espace : lancer la vague %d" % (_state.waves_completed + 1)
 	if _wave_preview != "":
 		prompt = _wave_preview

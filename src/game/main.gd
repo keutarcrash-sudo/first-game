@@ -92,6 +92,7 @@ var _rest_screen: RestScreen
 
 
 func _ready() -> void:
+	add_child(FullscreenToggle.new())  # F11, and full screen on the first gesture on the web.
 	var stats: HeroStats = HeroStats.load_from_file(STATS_PATH)
 	var defence: DefenceStats = DefenceStats.load_from_file(DEFENCE_PATH)
 	var curve: WaveCurve = WaveCurve.load_from_file(WAVES_PATH)
@@ -200,7 +201,7 @@ func _ready() -> void:
 		_decor.setup(decor_stats, _field_rect, _crystal.global_position, _rng)
 	_camera = GameCamera.new()
 	add_child(_camera)
-	_camera.setup(_hero, _crystal, _field_rect, _state, AbilityBar.bottom_band_height(bar_style))
+	_camera.setup(_hero, _crystal, _field_rect, _state, AbilityBar.bottom_band_height(bar_style), CrystalHud.top_band_height(), CrystalHud.side_column_width())
 	_impact = ImpactFeedback.new()
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)

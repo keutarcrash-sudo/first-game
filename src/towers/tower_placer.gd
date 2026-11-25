@@ -1,7 +1,9 @@
 ## Tower placement (story 004, design/game-brief.md MVP feature 4): during the
 ## BUILD phase a left click in the arena places the selected tower at the
 ## cursor when the spot is valid and the gold suffices. Also draws a small
-## preview of the tower (and its range) under the cursor. Placed towers are
+## preview of the tower (and its range) under the cursor, only while the cursor is
+## over the arena (BUILD fits the arena clear of the HUD, so the cursor over the HUD
+## or past the arena shows no stray red ring). Placed towers are
 ## children of the towers node; towers last one wave ([method clear_towers]).
 class_name TowerPlacer
 extends Node2D
@@ -78,11 +80,15 @@ func select_kind(kind: TowerStats.Kind) -> void:
 func _process(_delta: float) -> void:
 	queue_redraw()
 	if _preview != null:
-		_preview.position = get_local_mouse_position()
+		var mouse: Vector2 = get_local_mouse_position()
+		_preview.position = mouse
+		_preview.visible = _has_sheet() and _field_rect.has_point(mouse)
 
 
 func _draw() -> void:
 	var mouse: Vector2 = get_local_mouse_position()
+	if not _field_rect.has_point(mouse):
+		return  # Over the HUD or past the arena: no ring.
 	var radius: float = _stats.radius_of(_kind)
 	var color: Color = VALID_COLOR if _is_spot_valid(mouse, radius) else INVALID_COLOR
 	if _preview != null:
@@ -114,6 +120,10 @@ func _range_of(kind: TowerStats.Kind) -> float:
 	if kind == TowerStats.Kind.FROST:
 		factor *= _modifiers.frost_range_factor()
 	return _stats.range_of(kind) * factor
+
+
+func _has_sheet() -> bool:
+	return (_cannon_sheet if _kind == TowerStats.Kind.CANNON else _frost_sheet) != null
 
 
 func _apply_preview_sheet() -> void:
