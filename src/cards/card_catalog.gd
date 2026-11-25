@@ -41,6 +41,7 @@ const EFFECT_NUMBER_KEYS := {
 	"hero_heal_per_wave": ["value"],
 	"crystal_damage_reduction": ["value"],
 	"tower_cost_mult": ["value"],
+	"upgrade_cost_mult": ["value"],
 	"gold_per_kill_mult": ["value"],
 	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
 	"burst_on_crit": ["chance"],

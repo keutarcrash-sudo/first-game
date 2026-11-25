@@ -62,6 +62,7 @@ var _tower_range_bonus := 0.0
 var _hero_heal_per_wave := 0.0
 var _crystal_reduction := 0.0
 var _tower_cost_mult := 1.0
+var _upgrade_cost_mult := 1.0
 var _gold_kill_mult := 1.0
 
 
@@ -124,6 +125,19 @@ func tower_range_factor() -> float:
 ## Price of a tower with base price [param base] after item discounts, rounded.
 func tower_cost(base: int) -> int:
 	return roundi(base * _tower_cost_mult)
+
+
+## Factor applied to tower purchase prices (product of the item discounts,
+## Plans d'ingénieur); 1.0 for none. Handed to [method TowerReserve.price_of_next].
+func tower_cost_factor() -> float:
+	return _tower_cost_mult
+
+
+## Factor applied to tower upgrade prices: the purchase discounts times the card
+## discounts (Ingénieur chevronné, [code]upgrade_cost_mult[/code]); 1.0 for none.
+## Handed to [method TowerReserve.upgrade_cost] and [method TowerReserve.try_upgrade].
+func upgrade_cost_factor() -> float:
+	return _tower_cost_mult * _upgrade_cost_mult
 
 
 ## Factor applied to damage the crystal takes: 1 minus the item reductions, never below 0.1.
@@ -293,6 +307,8 @@ func _apply_effect(effect: Dictionary) -> void:
 			_crystal_reduction += float(effect["value"])
 		"tower_cost_mult":
 			_tower_cost_mult *= float(effect["value"])
+		"upgrade_cost_mult":
+			_upgrade_cost_mult *= float(effect["value"])
 		"gold_per_kill_mult":
 			_gold_kill_mult *= float(effect["value"])
 		_:

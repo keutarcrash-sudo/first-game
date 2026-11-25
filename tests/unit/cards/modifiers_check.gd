@@ -106,6 +106,8 @@ func _run_items() -> String:
 		return "gold_per_kill_item"
 	if mods.tower_cost(50) != 40:
 		return "tower_cost_item"
+	if not is_equal_approx(mods.tower_cost_factor(), 0.8) or not is_equal_approx(mods.upgrade_cost_factor(), 0.8):
+		return "tower_cost_factors_item"
 	if not is_equal_approx(mods.tower_range_factor(), 1.2):
 		return "tower_range_factor_item"
 	if not is_equal_approx(mods.crystal_damage_factor(), 0.85):
@@ -120,6 +122,9 @@ func _run_items() -> String:
 		return "items_changed_signals"
 	if not mods.has_flag(&"second_chance") or not is_equal_approx(mods.flag_value(&"second_chance", "hp_fraction"), 0.3):
 		return "flag_second_chance"
+	mods.take(_card("ingenieur_chevronne", {"type": "upgrade_cost_mult", "value": 0.75}))
+	if not is_equal_approx(mods.tower_cost_factor(), 0.8) or not is_equal_approx(mods.upgrade_cost_factor(), 0.6):
+		return "upgrade_cost_factor_card"
 	var heavy := PlayerModifiers.new(null)
 	for i: int in 3:
 		heavy.take_item(_item("shield_%d" % i, {"type": "crystal_damage_reduction", "value": 0.5}))

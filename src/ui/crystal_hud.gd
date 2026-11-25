@@ -7,14 +7,19 @@
 class_name CrystalHud
 extends CanvasLayer
 
-## Emitted when the player clicks one of the two tower buttons (build phase).
+## Emitted when the player clicks one of the two tower purchase buttons (build phase).
 signal tower_kind_chosen(kind: TowerStats.Kind)
+## Emitted when the player clicks a tower of the reserve bar (build phase).
+signal reserve_record_chosen(record: TowerRecord)
 
 const BUTTON_FONT_SIZE := 22
 const BUTTON_SIZE := Vector2(220.0, 44.0)
 const BUTTON_SPACING := 16
 const BUTTON_BOTTOM_MARGIN := 70.0
 const BUTTON_SELECTED_COLOR := Color(1.0, 0.9, 0.35)
+const BUTTON_SHORT_COLOR := Color(1.0, 0.45, 0.4)  # Purchase price above the gold.
+## Gap between the top of the tower buttons and the reserve bar above them.
+const RESERVE_BAR_GAP := 6.0
 const MESSAGE_FONT_SIZE := 28
 const MESSAGE_BOTTOM_MARGIN := 186.0  # Above the ability bar.
 const MESSAGE_COLOR := Color(1.0, 0.45, 0.4)
@@ -76,6 +81,10 @@ var _enemy_types: EnemyTypes
 var _banner_label: Label
 var _banner_tween: Tween
 var _ability_bar: AbilityBar  # Shown in COMBAT only (abilities are cast in COMBAT only).
+var _reserve: TowerReserve
+var _placer: TowerPlacer
+var _reserve_bar: TowerReserveBar
+var _upgrade_panel: TowerUpgradePanel
 
 
 func _ready() -> void:
@@ -147,10 +156,10 @@ func _build_tower_ui() -> void:
 	_build_box.mouse_filter = Control.MOUSE_FILTER_IGNORE  # Only the buttons take clicks, not the whole strip.
 	_build_box.visible = false
 	add_child(_build_box)
-	var group := ButtonGroup.new()
-	_cannon_button = _make_tower_button(group, TowerStats.Kind.CANNON)
-	_frost_button = _make_tower_button(group, TowerStats.Kind.FROST)
-	_cannon_button.button_pressed = true  # The cannon is selected by default.
+	# Pressed state set from the placer's selection ([method _refresh_tower_selection]).
+	_cannon_button = _make_tower_button(TowerStats.Kind.CANNON)
+	_frost_button = _make_tower_button(TowerStats.Kind.FROST)
+	_cannon_button.set_pressed_no_signal(true)  # The cannon purchase is selected by default.
 	_message_label = Label.new()
 	_message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_message_label.offset_bottom = -MESSAGE_BOTTOM_MARGIN
@@ -169,10 +178,9 @@ func _build_tower_ui() -> void:
 	add_child(_message_timer)
 
 
-func _make_tower_button(group: ButtonGroup, kind: TowerStats.Kind) -> Button:
+func _make_tower_button(kind: TowerStats.Kind) -> Button:
 	var button := Button.new()
 	button.toggle_mode = true
-	button.button_group = group
 	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused button must not react to it.
 	button.custom_minimum_size = BUTTON_SIZE
 	button.add_theme_font_size_override(&"font_size", BUTTON_FONT_SIZE)
@@ -186,20 +194,67 @@ func _make_tower_button(group: ButtonGroup, kind: TowerStats.Kind) -> Button:
 
 func _on_tower_button_pressed(kind: TowerStats.Kind) -> void:
 	tower_kind_chosen.emit(kind)
+	_refresh_tower_selection()  # A click on the pressed button must not unpress it.
 
 
-## Writes the tower prices on the two build buttons, after the item discounts of
-## [param modifiers], and rewrites them on every [signal PlayerModifiers.changed].
-func bind_tower_build(stats: TowerStats, modifiers: PlayerModifiers) -> void:
+## Writes the real purchase prices on the two build buttons ("Acheter canon — N",
+## [method TowerReserve.price_of_next] after the discounts of [param modifiers]) and
+## rewrites them when the gold of [param state], the [param reserve] or the modifiers
+## change. Adds the reserve bar above the buttons and the upgrade panel
+## ([method upgrade_panel]); the buttons and the bar show the selection of [param placer].
+## Display only: [signal tower_kind_chosen] and [signal reserve_record_chosen] carry the clicks.
+func bind_tower_build(stats: TowerStats, modifiers: PlayerModifiers, reserve: TowerReserve, placer: TowerPlacer, state: GameState) -> void:
 	_tower_stats = stats
 	_tower_modifiers = modifiers
+	_reserve = reserve
+	_placer = placer
 	modifiers.changed.connect(_refresh_tower_prices)
+	reserve.changed.connect(_refresh_tower_prices)
+	state.gold_changed.connect(_refresh_tower_prices.unbind(1))
+	placer.selection_changed.connect(_refresh_tower_selection)
+	_reserve_bar = TowerReserveBar.new()
+	_reserve_bar.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_reserve_bar.offset_bottom = -(BUTTON_BOTTOM_MARGIN + BUTTON_SIZE.y + RESERVE_BAR_GAP)
+	_reserve_bar.offset_top = _reserve_bar.offset_bottom - TowerReserveBar.HEIGHT
+	_reserve_bar.visible = _build_box.visible
+	add_child(_reserve_bar)
+	_reserve_bar.setup(reserve, placer, stats)
+	_reserve_bar.record_chosen.connect(reserve_record_chosen.emit)
+	_upgrade_panel = TowerUpgradePanel.new()
+	add_child(_upgrade_panel)
+	_upgrade_panel.setup(stats, reserve, modifiers, state)
 	_refresh_tower_prices()
+	_refresh_tower_selection()
+
+
+## The upgrade panel of the placed towers (created by [method bind_tower_build]).
+func upgrade_panel() -> TowerUpgradePanel:
+	return _upgrade_panel
 
 
 func _refresh_tower_prices() -> void:
-	_cannon_button.text = "Canon — %d or" % _tower_modifiers.tower_cost(_tower_stats.cannon_cost)
-	_frost_button.text = "Glace — %d or" % _tower_modifiers.tower_cost(_tower_stats.frost_cost)
+	if _reserve == null:
+		return
+	var factor: float = _tower_modifiers.tower_cost_factor()
+	var gold: int = _state.gold if _state != null else 0
+	_write_price(_cannon_button, "Acheter canon — %d", _reserve.price_of_next(TowerStats.Kind.CANNON, factor), gold)
+	_write_price(_frost_button, "Acheter glace — %d", _reserve.price_of_next(TowerStats.Kind.FROST, factor), gold)
+
+
+func _write_price(button: Button, text_format: String, price: int, gold: int) -> void:
+	button.text = text_format % price
+	var color: Color = BUTTON_SHORT_COLOR if gold < price else TEXT_COLOR
+	button.add_theme_color_override(&"font_color", color)
+	button.add_theme_color_override(&"font_hover_color", color)
+
+
+## Presses the purchase button of the kind the placer buys, none while it places a reserve tower.
+func _refresh_tower_selection() -> void:
+	if _placer == null:
+		return
+	var buying: bool = _placer.selected_record() == null
+	_cannon_button.set_pressed_no_signal(buying and _placer.selected_kind() == TowerStats.Kind.CANNON)
+	_frost_button.set_pressed_no_signal(buying and _placer.selected_kind() == TowerStats.Kind.FROST)
 
 
 ## Height in screen pixels of the top HUD band (crystal and hero lines, wave line,
@@ -210,11 +265,13 @@ static func top_band_height() -> float:
 
 
 ## Height in screen pixels of the bottom HUD band in BUILD: the prompt line, the
-## tower buttons above it and a small margin. BUILD keeps the field above it
-## ([GameCamera]); the ability bar is hidden in BUILD.
+## tower buttons above it, the reserve bar above them ([TowerReserveBar]) and a
+## small margin. BUILD keeps the field above it ([GameCamera]); the ability bar is
+## hidden in BUILD.
 static func build_bottom_band_height() -> float:
 	var prompt_top: float = PROMPT_BOTTOM_MARGIN + PROMPT_FONT_SIZE * LINE_HEIGHT_RATIO
-	return maxf(BUTTON_BOTTOM_MARGIN, prompt_top) + BUTTON_SIZE.y + BUILD_BAND_MARGIN
+	var buttons_top: float = maxf(BUTTON_BOTTOM_MARGIN, prompt_top) + BUTTON_SIZE.y
+	return buttons_top + RESERVE_BAR_GAP + TowerReserveBar.HEIGHT + BUILD_BAND_MARGIN
 
 
 ## Width in screen pixels kept free on each side of the field in BUILD: the wider of
@@ -378,6 +435,11 @@ func _refresh_info() -> void:
 	elif _state.phase == GameState.Phase.PLACE:
 		phase_name = "Lieu"
 	_build_box.visible = building
+	if _reserve_bar != null:
+		_reserve_bar.visible = building
+	if _upgrade_panel != null and not building:
+		_upgrade_panel.close()  # Wave launch, card choice, map...: the panel is BUILD only.
+	_refresh_tower_prices()
 	if _ability_bar != null:
 		_ability_bar.visible = _state.phase == GameState.Phase.COMBAT
 	if _stats_panel != null:

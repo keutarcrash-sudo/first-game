@@ -60,6 +60,7 @@ var _specs: SpecializationCatalog
 var _spec_screen: SpecializationChoiceScreen
 var _rules: ProcRules
 var _modifiers: PlayerModifiers
+var _reserve: TowerReserve
 var _rng: RandomNumberGenerator
 var _card_screen: CardChoiceScreen
 var _skill_tree: SkillTree
@@ -250,14 +251,20 @@ func _ready() -> void:
 	move_child(designator, _enemies.get_index() + 1)
 	designator.setup(_state, _enemies, towers)
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: designator.clear())
-	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers, designator)
+	_reserve = TowerReserve.new(towers)  # Empty at the start of a run.
+	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers, designator, _reserve)
 	_placer.set_visuals(cannon_sheet, _visuals.height("cannon"), frost_sheet, _visuals.height("frost"))
 	var tower_effects := TowerEffects.new()
 	add_child(tower_effects)
 	tower_effects.setup(_enemies, towers, modifiers, _placer.records_by_id)
-	_hud.bind_tower_build(towers, modifiers)
-	_hud.tower_kind_chosen.connect(_placer.select_kind)
+	_hud.bind_tower_build(towers, modifiers, _reserve, _placer, _state)
+	_hud.tower_kind_chosen.connect(_placer.select_purchase)
+	_hud.reserve_record_chosen.connect(_placer.select_record)
 	_placer.not_enough_gold.connect(_hud.show_not_enough_gold)
+	var upgrade_panel: TowerUpgradePanel = _hud.upgrade_panel()
+	_placer.tower_clicked.connect(upgrade_panel.open)
+	upgrade_panel.upgrade_requested.connect(_on_tower_upgrade_requested)
+	upgrade_panel.pick_up_requested.connect(_placer.pick_up)
 	_caster = AbilityCaster.new()
 	add_child(_caster)
 	_caster.set_impact(_impact)
@@ -581,9 +588,21 @@ func _on_wave_prepared(wave_number: int, composition: Dictionary, path: CrystalP
 		_hud.show_banner(FINAL_WAVE_BANNER)
 
 
-## The crystal arrived: the towers do not carry over to the next wave.
+## The crystal arrived: the placed towers go back to the reserve (they do not stay on
+## the old path) and the upgrade panel closes.
 func _on_wave_finished(_wave_number: int) -> void:
-	_placer.clear_towers()
+	_hud.upgrade_panel().close()
+	_placer.return_all_towers()
+
+
+## Upgrades [param record] when the gold covers the price: [method TowerReserve.try_upgrade]
+## checks and applies it, then its returned price is spent. A refusal spends nothing.
+func _on_tower_upgrade_requested(record: TowerRecord, branch: StringName) -> void:
+	var price: int = _reserve.try_upgrade(record, branch, _state.gold, _modifiers.upgrade_cost_factor())
+	if price < 0:
+		_hud.show_not_enough_gold()
+		return
+	_state.spend_gold(price)
 
 
 ## The hero died: the whole world freezes at once (the tree is paused: spawns, enemies,

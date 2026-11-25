@@ -1,15 +1,25 @@
-## Tower placement (story 004, design/game-brief.md MVP feature 4): during the
-## BUILD phase a left click in the arena places the selected tower at the
-## cursor when the spot is valid and the gold suffices. Also draws a small
+## Tower placement (story 004, design/game-brief.md MVP feature 4; towers T1):
+## during the BUILD phase a left click on a placed tower emits [signal tower_clicked]
+## (upgrade panel); otherwise a left click in the arena places the selection at the
+## cursor when the spot is valid: a tower of the [TowerReserve] for free
+## ([method select_record]), or a new tower bought on the spot
+## ([method select_purchase], price [method TowerReserve.price_of_next]). Also draws a small
 ## preview of the tower (and its range) under the cursor, only while the cursor is
 ## over the arena (BUILD fits the arena clear of the HUD, so the cursor over the HUD
 ## or past the arena shows no stray red ring). Placed towers are
-## children of the towers node; towers last one wave ([method clear_towers]).
+## children of the towers node; at the end of a wave they go back to the reserve
+## ([method return_all_towers]).
 class_name TowerPlacer
 extends Node2D
 
 ## Emitted when a valid placement is refused because the gold is insufficient.
 signal not_enough_gold
+## Emitted when a left click in BUILD lands on a placed tower; [param screen_position]
+## is the click in viewport (HUD) coordinates.
+signal tower_clicked(record: TowerRecord, screen_position: Vector2)
+## Emitted when the selection changes ([method select_record], [method select_purchase],
+## a placement, a pick-up or the end of a wave).
+signal selection_changed
 
 const VALID_COLOR := Color(0.5, 1.0, 0.6, 0.55)
 const INVALID_COLOR := Color(1.0, 0.4, 0.4, 0.55)
@@ -33,14 +43,17 @@ var _cannon_height: float
 var _frost_height: float
 var _preview: DirectionalSprite
 var _sheet_error_reported := false
-var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (until Task 4 uses the reserve).
-var _next_id := 1
+var _reserve: TowerReserve
+var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (read by TowerEffects).
+var _tower_nodes: Dictionary = {}  # id -> Tower node of the placed towers.
+var _selected_record: TowerRecord  # Reserve tower placed by the next click; null = buy _kind.
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
 ## the crystal to keep clear, and the nodes holding the towers, the enemies and the
-## bullets, the combo rules handed to cannon shots, the card modifiers handed to every tower (shared, never copied), and the target designator handed to every cannon. Call once, before the first frame.
-func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules, modifiers: PlayerModifiers, designator: TargetDesignator) -> void:
+## bullets, the combo rules handed to cannon shots, the card modifiers handed to every tower (shared, never copied), the target designator handed to every cannon, and the player's [param reserve] (purchases and the records of the placed towers). Call once, before the first frame.
+func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules, modifiers: PlayerModifiers, designator: TargetDesignator, reserve: TowerReserve) -> void:
+	_reserve = reserve
 	_designator = designator
 	_modifiers = modifiers
 	_rules = rules
@@ -67,23 +80,66 @@ func set_visuals(cannon_sheet: SpriteSheet, cannon_height: float, frost_sheet: S
 	_apply_preview_sheet()
 
 
-## Frees every placed tower (towers last one wave).
-func clear_towers() -> void:
+## Removes every placed tower from the map and puts it back in the reserve with its
+## level and branch (end of wave). The selection falls back to buying.
+func return_all_towers() -> void:
 	for child: Node in _towers.get_children():
+		_towers.remove_child(child)
 		child.queue_free()
 	_records.clear()
+	_tower_nodes.clear()
+	_reserve.return_all()
+	_selected_record = null
+	selection_changed.emit()
 
 
-## The records of the placed towers, id -> [TowerRecord] (read by [TowerEffects]). Each placed
-## tower gets a fresh level 1 record for now; the reserve takes over in Task 4 of towers T1.
+## Removes the placed tower of [param record] from the map and puts it back in the
+## reserve; it keeps its level and branch. Ignored if the tower is not placed.
+func pick_up(record: TowerRecord) -> void:
+	if not _records.has(record.id):
+		return
+	var tower: Node = _tower_nodes[record.id]
+	_towers.remove_child(tower)  # Out of the spot checks at once, not at the end of the frame.
+	tower.queue_free()
+	_records.erase(record.id)
+	_tower_nodes.erase(record.id)
+	_reserve.mark_returned(record)
+
+
+## The records of the placed towers, id -> [TowerRecord] (read by [TowerEffects]).
+## They are the reserve's records: levels and branches carry over.
 func records_by_id() -> Dictionary:
 	return _records
 
 
-## Chooses the type of tower the next click places. The cannon is selected by default.
-func select_kind(kind: TowerStats.Kind) -> void:
+## Makes the next valid click place [param record], a tower waiting in the reserve,
+## for free. Ignored if the record is already placed.
+func select_record(record: TowerRecord) -> void:
+	if record.placed:
+		return
+	_selected_record = record
+	_kind = record.kind
+	_apply_preview_sheet()
+	selection_changed.emit()
+
+
+## Makes the next valid click buy a new tower of [param kind] and place it there.
+## The cannon is selected by default.
+func select_purchase(kind: TowerStats.Kind) -> void:
+	_selected_record = null
 	_kind = kind
 	_apply_preview_sheet()
+	selection_changed.emit()
+
+
+## The reserve tower the next click places, or [code]null[/code] when it buys.
+func selected_record() -> TowerRecord:
+	return _selected_record
+
+
+## The kind the next click places (bought or taken from the reserve).
+func selected_kind() -> TowerStats.Kind:
+	return _kind
 
 
 func _process(_delta: float) -> void:
@@ -113,13 +169,28 @@ func _unhandled_input(event: InputEvent) -> void:
 	if click == null or not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
 		return
 	var position_clicked: Vector2 = get_global_mouse_position()
-	# Validity first: an invalid spot must never cost gold.
+	# A placed tower first: clicking it opens its panel, never buys or places.
+	var clicked: TowerRecord = _record_at(position_clicked)
+	if clicked != null:
+		get_viewport().set_input_as_handled()
+		tower_clicked.emit(clicked, click.position)
+		return
+	# Validity next: an invalid spot must never cost gold.
 	if not _is_spot_valid(position_clicked, _stats.radius_of(_kind)):
 		return
-	if not _state.spend_gold(_modifiers.tower_cost(_stats.cost_of(_kind))):
-		not_enough_gold.emit()
-		return
-	_place(position_clicked)
+	var record: TowerRecord = _selected_record
+	if record == null or record.placed:
+		var cost_factor: float = _modifiers.tower_cost_factor()
+		var price: int = _reserve.price_of_next(_kind, cost_factor)
+		record = _reserve.buy(_kind, _state.gold, cost_factor)
+		if record == null:
+			not_enough_gold.emit()
+			return
+		_state.spend_gold(price)
+	_place(record, position_clicked)
+	_reserve.mark_placed(record)
+	if record == _selected_record:
+		_select_next_waiting(record.kind)
 
 
 ## The range a tower of [param kind] would have if placed now, card and item bonuses
@@ -177,15 +248,30 @@ func _report_missing_sheet() -> void:
 	push_error("TowerPlacer: tower sheets were not set (set_visuals); towers are shown without an image.")
 
 
-func _place(spot: Vector2) -> void:
-	var record := TowerRecord.new()
-	record.id = _next_id
-	_next_id += 1
-	record.kind = _kind
-	record.placed = true
+## The record of the placed tower whose body contains [param spot], or null.
+func _record_at(spot: Vector2) -> TowerRecord:
+	for id: int in _tower_nodes:
+		var tower: Tower = _tower_nodes[id]
+		if spot.distance_squared_to(tower.position) <= tower.radius * tower.radius:
+			return _records[id]
+	return null
+
+
+## After a reserve tower is placed, selects the next one of [param kind] still
+## waiting, or falls back to buying that kind.
+func _select_next_waiting(kind: TowerStats.Kind) -> void:
+	_selected_record = null
+	for waiting: TowerRecord in _reserve.available():
+		if waiting.kind == kind:
+			_selected_record = waiting
+			break
+	selection_changed.emit()
+
+
+func _place(record: TowerRecord, spot: Vector2) -> void:
 	_records[record.id] = record
 	var tower: Tower
-	if _kind == TowerStats.Kind.CANNON:
+	if record.kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
 		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator, record)
 		if _cannon_sheet != null:
@@ -203,3 +289,4 @@ func _place(spot: Vector2) -> void:
 		tower = frost
 	tower.position = spot
 	_towers.add_child(tower)
+	_tower_nodes[record.id] = tower
