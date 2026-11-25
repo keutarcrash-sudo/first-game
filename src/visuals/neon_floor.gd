@@ -33,6 +33,7 @@ var _dots: ImageTexture
 ## Sets the arena rectangle and builds the dot pattern texture.
 func setup(field_rect: Rect2) -> void:
 	_field_rect = field_rect
+	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED  # The dot texture is tiled over the floor.
 	var image := Image.create_empty(DOT_SPACING, DOT_SPACING, false, Image.FORMAT_RGBA8)
 	for x: int in DOT_SIZE:
 		for y: int in DOT_SIZE:
