@@ -122,13 +122,13 @@ func crosshair(hover: bool) -> Image:
 	for dy: int in range(-outer_r, outer_r + 1):
 		for dx: int in range(-outer_r, outer_r + 1):
 			if dx * dx + dy * dy < outer_r * outer_r:
-				_set(img, c + dx, c + dy, _outline)
+				_put_pixel(img, c + dx, c + dy, _outline)
 	for arm: Rect2i in arms:
 		_fill_rect(img, arm, fill)
 	for dy: int in range(-_dot_radius, _dot_radius + 1):
 		for dx: int in range(-_dot_radius, _dot_radius + 1):
 			if dx * dx + dy * dy <= _dot_radius * _dot_radius:
-				_set(img, c + dx, c + dy, fill)
+				_put_pixel(img, c + dx, c + dy, fill)
 	return img
 
 
@@ -192,7 +192,7 @@ static func _fill_rect(img: Image, rect: Rect2i, color: Color) -> void:
 		img.fill_rect(clipped, color)
 
 
-static func _set(img: Image, x: int, y: int, color: Color) -> void:
+static func _put_pixel(img: Image, x: int, y: int, color: Color) -> void:
 	if x >= 0 and y >= 0 and x < img.get_width() and y < img.get_height():
 		img.set_pixel(x, y, color)
 
