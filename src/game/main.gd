@@ -154,6 +154,7 @@ func _ready() -> void:
 	_crystal.destroyed.connect(_lose)
 	modifiers.heal_requested.connect(_crystal.heal)
 	modifiers.hero_heal_requested.connect(_hero.health().heal)
+	modifiers.free_tower_requested.connect(func() -> void: _reserve.add_free(_reserve.least_owned_kind()))
 	_hero.health().set_regen_active(false)
 	_spawner.wave_started.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(true))
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: _hero.health().set_regen_active(false))

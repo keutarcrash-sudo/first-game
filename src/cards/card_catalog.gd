@@ -42,6 +42,8 @@ const EFFECT_NUMBER_KEYS := {
 	"crystal_damage_reduction": ["value"],
 	"tower_cost_mult": ["value"],
 	"upgrade_cost_mult": ["value"],
+	"free_tower": [],
+	"tier3_fire_rate_bonus": ["value"],
 	"gold_per_kill_mult": ["value"],
 	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
 	"burst_on_crit": ["chance"],

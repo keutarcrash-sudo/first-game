@@ -56,7 +56,7 @@ func _physics_process(delta: float) -> void:
 	_fire(target)
 	_cooldown = _stats.cannon_fire_interval * _modifiers.cannon_interval_factor()
 	if _record.level >= TowerRecord.MAX_LEVEL:
-		_cooldown /= _modifiers.tier3_fire_rate_factor()  # « Surcharge ».
+		_cooldown *= _modifiers.tier3_fire_rate_factor()  # « Surcharge ».
 
 
 ## The designated enemy when it is within this cannon's range, else null.

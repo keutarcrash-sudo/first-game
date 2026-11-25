@@ -13,6 +13,8 @@ signal items_changed
 signal heal_requested(amount: float)
 ## Emitted when a card asks the hero to recover [param amount] hit points.
 signal hero_heal_requested(amount: float)
+## Emitted once each time a « free_tower » card is taken (Tour de renfort).
+signal free_tower_requested
 
 ## Cooldown reductions never go below this share of the base cooldown (-75 % at most).
 const MIN_COOLDOWN_FACTOR := 0.25
@@ -42,7 +44,7 @@ var _freeze_duration_bonus := 0.0
 var _freeze_base_duration := 0.0
 var _freeze_cooldown := 0.0
 var _frozen_vulnerability_bonus := 0.0
-var _tier3_fire_rate_bonus := 0.0  # « Surcharge » (filled by Task 5 of towers T1).
+var _tier3_fire_rate_bonus := 0.0  # « Surcharge ».
 var _hero_damage_bonus := 0.0
 var _move_speed_bonus := 0.0
 var _pickup_bonus := 0.0  # Sum of (multiplier - 1) over the cards taken.
@@ -421,10 +423,10 @@ func freeze_duration_bonus() -> float:
 	return _freeze_duration_bonus
 
 
-## Factor applied to the fire rate of level 3 towers that shoot (the cannon), « Surcharge »:
-## 1.2 = 20 % faster. 1 without the card.
+## Factor applied to the fire interval of level 3 towers that shoot (the cannon),
+## « Surcharge »: 1 / 1.2 = 20 % faster. 1 without the card.
 func tier3_fire_rate_factor() -> float:
-	return 1.0 + _tier3_fire_rate_bonus
+	return 1.0 / (1.0 + _tier3_fire_rate_bonus)
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".

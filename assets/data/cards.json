@@ -719,6 +719,61 @@
 					"value": 1.0
 				}
 			]
+		},
+		{
+			"id": "tour_de_renfort",
+			"rarity": "rare",
+			"display_name": "Tour de renfort",
+			"description": "Une tour de base gratuite rejoint la réserve (le type que vous avez le moins).",
+			"combines_with": "",
+			"max_stacks": null,
+			"effects": [
+				{
+					"type": "free_tower"
+				}
+			]
+		},
+		{
+			"id": "ingenieur_chevronne",
+			"rarity": "uncommon",
+			"display_name": "Ingénieur chevronné",
+			"description": "Les améliorations de tours coûtent 25 % moins cher.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "upgrade_cost_mult",
+					"value": 0.75
+				}
+			]
+		},
+		{
+			"id": "surcharge",
+			"rarity": "rare",
+			"display_name": "Surcharge",
+			"description": "Les canons de niveau 3 tirent 20 % plus vite.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "tier3_fire_rate_bonus",
+					"value": 0.2
+				}
+			]
+		},
+		{
+			"id": "gel_mordant",
+			"rarity": "uncommon",
+			"display_name": "Gel mordant",
+			"description": "Les ennemis gelés subissent 25 % de dégâts en plus.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"effects": [
+				{
+					"type": "frozen_vulnerability_bonus",
+					"value": 0.25
+				}
+			]
 		}
 	]
 }
