@@ -42,6 +42,7 @@ var _freeze_duration_bonus := 0.0
 var _freeze_base_duration := 0.0
 var _freeze_cooldown := 0.0
 var _frozen_vulnerability_bonus := 0.0
+var _tier3_fire_rate_bonus := 0.0  # « Surcharge » (filled by Task 5 of towers T1).
 var _hero_damage_bonus := 0.0
 var _move_speed_bonus := 0.0
 var _pickup_bonus := 0.0  # Sum of (multiplier - 1) over the cards taken.
@@ -396,6 +397,18 @@ func freeze_cooldown() -> float:
 ## (« Gel mordant »: 0.25 = +25 % more). 0 without the card.
 func frozen_vulnerability_bonus() -> float:
 	return _frozen_vulnerability_bonus
+
+
+## Extra seconds given to every freeze by « Gel profond » alone (the frost towers add it
+## to their own freeze; [method freeze_duration] already includes it). 0 without the card.
+func freeze_duration_bonus() -> float:
+	return _freeze_duration_bonus
+
+
+## Factor applied to the fire rate of level 3 towers that shoot (the cannon), « Surcharge »:
+## 1.2 = 20 % faster. 1 without the card.
+func tier3_fire_rate_factor() -> float:
+	return 1.0 + _tier3_fire_rate_bonus
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".

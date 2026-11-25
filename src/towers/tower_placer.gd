@@ -33,6 +33,8 @@ var _cannon_height: float
 var _frost_height: float
 var _preview: DirectionalSprite
 var _sheet_error_reported := false
+var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (until Task 4 uses the reserve).
+var _next_id := 1
 
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
@@ -69,6 +71,13 @@ func set_visuals(cannon_sheet: SpriteSheet, cannon_height: float, frost_sheet: S
 func clear_towers() -> void:
 	for child: Node in _towers.get_children():
 		child.queue_free()
+	_records.clear()
+
+
+## The records of the placed towers, id -> [TowerRecord] (read by [TowerEffects]). Each placed
+## tower gets a fresh level 1 record for now; the reserve takes over in Task 4 of towers T1.
+func records_by_id() -> Dictionary:
+	return _records
 
 
 ## Chooses the type of tower the next click places. The cannon is selected by default.
@@ -169,10 +178,16 @@ func _report_missing_sheet() -> void:
 
 
 func _place(spot: Vector2) -> void:
+	var record := TowerRecord.new()
+	record.id = _next_id
+	_next_id += 1
+	record.kind = _kind
+	record.placed = true
+	_records[record.id] = record
 	var tower: Tower
 	if _kind == TowerStats.Kind.CANNON:
 		var cannon := CannonTower.new()
-		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator)
+		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator, record)
 		if _cannon_sheet != null:
 			cannon.set_visual(_cannon_sheet, _cannon_height)
 		else:
@@ -180,7 +195,7 @@ func _place(spot: Vector2) -> void:
 		tower = cannon
 	else:
 		var frost := FrostTower.new()
-		frost.setup(_stats, _enemies, _modifiers)
+		frost.setup(_stats, _enemies, _modifiers, record)
 		if _frost_sheet != null:
 			frost.set_visual(_frost_sheet, _frost_height)
 		else:
