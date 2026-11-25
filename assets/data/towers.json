@@ -17,5 +17,50 @@
 	},
 	"designation": {
 		"click_margin": 12.0
+	},
+	"reserve": {
+		"price_step": 25,
+		"upgrade_costs": [80, 150]
+	},
+	"freeze": {
+		"dwell": 1.5,
+		"duration": 1.0,
+		"cooldown": 3.0,
+		"frozen_vulnerability": 0.25
+	},
+	"chain": {
+		"max_per_frame": 12
+	},
+	"branches": {
+		"cannon": {
+			"incendiaire": {
+				"label": "Incendiaire",
+				"burn_duration": 4.0,
+				"burn_dps": 8.0,
+				"card_duration_mult": 1.5,
+				"l3_explosion_radius": 80.0,
+				"l3_explosion_damage": 15.0
+			},
+			"perforant": {
+				"label": "Perforant",
+				"pierce_total": 3,
+				"l3_shots": 2,
+				"l3_spread_degrees": 8.0
+			}
+		},
+		"frost": {
+			"blizzard": {
+				"label": "Blizzard",
+				"range_mult": 1.4,
+				"dwell": 1.0,
+				"l3_wet_duration": 3.0
+			},
+			"eclats": {
+				"label": "Éclats",
+				"shard_radius": 70.0,
+				"shard_damage": 12.0,
+				"l3_shard_freeze": 0.6
+			}
+		}
 	}
 }
