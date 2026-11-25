@@ -41,6 +41,7 @@ var _wet_duration_bonus := 0.0
 var _freeze_duration_bonus := 0.0
 var _freeze_base_duration := 0.0
 var _freeze_cooldown := 0.0
+var _frozen_vulnerability_bonus := 0.0
 var _hero_damage_bonus := 0.0
 var _move_speed_bonus := 0.0
 var _pickup_bonus := 0.0  # Sum of (multiplier - 1) over the cards taken.
@@ -262,6 +263,8 @@ func _apply_effect(effect: Dictionary) -> void:
 			_wet_duration_bonus += float(effect["value"])
 		"freeze_duration_bonus":
 			_freeze_duration_bonus += float(effect["value"])
+		"frozen_vulnerability_bonus":
+			_frozen_vulnerability_bonus += float(effect["value"])
 		"hero_damage_bonus":
 			_hero_damage_bonus += float(effect["value"])
 		"move_speed_bonus":
@@ -387,6 +390,12 @@ func freeze_duration() -> float:
 ## Seconds after a freeze during which the enemy cannot be frozen again.
 func freeze_cooldown() -> float:
 	return _freeze_cooldown
+
+
+## Extra damage fraction taken by a frozen enemy, on top of the towers' base value
+## (« Gel mordant »: 0.25 = +25 % more). 0 without the card.
+func frozen_vulnerability_bonus() -> float:
+	return _frozen_vulnerability_bonus
 
 
 ## One entry per card taken, in the order taken, such as "Canon rapide ×2".

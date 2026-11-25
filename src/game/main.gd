@@ -173,6 +173,7 @@ func _ready() -> void:
 	add_child(hazards)
 	move_child(hazards, 0)
 	_spawner.set_modifiers(modifiers)
+	_spawner.set_frozen_vulnerability(towers.frozen_vulnerability)
 	var card_effects := CardEffects.new()
 	add_child(card_effects)
 	card_effects.setup(_enemies, modifiers)

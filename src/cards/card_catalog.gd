@@ -28,6 +28,7 @@ const EFFECT_NUMBER_KEYS := {
 	"burn_duration_bonus": ["value"],
 	"wet_duration_bonus": ["value"],
 	"freeze_duration_bonus": ["value"],
+	"frozen_vulnerability_bonus": ["value"],
 	"hero_damage_bonus": ["value"],
 	"move_speed_bonus": ["value"],
 	"pickup_radius_mult": ["value"],
