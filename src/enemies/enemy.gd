@@ -50,6 +50,7 @@ var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
 var _burn_full_duration := 0.0  # Duration given by the last apply_burn call.
 var _modifiers: PlayerModifiers  # Card bonuses (Combustion, Marée montante); null = none.
+var _damage_numbers: DamageNumbers  # Floating damage numbers; null = none shown.
 var _mark_left := 0.0  # Seconds of « marqué » remaining (story 008).
 
 var _wet_left := 0.0  # Seconds of « trempé » remaining (story 009).
@@ -109,6 +110,12 @@ func set_modifiers(modifiers: PlayerModifiers) -> void:
 	_modifiers = modifiers
 
 
+## Gives the enemy the node that shows the damage it takes. Optional: without it no
+## number is shown. Call before adding the enemy to the tree.
+func set_damage_numbers(numbers: DamageNumbers) -> void:
+	_damage_numbers = numbers
+
+
 ## Draws the enemy with [param sheet] at [param height_px] on screen instead of a disc
 ## (graphics only: the collision radius and every rule stay the same). Call before
 ## adding the enemy to the tree and after [method setup]; the sheet may be shared by all enemies.
@@ -155,7 +162,7 @@ func _physics_process(delta: float) -> void:
 		# Damage over time goes through _damage, without the hit pose (a burn kill still emits died) and triggers no combo.
 		var burn_time: float = minf(delta, _burn_left)
 		_burn_left -= burn_time
-		_damage(_burn_damage_per_second * burn_time, false, false, true)
+		_damage(_burn_damage_per_second * burn_time, false, false, true, &"burn")
 		if is_queued_for_deletion():
 			return
 		if _burn_left <= 0.0:
@@ -416,20 +423,24 @@ func _move_pushed(step: Vector2) -> void:
 
 
 ## Removes [param amount] hit points; the enemy is freed at zero. A lethal
-## [param heavy] hit (critical, ability) also emits [signal died_heavy].
-func take_damage(amount: float, heavy: bool = false) -> void:
-	_damage(amount, true, heavy)
+## [param heavy] hit (critical, ability) also emits [signal died_heavy]. [param source]
+## (&"hero", &"cannon", &"area") and [param crit] only choose how the damage number looks.
+func take_damage(amount: float, heavy: bool = false, source: StringName = &"hero", crit: bool = false) -> void:
+	_damage(amount, true, heavy, false, source, crit)
 
 
 ## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
 ## [param burn_tick]: the burn's own damage, amplified by Combustion even if the burn ends this very tick.
 ## Combustion (+value on every source while burning) multiplies with the combos already in [param amount].
-func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool = false) -> void:
+## The amount removed (after Combustion) is reported to the damage numbers with [param source] and [param crit].
+func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool = false, source: StringName = &"hero", crit: bool = false) -> void:
 	if is_queued_for_deletion():
 		return
 	if (burn_tick or _burn_left > 0.0) and _modifiers != null and _modifiers.has_flag(&"burning_vulnerability"):
 		amount *= 1.0 + _modifiers.flag_value(&"burning_vulnerability", "value")
 	_hp -= amount
+	if is_instance_valid(_damage_numbers):
+		_damage_numbers.report(self, amount, source, crit)
 	if _hp <= 0.0:
 		var was_burning: bool = burn_tick or _burn_left > 0.0
 		if _kamikaze != null:
@@ -438,6 +449,8 @@ func _damage(amount: float, show_hit: bool, heavy: bool = false, burn_tick: bool
 		if heavy:
 			died_heavy.emit()
 		died_with_state.emit(global_position, was_burning, _frozen_left > 0.0)
+		if is_instance_valid(_damage_numbers):
+			_damage_numbers.flush(self)  # Pending burn / area sum shown now, not lost.
 		queue_free()
 	else:
 		if show_hit and _sprite != null and _hit_left <= 0.0:

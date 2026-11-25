@@ -260,7 +260,7 @@ func _on_arrow_rain_enemy_inside(enemy: Enemy, delta: float, tick: Dictionary, i
 		if tick["fire"]:
 			tick["left"] = float(tick["left"]) + interval
 	if tick["fire"]:
-		enemy.take_damage(damage * _modifiers.hero_damage_multiplier(), true)
+		enemy.take_damage(damage * _modifiers.hero_damage_multiplier(), true, &"area")  # Summed per enemy on screen.
 
 
 func _cast_fire_wall(def: AbilityDef) -> void:

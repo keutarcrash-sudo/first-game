@@ -34,6 +34,7 @@ const IMPACT_PATH := "res://assets/data/impact.json"
 const WORLD_MAP_PATH := "res://assets/data/world_map.json"
 const ITEMS_PATH := "res://assets/data/items.json"
 const ABILITY_BAR_PATH := "res://assets/data/ability_bar.json"
+const DAMAGE_NUMBERS_PATH := "res://assets/data/damage_numbers.json"
 ## Banner shown when a world's final wave is announced (étape 5a, spec §5).
 const FINAL_WAVE_BANNER := "VAGUE FINALE !"
 ## Banner shown when a new world starts, with its number (étape 5a, spec §5).
@@ -206,6 +207,15 @@ func _ready() -> void:
 	add_child(_impact)
 	_impact.setup(impact_stats, _camera, _state)
 	_spawner.set_enemy_types(enemy_types, enemy_sheets, _hero, _impact, hazards, _state, _rng)
+	# Floating damage numbers are optional: a missing or invalid damage_numbers.json
+	# (error already logged) only leaves the hits without numbers.
+	var damage_number_model: DamageNumberModel = DamageNumberModel.load_from_file(DAMAGE_NUMBERS_PATH)
+	if damage_number_model != null:
+		var damage_numbers := DamageNumbers.new()
+		damage_numbers.name = "DamageNumbers"
+		add_child(damage_numbers)
+		damage_numbers.setup(damage_number_model, _state)
+		_spawner.set_damage_numbers(damage_numbers)
 	_impact.watch_enemies(_enemies)
 	_impact.watch_crystal(_crystal)
 	_hero.set_impact(_impact)
