@@ -48,14 +48,19 @@ func _on_enemy_added(node: Node) -> void:
 		enemy.died_with_state.connect(_on_enemy_died.bind(enemy))
 
 
-## The record of tower [param id] when it has [param kind], [param branch] and at least
-## [param level]; null otherwise.
-func _record_with(id: int, kind: TowerStats.Kind, branch: StringName, level: int) -> TowerRecord:
+## The chain-effect cap shared with the towers ([method TowerPlacer.set_chain_limiter]).
+func limiter() -> ChainLimiter:
+	return _limiter
+
+
+## The record of tower [param id] when it has [param branch] (a branch id belongs to one
+## tower type) and at least [param level]; null otherwise.
+func _record_with(id: int, branch: StringName, level: int) -> TowerRecord:
 	if id < 0 or not _records.is_valid():
 		return null
 	var records: Dictionary = _records.call()
 	var record := records.get(id) as TowerRecord
-	if record == null or record.kind != kind or record.branch != branch or record.level < level:
+	if record == null or record.branch != branch or record.level < level or _stats.def_of(record.kind) == null:
 		return null
 	return record
 
@@ -63,24 +68,24 @@ func _record_with(id: int, kind: TowerStats.Kind, branch: StringName, level: int
 # The dying enemy is still valid here (its deletion is only queued): its last burner and freezer are read now.
 func _on_enemy_died(at: Vector2, was_burning: bool, was_frozen: bool, enemy: Enemy) -> void:
 	if was_burning:
-		var cannon: TowerRecord = _record_with(enemy.last_burner_id(), TowerStats.Kind.CANNON, INCENDIAIRE, TowerRecord.MAX_LEVEL)
+		var cannon: TowerRecord = _record_with(enemy.last_burner_id(), INCENDIAIRE, TowerRecord.MAX_LEVEL)
 		if cannon != null:
-			_explode.call_deferred(at, cannon.id)
+			_explode.call_deferred(at, cannon.id, cannon.kind)
 	if was_frozen:
-		var frost: TowerRecord = _record_with(enemy.last_freezer_id(), TowerStats.Kind.FROST, ECLATS, 2)
+		var frost: TowerRecord = _record_with(enemy.last_freezer_id(), ECLATS, 2)
 		if frost != null:
-			_shatter.call_deferred(at, frost.id, frost.level >= TowerRecord.MAX_LEVEL)
+			_shatter.call_deferred(at, frost.id, frost.kind, frost.level >= TowerRecord.MAX_LEVEL)
 
 
-func _explode(at: Vector2, cannon_id: int) -> void:
+func _explode(at: Vector2, cannon_id: int, kind: StringName) -> void:
 	if not _limiter.try_consume(Engine.get_process_frames()):
 		return
-	var radius: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "l3_explosion_radius")
-	var damage: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "l3_explosion_damage") * _modifiers.damage_multiplier()
-	var duration: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "burn_duration")
+	var radius: float = _value(kind, INCENDIAIRE, "l3_explosion_radius")
+	var damage: float = _value(kind, INCENDIAIRE, "l3_explosion_damage") * _modifiers.damage_multiplier()
+	var duration: float = _value(kind, INCENDIAIRE, "burn_duration")
 	if _modifiers.burn_duration() > 0.0:
-		duration *= _value(TowerStats.Kind.CANNON, INCENDIAIRE, "card_duration_mult")
-	var dps: float = _value(TowerStats.Kind.CANNON, INCENDIAIRE, "burn_dps")
+		duration *= _value(kind, INCENDIAIRE, "card_duration_mult")
+	var dps: float = _value(kind, INCENDIAIRE, "burn_dps")
 	_show(at, EXPLOSION_WORD, EXPLOSION_COLOR, radius)
 	for enemy: Enemy in _living_enemies_near(at, radius):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
@@ -91,12 +96,12 @@ func _explode(at: Vector2, cannon_id: int) -> void:
 			enemy.apply_burn(duration, dps, cannon_id)
 
 
-func _shatter(at: Vector2, frost_id: int, freezes: bool) -> void:
+func _shatter(at: Vector2, frost_id: int, kind: StringName, freezes: bool) -> void:
 	if not _limiter.try_consume(Engine.get_process_frames()):
 		return
-	var radius: float = _value(TowerStats.Kind.FROST, ECLATS, "shard_radius")
-	var damage: float = _value(TowerStats.Kind.FROST, ECLATS, "shard_damage") * _modifiers.damage_multiplier()
-	var freeze: float = _value(TowerStats.Kind.FROST, ECLATS, "l3_shard_freeze") + _modifiers.freeze_duration_bonus()
+	var radius: float = _value(kind, ECLATS, "shard_radius")
+	var damage: float = _value(kind, ECLATS, "shard_damage") * _modifiers.damage_multiplier()
+	var freeze: float = _value(kind, ECLATS, "l3_shard_freeze") + _modifiers.freeze_duration_bonus()
 	_show(at, SHARD_WORD, SHARD_COLOR, radius)
 	for enemy: Enemy in _living_enemies_near(at, radius):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
@@ -125,5 +130,5 @@ func _show(at: Vector2, word: String, color: Color, radius: float) -> void:
 
 
 ## Number [param key] of branch [param branch] of a tower of [param kind] (required and validated by [constant TowerStats.BRANCH_KEYS]).
-func _value(kind: TowerStats.Kind, branch: StringName, key: String) -> float:
+func _value(kind: StringName, branch: StringName, key: String) -> float:
 	return float(_stats.branch_value(kind, branch, key))

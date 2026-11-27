@@ -15,8 +15,6 @@ const HEIGHT := 40.0
 const ICON_SIZE := Vector2(64.0, HEIGHT)
 const ICON_SPACING := 8
 const FONT_SIZE := 16
-const CANNON_COLOR := Color(1.0, 0.55, 0.25)
-const FROST_COLOR := Color(0.45, 0.85, 1.0)
 const SELECTED_COLOR := Color(1.0, 0.9, 0.35)
 const BG_COLOR := Color(0.1, 0.1, 0.16, 0.9)
 const BG_HOVER_COLOR := Color(0.16, 0.16, 0.24, 0.95)
@@ -49,9 +47,9 @@ func setup(reserve: TowerReserve, placer: TowerPlacer, stats: TowerStats) -> voi
 	_rebuild()
 
 
-## Short text of an icon: type letter, level, and the first letter of the branch.
-static func icon_text(record: TowerRecord, branch_label: String) -> String:
-	var kind_text: String = "Canon" if record.kind == TowerStats.Kind.CANNON else "Glace"
+## Short text of an icon: type letter (of [param kind_label]), level, and the first letter of the branch.
+static func icon_text(record: TowerRecord, kind_label: String, branch_label: String) -> String:
+	var kind_text: String = kind_label
 	var text: String = "%s %d" % [kind_text.left(1), record.level]
 	if branch_label != "":
 		text += " %s" % branch_label.left(1)
@@ -99,11 +97,12 @@ func _make_icon(record: TowerRecord, selected: bool) -> Button:
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused button must not react to it.
 	button.custom_minimum_size = ICON_SIZE
-	button.text = icon_text(record, _branch_label(record))
+	button.text = icon_text(record, TowerUpgradePanel.kind_label(_stats, record.kind), _branch_label(record))
 	button.tooltip_text = "Niveau %d" % record.level
 	button.add_theme_font_size_override(&"font_size", FONT_SIZE)
 	button.add_theme_font_override(&"font", NeonFonts.title())
-	var color: Color = CANNON_COLOR if record.kind == TowerStats.Kind.CANNON else FROST_COLOR
+	var def: TowerDef = _stats.def_of(record.kind)
+	var color: Color = Color.WHITE if def == null else def.icon_color
 	button.add_theme_color_override(&"font_color", color)
 	button.add_theme_color_override(&"font_hover_color", color)
 	var frame_color: Color = SELECTED_COLOR if selected else color

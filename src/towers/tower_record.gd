@@ -9,8 +9,8 @@ const MAX_LEVEL := 3
 
 ## Identifier unique within its reserve.
 var id: int = 0
-## Tower type.
-var kind: TowerStats.Kind = TowerStats.Kind.CANNON
+## Tower type: the id of its [TowerDef] ([code]&"cannon"[/code], [code]&"frost"[/code]…).
+var kind: StringName = &""
 ## Upgrade level, 1 to [constant MAX_LEVEL].
 var level: int = 1
 ## Branch id chosen at level 2; [code]&""[/code] at level 1.

@@ -168,19 +168,19 @@ func _append_item_rows(rows: Array[Dictionary]) -> void:
 	var tower_range: float = _modifiers.tower_range_factor()
 	if not is_equal_approx(tower_range, 1.0):
 		rows.append(_row("tower_range", "Portée des tours", tower_range, "+%d %%" % roundi((tower_range - 1.0) * 100.0)))
-	var cannon_base: int = _towers.cannon_cost
-	var frost_base: int = _towers.frost_cost
-	if _reserve != null:
-		cannon_base = _reserve.price_of_next(TowerStats.Kind.CANNON, 1.0)
-		frost_base = _reserve.price_of_next(TowerStats.Kind.FROST, 1.0)
-	var cannon_cost: int = _modifiers.tower_cost(cannon_base)
-	var frost_cost: int = _modifiers.tower_cost(frost_base)
-	if _reserve != null:
-		cannon_cost = _reserve.price_of_next(TowerStats.Kind.CANNON, _modifiers.tower_cost_factor())
-		frost_cost = _reserve.price_of_next(TowerStats.Kind.FROST, _modifiers.tower_cost_factor())
-	var saved: int = cannon_base - cannon_cost + frost_base - frost_cost
+	var saved: int = 0
+	var costs: PackedStringArray = []
+	for kind: StringName in _modifiers.unlocked_towers():
+		var base: int = _towers.cost_of(kind)
+		if _reserve != null:
+			base = _reserve.price_of_next(kind, 1.0)
+		var cost: int = _modifiers.tower_cost(base)
+		if _reserve != null:
+			cost = _reserve.price_of_next(kind, _modifiers.tower_cost_factor())
+		saved += base - cost
+		costs.append(str(cost))
 	if saved != 0:
-		rows.append(_row("tower_cost", "Coût des tours", float(saved), "%d / %d or" % [cannon_cost, frost_cost]))
+		rows.append(_row("tower_cost", "Coût des tours", float(saved), "%s or" % " / ".join(costs)))
 	var crystal_factor: float = _modifiers.crystal_damage_factor()
 	if not is_equal_approx(crystal_factor, 1.0):
 		var reduction: float = 1.0 - crystal_factor

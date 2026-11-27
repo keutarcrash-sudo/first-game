@@ -99,11 +99,17 @@ func shown_record() -> TowerRecord:
 
 ## Display name of [param branch] of a tower of [param kind] (its [code]label[/code]
 ## in towers.json, else its id).
-static func branch_label(stats: TowerStats, kind: TowerStats.Kind, branch: StringName) -> String:
+static func branch_label(stats: TowerStats, kind: StringName, branch: StringName) -> String:
 	var label: Variant = stats.branch_value(kind, branch, "label")
 	if label is String:
 		return label as String
 	return String(branch)
+
+
+## Display name of a tower of [param kind] (its [code]label[/code] in towers.json, else its id).
+static func kind_label(stats: TowerStats, kind: StringName) -> String:
+	var def: TowerDef = stats.def_of(kind)
+	return String(kind) if def == null else def.label
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -132,7 +138,7 @@ func _rebuild() -> void:
 	for child: Node in _column.get_children():
 		_column.remove_child(child)
 		child.queue_free()
-	var kind_name: String = "Canon" if _record.kind == TowerStats.Kind.CANNON else "Glace"
+	var kind_name: String = kind_label(_stats, _record.kind)
 	var title: String = "%s — niveau %d" % [kind_name, _record.level]
 	if _record.branch != &"":
 		title += " · %s" % branch_label(_stats, _record.kind, _record.branch)

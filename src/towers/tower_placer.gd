@@ -34,18 +34,13 @@ var _state: GameState
 var _field_rect: Rect2
 var _crystal: Crystal
 var _towers: Node2D
-var _enemies: Node2D
-var _bullets: Node2D
-var _rules: ProcRules
 var _modifiers: PlayerModifiers
-var _designator: TargetDesignator
-var _kind := TowerStats.Kind.CANNON
-var _cannon_sheet: SpriteSheet
-var _frost_sheet: SpriteSheet
-var _cannon_height: float
-var _frost_height: float
+var _ctx: TowerBehaviour.TowerContext
+var _kind: StringName = &""
+var _sheets: Dictionary = {}  # Tower id (StringName) -> SpriteSheet; a missing id has no image.
 var _preview: DirectionalSprite
-var _sheet_error_reported := false
+var _preview_behaviour: TowerBehaviour  # Gives the preview ring its range (no tower node).
+var _sheet_errors_reported: Dictionary = {}  # Tower ids whose missing sheet was reported.
 var _reserve: TowerReserve
 var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (read by TowerEffects).
 var _tower_nodes: Dictionary = {}  # id -> Tower node of the placed towers.
@@ -55,29 +50,40 @@ var _panel_open: bool = false  # A field click then only dismisses the upgrade p
 
 ## Gives the placer its tuning values, the game state (gold and phase), the arena,
 ## the crystal to keep clear, and the nodes holding the towers, the enemies and the
-## bullets, the combo rules handed to cannon shots, the card modifiers handed to every tower (shared, never copied), the target designator handed to every cannon, and the player's [param reserve] (purchases and the records of the placed towers). Call once, before the first frame.
+## bullets, the combo rules handed to the shots, the card modifiers handed to every tower (shared, never copied), the target designator handed to every tower, and the player's [param reserve] (purchases and the records of the placed towers). These make the [TowerBehaviour.TowerContext] shared by all towers. The first unlocked tower is selected for purchase. Call once, before the first frame.
 func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crystal, towers: Node2D, enemies: Node2D, bullets: Node2D, rules: ProcRules, modifiers: PlayerModifiers, designator: TargetDesignator, reserve: TowerReserve) -> void:
 	_reserve = reserve
-	_designator = designator
 	_modifiers = modifiers
-	_rules = rules
 	_stats = stats
 	_state = state
 	_field_rect = field_rect
 	_crystal = crystal
 	_towers = towers
-	_enemies = enemies
-	_bullets = bullets
+	_ctx = TowerBehaviour.TowerContext.new()
+	_ctx.stats = stats
+	_ctx.enemies = enemies
+	_ctx.bullets = bullets
+	_ctx.arena_rect = field_rect
+	_ctx.rules = rules
+	_ctx.modifiers = modifiers
+	_ctx.designator = designator
+	var unlocked: Array[StringName] = modifiers.unlocked_towers()
+	_kind = unlocked[0] if not unlocked.is_empty() else stats.defs()[0].id
+	_refresh_preview_behaviour()
 	state.phase_changed.connect(_on_phase_changed)
 	_on_phase_changed(state.phase)
 
 
-## Gives the placer the tower images and their on-screen heights in pixels, used for the preview and for every placed tower. Call once, before the first frame.
-func set_visuals(cannon_sheet: SpriteSheet, cannon_height: float, frost_sheet: SpriteSheet, frost_height: float) -> void:
-	_cannon_sheet = cannon_sheet
-	_frost_sheet = frost_sheet
-	_cannon_height = cannon_height
-	_frost_height = frost_height
+## Gives every tower the chain-effect cap of the [TowerEffects] ([member TowerBehaviour.TowerContext.chain_limiter]).
+func set_chain_limiter(limiter: ChainLimiter) -> void:
+	_ctx.chain_limiter = limiter
+
+
+## Gives the placer the tower images, tower id (StringName) -> [SpriteSheet], used for the
+## preview and for every placed tower, drawn [member TowerDef.height_px] tall. A tower
+## without a sheet is reported once and shown without an image. Call once, before the first frame.
+func set_visuals(sheets: Dictionary) -> void:
+	_sheets = sheets
 	if _preview == null:
 		_preview = DirectionalSprite.new()
 		add_child(_preview)
@@ -123,15 +129,19 @@ func select_record(record: TowerRecord) -> void:
 		return
 	_selected_record = record
 	_kind = record.kind
+	_refresh_preview_behaviour()
 	_apply_preview_sheet()
 	selection_changed.emit()
 
 
 ## Makes the next valid click buy a new tower of [param kind] and place it there.
-## The cannon is selected by default.
-func select_purchase(kind: TowerStats.Kind) -> void:
+## The first unlocked tower is selected by default. Ignored for an unknown kind.
+func select_purchase(kind: StringName) -> void:
+	if _stats.def_of(kind) == null:
+		return
 	_selected_record = null
 	_kind = kind
+	_refresh_preview_behaviour()
 	_apply_preview_sheet()
 	selection_changed.emit()
 
@@ -149,8 +159,13 @@ func selected_record() -> TowerRecord:
 
 
 ## The kind the next click places (bought or taken from the reserve).
-func selected_kind() -> TowerStats.Kind:
+func selected_kind() -> StringName:
 	return _kind
+
+
+## The image of the towers of [param kind], or [code]null[/code] when it has none.
+func sheet_of(kind: StringName) -> SpriteSheet:
+	return _sheets.get(kind) as SpriteSheet
 
 
 func _process(_delta: float) -> void:
@@ -169,7 +184,8 @@ func _draw() -> void:
 	var color: Color = VALID_COLOR if _is_spot_valid(mouse, radius) else INVALID_COLOR
 	if _preview != null:
 		_preview.tint = color
-	draw_arc(mouse, _range_of(_kind), 0.0, TAU, RING_POINTS, color, RING_WIDTH)
+	var preview_range: float = 0.0 if _preview_behaviour == null else _preview_behaviour.range_now()
+	draw_arc(mouse, preview_range, 0.0, TAU, RING_POINTS, color, RING_WIDTH)
 
 
 ## Clicks consumed by the HUD buttons never reach this function.
@@ -208,32 +224,35 @@ func _unhandled_input(event: InputEvent) -> void:
 		_select_next_waiting(record.kind)
 
 
-## The range a tower of [param kind] would have if placed now, card and item bonuses
-## included (the same factors the towers read every frame).
-func _range_of(kind: TowerStats.Kind) -> float:
-	var factor: float = _modifiers.tower_range_factor()
-	if kind == TowerStats.Kind.FROST:
-		factor *= _modifiers.frost_range_factor()
-		var record: TowerRecord = _selected_record
-		if record != null and record.level >= 2 and record.branch == FrostTower.BLIZZARD:
-			factor *= float(_stats.branch_value(TowerStats.Kind.FROST, FrostTower.BLIZZARD, "range_mult"))
-	return _stats.range_of(kind) * factor
+## Rebuilds the behaviour giving the preview ring its range: the selected reserve tower,
+## or a new level 1 tower of the selected kind. The record is shared, so an upgrade of the
+## selected tower shows at once; cards and items are read live.
+func _refresh_preview_behaviour() -> void:
+	var def: TowerDef = _stats.def_of(_kind)
+	_preview_behaviour = null if def == null else TowerBehaviour.create(def.behaviour)
+	if _preview_behaviour == null:
+		return
+	var record: TowerRecord = _selected_record
+	if record == null:
+		record = TowerRecord.new()
+		record.kind = _kind
+	_preview_behaviour.setup(null, def, record, _ctx)
 
 
 func _has_sheet() -> bool:
-	return (_cannon_sheet if _kind == TowerStats.Kind.CANNON else _frost_sheet) != null
+	return sheet_of(_kind) != null
 
 
 func _apply_preview_sheet() -> void:
 	if _preview == null:
 		return
-	var sheet: SpriteSheet = _cannon_sheet if _kind == TowerStats.Kind.CANNON else _frost_sheet
+	var sheet: SpriteSheet = sheet_of(_kind)
 	if sheet == null:
-		_report_missing_sheet()
+		_report_missing_sheet(_kind)
 		_preview.visible = false
 		return
 	_preview.visible = true
-	_preview.setup(sheet, _cannon_height if _kind == TowerStats.Kind.CANNON else _frost_height, true)
+	_preview.setup(sheet, _stats.def_of(_kind).height_px, true)
 	_preview.play(&"idle")
 
 
@@ -258,12 +277,12 @@ func _is_spot_valid(spot: Vector2, radius: float) -> bool:
 	return true
 
 
-## Reports once that a tower image was not given; the tower is then placed without its visual.
-func _report_missing_sheet() -> void:
-	if _sheet_error_reported:
+## Reports once per kind that a tower image was not given; the tower is then placed without its visual.
+func _report_missing_sheet(kind: StringName) -> void:
+	if _sheet_errors_reported.has(kind):
 		return
-	_sheet_error_reported = true
-	push_error("TowerPlacer: tower sheets were not set (set_visuals); towers are shown without an image.")
+	_sheet_errors_reported[kind] = true
+	push_error("TowerPlacer: no sheet for tower '%s' (set_visuals); it is shown without an image." % kind)
 
 
 ## The record of the placed tower whose body contains [param spot], or null.
@@ -277,34 +296,29 @@ func _record_at(spot: Vector2) -> TowerRecord:
 
 ## After a reserve tower is placed, selects the next one of [param kind] still
 ## waiting, or falls back to buying that kind.
-func _select_next_waiting(kind: TowerStats.Kind) -> void:
+func _select_next_waiting(kind: StringName) -> void:
 	_selected_record = null
 	for waiting: TowerRecord in _reserve.available():
 		if waiting.kind == kind:
 			_selected_record = waiting
 			break
+	_refresh_preview_behaviour()
 	selection_changed.emit()
 
 
 func _place(record: TowerRecord, spot: Vector2) -> void:
+	var def: TowerDef = _stats.def_of(record.kind)
+	if def == null:
+		push_error("TowerPlacer: unknown tower '%s'; not placed." % record.kind)
+		return
 	_records[record.id] = record
-	var tower: Tower
-	if record.kind == TowerStats.Kind.CANNON:
-		var cannon := CannonTower.new()
-		cannon.setup(_stats, _enemies, _bullets, _field_rect, _rules, _modifiers, _designator, record)
-		if _cannon_sheet != null:
-			cannon.set_visual(_cannon_sheet, _cannon_height)
-		else:
-			_report_missing_sheet()
-		tower = cannon
+	var tower := Tower.new()
+	tower.setup(def, record, _ctx)
+	var sheet: SpriteSheet = sheet_of(record.kind)
+	if sheet != null:
+		tower.set_visual(sheet, def.height_px)
 	else:
-		var frost := FrostTower.new()
-		frost.setup(_stats, _enemies, _modifiers, record)
-		if _frost_sheet != null:
-			frost.set_visual(_frost_sheet, _frost_height)
-		else:
-			_report_missing_sheet()
-		tower = frost
+		_report_missing_sheet(record.kind)
 	tower.position = spot
 	_towers.add_child(tower)
 	_tower_nodes[record.id] = tower

@@ -23,33 +23,38 @@ func _init(stats: TowerStats) -> void:
 
 ## Gold price of the next paid tower of [param kind], after multiplying by
 ## [param cost_factor] (product of the discounts, 1.0 for none).
-func price_of_next(kind: TowerStats.Kind, cost_factor: float) -> int:
+func price_of_next(kind: StringName, cost_factor: float) -> int:
 	var paid: int = _paid_counts.get(kind, 0)
 	return roundi((_stats.cost_of(kind) + _stats.price_step * paid) * cost_factor)
 
 
 ## Buys a tower of [param kind] into the reserve if [param gold_available]
 ## covers [method price_of_next]; returns it, or [code]null[/code] if not. The
-## caller spends the price it read before calling.
-func buy(kind: TowerStats.Kind, gold_available: int, cost_factor: float) -> TowerRecord:
-	if gold_available < price_of_next(kind, cost_factor):
+## caller spends the price it read before calling. An unknown kind is refused.
+func buy(kind: StringName, gold_available: int, cost_factor: float) -> TowerRecord:
+	if _stats.def_of(kind) == null or gold_available < price_of_next(kind, cost_factor):
 		return null
 	_paid_counts[kind] = int(_paid_counts.get(kind, 0)) + 1
 	return _add(kind, false)
 
 
-## Adds a gift tower of [param kind]; it does not raise later prices.
-func add_free(kind: TowerStats.Kind) -> TowerRecord:
+## Adds a gift tower of [param kind]; it does not raise later prices. Returns
+## [code]null[/code] for an unknown kind.
+func add_free(kind: StringName) -> TowerRecord:
+	if _stats.def_of(kind) == null:
+		return null
 	return _add(kind, true)
 
 
-## Kind with the fewest owned towers (paid and free); CANNON on a tie.
-func least_owned_kind() -> TowerStats.Kind:
-	var best: TowerStats.Kind = TowerStats.Kind.CANNON
-	var best_count: int = _count_of(best)
-	for kind: TowerStats.Kind in TowerStats.Kind.values():
+## Kind with the fewest owned towers (paid and free) among [param unlocked]; the
+## first of [param unlocked] on a tie, [code]&""[/code] when it is empty. Locked
+## kinds are never returned.
+func least_owned_kind(unlocked: Array[StringName]) -> StringName:
+	var best: StringName = &""
+	var best_count: int = 0
+	for kind: StringName in unlocked:
 		var count: int = _count_of(kind)
-		if count < best_count:
+		if best == &"" or count < best_count:
 			best = kind
 			best_count = count
 	return best
@@ -124,7 +129,7 @@ func return_all() -> void:
 		changed.emit()
 
 
-func _add(kind: TowerStats.Kind, is_free: bool) -> TowerRecord:
+func _add(kind: StringName, is_free: bool) -> TowerRecord:
 	var record := TowerRecord.new()
 	record.id = _next_id
 	_next_id += 1
@@ -135,7 +140,7 @@ func _add(kind: TowerStats.Kind, is_free: bool) -> TowerRecord:
 	return record
 
 
-func _count_of(kind: TowerStats.Kind) -> int:
+func _count_of(kind: StringName) -> int:
 	var count: int = 0
 	for record: TowerRecord in _records:
 		if record.kind == kind:

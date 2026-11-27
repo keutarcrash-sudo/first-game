@@ -15,6 +15,8 @@ signal heal_requested(amount: float)
 signal hero_heal_requested(amount: float)
 ## Emitted once each time a « free_tower » card is taken (Tour de renfort).
 signal free_tower_requested
+## Emitted after the set of unlocked towers changes ([method unlock_tower], [method set_starting_towers]).
+signal towers_unlocked_changed
 
 ## Cooldown reductions never go below this share of the base cooldown (-75 % at most).
 const MIN_COOLDOWN_FACTOR := 0.25
@@ -66,11 +68,37 @@ var _crystal_reduction := 0.0
 var _tower_cost_mult := 1.0
 var _upgrade_cost_mult := 1.0
 var _gold_kill_mult := 1.0
+var _unlocked_towers: Array[StringName] = []  # Tower ids the player can build, in unlock order.
 
 
 ## [param rules] receives the combos unlocked by cards.
 func _init(rules: ProcRules) -> void:
 	_rules = rules
+
+
+## Sets the towers buildable from the start of the run ([member TowerStats.starting_unlocked]),
+## replacing any previous set. Call once, before the first build.
+func set_starting_towers(ids: Array[StringName]) -> void:
+	_unlocked_towers = ids.duplicate()
+	towers_unlocked_changed.emit()
+
+
+## True if the tower [param id] can be built.
+func is_tower_unlocked(id: StringName) -> bool:
+	return _unlocked_towers.has(id)
+
+
+## The tower ids the player can build, starting ones first, then in unlock order.
+func unlocked_towers() -> Array[StringName]:
+	return _unlocked_towers.duplicate()
+
+
+## Unlocks the tower [param id]; ignored if it already is.
+func unlock_tower(id: StringName) -> void:
+	if _unlocked_towers.has(id):
+		return
+	_unlocked_towers.append(id)
+	towers_unlocked_changed.emit()
 
 
 ## How many times the card [param card_id] has been taken.

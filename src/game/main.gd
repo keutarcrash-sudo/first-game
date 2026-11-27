@@ -122,10 +122,8 @@ func _ready() -> void:
 				enemy_types = null
 				break
 			enemy_sheets[type["id"]] = type_sheet
-	var cannon_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.cannon_sheet)
-	var frost_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.frost_sheet)
 	var crystal_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.crystal_sheet)
-	if _item_catalog == null or default_sheet == null or enemy_types == null or cannon_sheet == null or frost_sheet == null or crystal_sheet == null or impact_stats == null or bar_style == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
+	if _item_catalog == null or default_sheet == null or enemy_types == null or crystal_sheet == null or impact_stats == null or bar_style == null or _map_generator == null or _skill_tree == null or _ability_catalog == null or stats == null or defence == null or curve == null or economy == null or towers == null:
 		_hero.queue_free()
 		_crystal.queue_free()
 		_placer.queue_free()
@@ -136,6 +134,7 @@ func _ready() -> void:
 	var owned: PackedStringArray = _progress.owned_ids
 	_rules = rules
 	var modifiers := PlayerModifiers.new(rules)
+	modifiers.set_starting_towers(towers.starting_unlocked)
 	_modifiers = modifiers
 	_rng = RandomNumberGenerator.new()
 	_rng.randomize()
@@ -254,10 +253,16 @@ func _ready() -> void:
 	_spawner.wave_finished.connect(func(_wave_number: int) -> void: designator.clear())
 	_reserve = TowerReserve.new(towers)  # Empty at the start of a run.
 	_placer.setup(towers, _state, _field_rect, _crystal, _towers, _enemies, _bullets, rules, modifiers, designator, _reserve)
-	_placer.set_visuals(cannon_sheet, _visuals.height("cannon"), frost_sheet, _visuals.height("frost"))
+	var tower_sheets: Dictionary = {}  # Tower id -> SpriteSheet; a tower whose sheet fails is shown without an image.
+	for def: TowerDef in towers.defs():
+		var tower_sheet: SpriteSheet = _sheet_for(def.sheet_path)
+		if tower_sheet != null:
+			tower_sheets[def.id] = tower_sheet
+	_placer.set_visuals(tower_sheets)
 	var tower_effects := TowerEffects.new()
 	add_child(tower_effects)
 	tower_effects.setup(_enemies, towers, modifiers, _placer.records_by_id)
+	_placer.set_chain_limiter(tower_effects.limiter())
 	_hud.bind_tower_build(towers, modifiers, _reserve, _placer, _state)
 	_hud.tower_kind_chosen.connect(_placer.select_purchase)
 	_hud.reserve_record_chosen.connect(_placer.select_record)
@@ -651,7 +656,10 @@ func _on_replay_pressed() -> void:
 	get_tree().reload_current_scene()
 
 
-## « Tour de renfort »: a free base tower of the least owned kind joins the reserve.
+## « Tour de renfort »: a free base tower of the least owned unlocked kind joins the reserve.
 func _on_free_tower_requested() -> void:
-	if _reserve != null:
-		_reserve.add_free(_reserve.least_owned_kind())
+	if _reserve == null or _modifiers == null:
+		return
+	var kind: StringName = _reserve.least_owned_kind(_modifiers.unlocked_towers())
+	if kind != &"":
+		_reserve.add_free(kind)

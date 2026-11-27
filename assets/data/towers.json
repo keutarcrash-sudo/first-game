@@ -1,20 +1,4 @@
 {
-	"cannon": {
-		"cost": 50,
-		"range": 250.0,
-		"radius": 18.0,
-		"damage": 10.0,
-		"fire_interval": 0.8,
-		"bullet_speed": 500.0,
-		"bullet_radius": 5.0,
-		"bullet_max_range": 400.0
-	},
-	"frost": {
-		"cost": 50,
-		"range": 150.0,
-		"radius": 18.0,
-		"slow_factor": 0.45
-	},
 	"designation": {
 		"click_margin": 12.0
 	},
@@ -31,36 +15,65 @@
 	"chain": {
 		"max_per_frame": 12
 	},
-	"branches": {
+	"towers": {
 		"cannon": {
-			"incendiaire": {
-				"label": "Incendiaire",
-				"burn_duration": 4.0,
-				"burn_dps": 8.0,
-				"card_duration_mult": 1.5,
-				"l3_explosion_radius": 80.0,
-				"l3_explosion_damage": 15.0
-			},
-			"perforant": {
-				"label": "Perforant",
-				"pierce_total": 3,
-				"l3_shots": 2,
-				"l3_spread_degrees": 8.0
+			"label": "Canon",
+			"behaviour": "shooter",
+			"base_cost": 50,
+			"range": 250.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/cannon",
+			"height_px": 110.0,
+			"color": [1.0, 0.65, 0.25],
+			"icon_color": [1.0, 0.55, 0.25],
+			"damage": 10.0,
+			"fire_interval": 0.8,
+			"bullet_speed": 500.0,
+			"bullet_radius": 5.0,
+			"bullet_max_range": 400.0,
+			"branches": {
+				"incendiaire": {
+					"label": "Incendiaire",
+					"burn_duration": 4.0,
+					"burn_dps": 8.0,
+					"card_duration_mult": 1.5,
+					"l3_explosion_radius": 80.0,
+					"l3_explosion_damage": 15.0
+				},
+				"perforant": {
+					"label": "Perforant",
+					"pierce_total": 3,
+					"l3_shots": 2,
+					"l3_spread_degrees": 8.0
+				}
 			}
 		},
 		"frost": {
-			"blizzard": {
-				"label": "Blizzard",
-				"range_mult": 1.4,
-				"dwell": 1.0,
-				"l3_wet_duration": 3.0
-			},
-			"eclats": {
-				"label": "Éclats",
-				"shard_radius": 70.0,
-				"shard_damage": 12.0,
-				"l3_shard_freeze": 0.6
+			"label": "Glace",
+			"behaviour": "frost_aura",
+			"base_cost": 50,
+			"range": 150.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/frost_tower",
+			"height_px": 110.0,
+			"color": [0.1, 0.89, 1.0],
+			"icon_color": [0.45, 0.85, 1.0],
+			"slow_factor": 0.45,
+			"branches": {
+				"blizzard": {
+					"label": "Blizzard",
+					"range_mult": 1.4,
+					"dwell": 1.0,
+					"l3_wet_duration": 3.0
+				},
+				"eclats": {
+					"label": "Éclats",
+					"shard_radius": 70.0,
+					"shard_damage": 12.0,
+					"l3_shard_freeze": 0.6
+				}
 			}
 		}
-	}
+	},
+	"starting_unlocked": ["cannon", "frost"]
 }

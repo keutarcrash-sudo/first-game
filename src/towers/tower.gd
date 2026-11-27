@@ -1,8 +1,8 @@
-## Base of the placed towers (story 004): a coloured halo on the ground, the
-## tower image on top of it, and a faint ring showing its range. Subclasses set
-## [member _halo_color] in their setup and add their behaviour in
-## [method Node._physics_process]. The image is a [DirectionalSprite] child, drawn
-## after (so over) the halo.
+## A placed tower (story 004, towers T2a): a coloured halo on the ground, the tower
+## image on top of it, and a faint ring showing its range. What it does comes from its
+## [TowerBehaviour], created from its [TowerDef] in [method setup] and ticked every
+## physics frame; the range ring follows [method TowerBehaviour.range_now]. The image is
+## a [DirectionalSprite] child, drawn after (so over) the halo.
 class_name Tower
 extends Node2D
 
@@ -19,6 +19,21 @@ var radius: float
 var attack_range: float
 var _halo_color: Color
 var _sprite: DirectionalSprite
+var _behaviour: TowerBehaviour
+
+
+## Sets the tower type [param def], its [param record] (shared, never copied: level and
+## branch are read live) and the shared [param ctx], and creates its behaviour. Call
+## before adding the tower to the tree.
+func setup(def: TowerDef, record: TowerRecord, ctx: TowerBehaviour.TowerContext) -> void:
+	radius = def.radius
+	_halo_color = def.color
+	_behaviour = TowerBehaviour.create(def.behaviour)
+	if _behaviour == null:
+		set_physics_process(false)
+		return
+	_behaviour.setup(self, def, record, ctx)
+	attack_range = _behaviour.range_now()
 
 
 ## Gives the tower its image: [param sheet] drawn [param height_px] tall.
@@ -36,9 +51,21 @@ func set_facing(angle: float) -> void:
 		_sprite.set_facing(angle)
 
 
+func _physics_process(delta: float) -> void:
+	if _behaviour == null:
+		return
+	var current_range: float = _behaviour.range_now()
+	if not is_equal_approx(current_range, attack_range):
+		attack_range = current_range
+		queue_redraw()  # The range ring follows (items, étape 5a).
+	_behaviour.physics_tick(delta)
+
+
 func _draw() -> void:
 	var fill := Color(_halo_color, HALO_FILL_ALPHA)
 	var edge := Color(_halo_color, HALO_EDGE_ALPHA)
 	draw_circle(Vector2.ZERO, radius, fill)
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, RING_POINTS, edge, HALO_EDGE_WIDTH, true)
 	draw_arc(Vector2.ZERO, attack_range, 0.0, TAU, RING_POINTS, RING_COLOR, RING_WIDTH)
+	if _behaviour != null:
+		_behaviour.draw(self)
