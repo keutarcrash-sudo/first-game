@@ -3,7 +3,8 @@
 ## click on an icon asks for that tower to be placed by the next click on the
 ## field ([signal record_chosen], wired to [method TowerPlacer.select_record]).
 ## Display only: it never changes the reserve. When the towers do not fit its width,
-## the last icon becomes a "+N" counter, so the bar never runs off-screen.
+## the last icon becomes a "+N" counter, so the bar never runs off-screen. An evolved
+## tower (towers T2b) carries a golden star, and its evolution's name shows on hover.
 class_name TowerReserveBar
 extends HBoxContainer
 
@@ -21,6 +22,12 @@ const BG_HOVER_COLOR := Color(0.16, 0.16, 0.24, 0.95)
 const FRAME_WIDTH := 2
 const SELECTED_FRAME_WIDTH := 4
 const FRAME_RADIUS := 6
+const STAR_COLOR := Color(1.0, 0.82, 0.2)
+## Outer radius in pixels of the star of an evolved tower, and its inner/outer ratio.
+const STAR_RADIUS := 6.0
+const STAR_INNER_RATIO := 0.45
+## Gap in pixels between the star and the icon's top right corner.
+const STAR_MARGIN := 3.0
 
 var _reserve: TowerReserve
 var _placer: TowerPlacer
@@ -98,7 +105,7 @@ func _make_icon(record: TowerRecord, selected: bool) -> Button:
 	button.focus_mode = Control.FOCUS_NONE  # Space starts the wave: a focused button must not react to it.
 	button.custom_minimum_size = ICON_SIZE
 	button.text = icon_text(record, TowerUpgradePanel.kind_label(_stats, record.kind), _branch_label(record))
-	button.tooltip_text = "Niveau %d" % record.level
+	button.tooltip_text = icon_tooltip(record, _branch_label(record), _evolution_name(record))
 	button.add_theme_font_size_override(&"font_size", FONT_SIZE)
 	button.add_theme_font_override(&"font", NeonFonts.title())
 	var def: TowerDef = _stats.def_of(record.kind)
@@ -111,7 +118,39 @@ func _make_icon(record: TowerRecord, selected: bool) -> Button:
 	button.add_theme_stylebox_override(&"hover", _frame(frame_color, BG_HOVER_COLOR, width))
 	button.add_theme_stylebox_override(&"pressed", _frame(SELECTED_COLOR, BG_HOVER_COLOR, SELECTED_FRAME_WIDTH))
 	button.pressed.connect(_on_icon_pressed.bind(record))
+	if record.evolved:
+		button.add_child(_make_star())
 	return button
+
+
+## Hover text of an icon: the level, then the branch and the evolution's name when known.
+static func icon_tooltip(record: TowerRecord, branch_label: String, evolution_name: String) -> String:
+	var text: String = "Niveau %d" % record.level
+	if branch_label != "":
+		text += " · %s" % branch_label
+	if record.evolved and evolution_name != "":
+		text += " · %s" % evolution_name
+	return text
+
+
+## A small golden star drawn in the top right corner of an icon (no font glyph needed).
+func _make_star() -> Control:
+	var star := Control.new()
+	star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	star.size = Vector2(STAR_RADIUS, STAR_RADIUS) * 2.0
+	star.position = Vector2(ICON_SIZE.x - star.size.x - STAR_MARGIN, STAR_MARGIN)
+	var points := PackedVector2Array()
+	for i: int in 10:
+		var reach: float = STAR_RADIUS if i % 2 == 0 else STAR_RADIUS * STAR_INNER_RATIO
+		var angle: float = -PI / 2.0 + i * PI / 5.0
+		points.append(Vector2(STAR_RADIUS, STAR_RADIUS) + Vector2.from_angle(angle) * reach)
+	star.draw.connect(func() -> void: star.draw_colored_polygon(points, STAR_COLOR))
+	return star
+
+
+func _evolution_name(record: TowerRecord) -> String:
+	var def: TowerDef = _stats.def_of(record.kind)
+	return "" if def == null else def.evolution_name(record.branch)
 
 
 func _branch_label(record: TowerRecord) -> String:

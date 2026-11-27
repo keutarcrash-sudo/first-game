@@ -835,6 +835,48 @@
 					"tower_id": "amplifier"
 				}
 			]
+		},
+		{
+			"id": "condensateur",
+			"rarity": "rare",
+			"display_name": "Condensateur",
+			"description": "Aucun effet seul : permet à une Tesla Surtension de niveau 3 d'évoluer en Orage (chaque éclair en relance un second).",
+			"combines_with": "",
+			"max_stacks": 1,
+			"requires_tower": "tesla",
+			"effects": [
+				{
+					"type": "evolution_key"
+				}
+			]
+		},
+		{
+			"id": "reservoir_sous_pression",
+			"rarity": "rare",
+			"display_name": "Réservoir sous pression",
+			"description": "Aucun effet seul : permet à un Lance-flammes Napalm de niveau 3 d'évoluer en Dragon (le feu sort tout autour de la tour).",
+			"combines_with": "",
+			"max_stacks": 1,
+			"requires_tower": "flamethrower",
+			"effects": [
+				{
+					"type": "evolution_key"
+				}
+			]
+		},
+		{
+			"id": "artillerie_lourde",
+			"rarity": "rare",
+			"display_name": "Artillerie lourde",
+			"description": "Aucun effet seul : permet à un Mortier Grappe de niveau 3 d'évoluer en Bombardement (3 obus par tir).",
+			"combines_with": "",
+			"max_stacks": 1,
+			"requires_tower": "mortar",
+			"effects": [
+				{
+					"type": "evolution_key"
+				}
+			]
 		}
 	]
 }

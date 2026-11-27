@@ -26,6 +26,9 @@ var requires_card := ""
 var max_stacks := -1
 ## First wave (the one about to be played) on which the card can be offered (towers T2a: plans from wave 2).
 var min_wave := 1
+## Id of a tower that must be unlocked for the card to be offered (towers T2b: the
+## evolution keys); empty for none.
+var requires_tower := ""
 ## Effects applied each time the card is taken: dictionaries with a "type" key
 ## (see [PlayerModifiers]) and the values of that type.
 var effects: Array[Dictionary] = []

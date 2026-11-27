@@ -112,6 +112,8 @@ func _ready() -> void:
 	var bar_style: AbilityBarStyle = AbilityBarStyle.load_from_file(ABILITY_BAR_PATH)
 	_map_generator = WorldMapGenerator.load_from_file(WORLD_MAP_PATH)
 	_item_catalog = null if _catalog == null else ItemCatalog.load_from_file(ITEMS_PATH, _rarities, _specs, rules, _ability_catalog)
+	if _item_catalog != null and towers != null and not _resolve_evolutions(towers):
+		towers = null  # An evolution names an unknown item or card: stop like any data error.
 	var default_sheet: SpriteSheet = null if _visuals == null else _sheet_for(_visuals.hero_sheet("default"))
 	var enemy_types: EnemyTypes = EnemyTypes.load_from_file(ENEMY_TYPES_PATH)
 	var enemy_sheets: Dictionary = {}  # Type id -> SpriteSheet.
@@ -278,6 +280,7 @@ func _ready() -> void:
 	_placer.panel_dismiss_requested.connect(upgrade_panel.close)
 	upgrade_panel.upgrade_requested.connect(_on_tower_upgrade_requested)
 	upgrade_panel.pick_up_requested.connect(_placer.pick_up)
+	upgrade_panel.evolve_requested.connect(_on_tower_evolve_requested)
 	_caster = AbilityCaster.new()
 	add_child(_caster)
 	_caster.set_impact(_impact)
@@ -328,6 +331,7 @@ func _on_spec_chosen(spec: SpecializationDef) -> void:
 	_hero.equip(spec, _modifiers, _rng)
 	_caster.equip(_ability_catalog.for_spec(spec.id))
 	_hud.show_specialization(spec)
+	_hud.upgrade_panel().set_hero_spec(StringName(spec.id))  # Evolutions reserved to a hero (towers T2b).
 	_hud.refresh_stats()
 	var abilities: Dictionary = _ability_catalog.for_spec(spec.id)
 	var is_unlocked := func(ability_id: String) -> bool:
@@ -641,6 +645,30 @@ func _on_tower_upgrade_requested(record: TowerRecord, branch: StringName) -> voi
 		_hud.show_not_enough_gold()
 		return
 	_state.spend_gold(price)
+
+
+## Evolves [param record] when its evolution's item or card is owned (towers T2b):
+## free, checked again here ([method TowerUpgradePanel.evolution_status]) before
+## [method TowerReserve.evolve] applies it.
+func _on_tower_evolve_requested(record: TowerRecord) -> void:
+	if _hud.upgrade_panel().evolution_status(record) != EvolutionRules.READY:
+		return
+	_reserve.evolve(record)
+
+
+## Checks that every evolution of [param towers] names an existing item or card and
+## records their display names and reserved hero (towers T2b). False after an error.
+func _resolve_evolutions(towers: TowerStats) -> bool:
+	var spec_names: Dictionary = {}  # Spec id -> display name.
+	for spec: SpecializationDef in _specs.specs:
+		spec_names[spec.id] = spec.display_name
+	var items: Dictionary = {}
+	for item: ItemDef in _item_catalog.all():
+		items[item.id] = {"name": item.display_name, "spec": item.requires_spec, "spec_name": spec_names.get(item.requires_spec, "")}
+	var cards: Dictionary = {}
+	for card: CardDef in _catalog.cards:
+		cards[card.id] = {"name": card.display_name, "spec": card.requires_spec, "spec_name": spec_names.get(card.requires_spec, "")}
+	return towers.resolve_evolutions(items, cards, TOWERS_PATH)
 
 
 ## The hero died: the whole world freezes at once (the tree is paused: spawns, enemies,

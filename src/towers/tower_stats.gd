@@ -56,6 +56,37 @@ const BRANCH_KEYS := {
 		"catalyseur": ["label", "state_bonus", "l3_state_bonus"],
 	},
 }
+## Evolution of each branch (towers T2b): behaviour -> branch id -> the numeric keys its
+## [code]evolution[/code] block must carry, besides [code]name[/code] and exactly one of
+## [code]requires_item[/code] / [code]requires_card[/code]. Required for these branches.
+const EVOLUTION_KEYS := {
+	"shooter": {
+		"incendiaire": ["lava_radius", "lava_duration", "lava_dps"],
+		"perforant": ["pierce_total", "damage_mult", "range_mult"],
+	},
+	"frost_aura": {
+		"blizzard": ["pulse_interval", "pulse_freeze"],
+		"eclats": ["shard_hops", "hop_range"],
+	},
+	"chain_lightning": {
+		"surtension": ["second_bolt"],
+		"arc": ["pull_speed", "pull_stop"],
+	},
+	"flame_cone": {
+		"napalm": ["angle_degrees"],
+		"souffle": ["blast_radius", "blast_damage", "burn_dps", "burn_duration"],
+	},
+	"mortar": {
+		"grappe": ["shells", "spread"],
+		"sismique": ["impact_stun"],
+	},
+	"amplifier": {
+		"cadence": ["rate_mult"],
+		"catalyseur": ["share_burn_dps", "share_burn_duration", "share_slow", "share_slow_duration", "share_wet", "share_stun"],
+	},
+}
+## String keys of an evolution block.
+const EVOLUTION_TEXT_KEYS := ["name", "requires_item", "requires_card"]
 ## Number of upgrade costs: level 1 -> 2, then level 2 -> 3.
 const UPGRADE_COUNT := 2
 
@@ -118,6 +149,26 @@ func branch_ids(kind: StringName) -> Array[StringName]:
 func branch_value(kind: StringName, branch: StringName, key: String) -> Variant:
 	var def: TowerDef = def_of(kind)
 	return null if def == null else def.branch_value(branch, key)
+
+
+## Checks the requirement of every evolution against the catalogs and records its
+## display names on the [TowerDef]s (towers T2b). [param items] and [param cards] map an
+## id (String) to a Dictionary with [code]name[/code] (display name), [code]spec[/code]
+## (specialization id, "" for all) and [code]spec_name[/code] (its display name).
+## Returns false after an error naming [param path] and the key if an id is unknown.
+func resolve_evolutions(items: Dictionary, cards: Dictionary, path: String) -> bool:
+	for def: TowerDef in _defs:
+		for branch: StringName in def.evolutions:
+			var item: String = def.requirement_item(branch)
+			var source: Dictionary = items if not item.is_empty() else cards
+			var id: String = item if not item.is_empty() else def.requirement_card(branch)
+			var key: String = "requires_item" if not item.is_empty() else "requires_card"
+			if not source.has(id):
+				push_error("TowerStats: key 'towers.%s.branches.%s.evolution.%s' in '%s' must be the id of an existing %s (got '%s')." % [def.id, branch, key, path, "item" if not item.is_empty() else "card", id])
+				return false
+			var info: Dictionary = source[id]
+			def.set_requirement_info(branch, String(info.get("name", id)), StringName(String(info.get("spec", ""))), String(info.get("spec_name", "")))
+	return true
 
 
 ## Reads and validates the JSON file at [param path]. Returns [code]null[/code]
@@ -279,7 +330,7 @@ static func _read_tower(tower_id: String, raw: Variant, path: String, seen_branc
 			push_error("TowerStats: key '%s.icon_color' in '%s' must be an array of 3 numbers in [0, 1]." % [where, path])
 			return null
 		def.icon_color = _to_color(tower["icon_color"])
-	def.branches = _read_branches(tower.get("branches"), where, behaviour, path, seen_branches)
+	def.branches = _read_branches(tower.get("branches"), where, behaviour, path, seen_branches, def.evolutions)
 	if def.branches.is_empty():
 		return null
 	return def
@@ -291,7 +342,9 @@ static func _read_tower(tower_id: String, raw: Variant, path: String, seen_branc
 ## must be positive numbers. The branches and keys of [constant BRANCH_KEYS] for
 ## [param behaviour] are required. A branch id must be unique across all towers:
 ## [param seen_branches] (branch id -> tower key) holds those of the towers already read.
-static func _read_branches(raw: Variant, where: String, behaviour: String, path: String, seen_branches: Dictionary) -> Dictionary:
+## The [code]evolution[/code] block of a branch is validated by [method _read_evolution]
+## and goes into [param evolutions] (branch id -> block), not into the branch values.
+static func _read_branches(raw: Variant, where: String, behaviour: String, path: String, seen_branches: Dictionary, evolutions: Dictionary) -> Dictionary:
 	if not raw is Dictionary or (raw as Dictionary).is_empty():
 		push_error("TowerStats: key '%s.branches' in '%s' must be a non-empty object." % [where, path])
 		return {}
@@ -310,12 +363,21 @@ static func _read_branches(raw: Variant, where: String, behaviour: String, path:
 		if not label is String or (label as String).is_empty():
 			push_error("TowerStats: key '%s.label' in '%s' must be a non-empty string." % [branch_where, path])
 			return {}
-		for key: String in values:
-			var value: Variant = values[key]
+		var branch_values: Dictionary = (values as Dictionary).duplicate()
+		branch_values.erase("evolution")
+		for key: String in branch_values:
+			var value: Variant = branch_values[key]
 			if key != "label" and (not (value is float or value is int) or value <= 0):
 				push_error("TowerStats: key '%s.%s' in '%s' must be a positive number (got %s)." % [branch_where, key, path, value])
 				return {}
-		tower_branches[StringName(id)] = values
+		var required_evolution: Array = ((EVOLUTION_KEYS.get(behaviour, {}) as Dictionary).get(id, []) as Array)
+		var has_required: bool = (EVOLUTION_KEYS.get(behaviour, {}) as Dictionary).has(id)
+		if (values as Dictionary).has("evolution") or has_required:
+			var evolution: Dictionary = _read_evolution((values as Dictionary).get("evolution"), branch_where + ".evolution", required_evolution, path)
+			if evolution.is_empty():
+				return {}
+			evolutions[StringName(id)] = evolution
+		tower_branches[StringName(id)] = branch_values
 	var required: Dictionary = BRANCH_KEYS.get(behaviour, {})
 	for id: String in required:
 		for key: String in required[id]:
@@ -323,6 +385,40 @@ static func _read_branches(raw: Variant, where: String, behaviour: String, path:
 				push_error("TowerStats: key '%s.branches.%s.%s' is missing in '%s'." % [where, id, key, path])
 				return {}
 	return tower_branches
+
+
+## Returns the validated evolution block [param raw] ([param where] names it), or an
+## empty dictionary after printing an error: a non-empty [code]name[/code], exactly one
+## non-empty [code]requires_item[/code] or [code]requires_card[/code], every
+## [param required] key, and positive numbers for all the other keys.
+static func _read_evolution(raw: Variant, where: String, required: Array, path: String) -> Dictionary:
+	if not raw is Dictionary:
+		push_error("TowerStats: key '%s' is missing in '%s' (or is not an object)." % [where, path])
+		return {}
+	var evolution: Dictionary = raw
+	var evo_name: Variant = evolution.get("name")
+	if not evo_name is String or (evo_name as String).is_empty():
+		push_error("TowerStats: key '%s.name' in '%s' must be a non-empty string." % [where, path])
+		return {}
+	var has_item: bool = evolution.has("requires_item")
+	if has_item == evolution.has("requires_card"):
+		push_error("TowerStats: key '%s' in '%s' must have exactly one of 'requires_item' and 'requires_card'." % [where, path])
+		return {}
+	var requirement_key: String = "requires_item" if has_item else "requires_card"
+	var requirement: Variant = evolution[requirement_key]
+	if not requirement is String or (requirement as String).is_empty():
+		push_error("TowerStats: key '%s.%s' in '%s' must be a non-empty id." % [where, requirement_key, path])
+		return {}
+	for key: String in evolution:
+		var value: Variant = evolution[key]
+		if not EVOLUTION_TEXT_KEYS.has(key) and (not (value is float or value is int) or value <= 0):
+			push_error("TowerStats: key '%s.%s' in '%s' must be a positive number (got %s)." % [where, key, path, value])
+			return {}
+	for key: String in required:
+		if not evolution.has(key):
+			push_error("TowerStats: key '%s.%s' is missing in '%s'." % [where, key, path])
+			return {}
+	return evolution
 
 
 ## True if [param value] is an array of 3 numbers between 0 and 1 (red, green, blue).

@@ -6,7 +6,7 @@
 class_name TowerReserve
 extends RefCounted
 
-## Emitted after any change: purchase, gift, upgrade, placement or return.
+## Emitted after any change: purchase, gift, upgrade, evolution, placement or return.
 signal changed
 
 var _stats: TowerStats
@@ -86,6 +86,21 @@ func try_upgrade(record: TowerRecord, branch: StringName, gold_available: int, c
 	record.level += 1
 	changed.emit()
 	return cost
+
+
+## Evolves [param record] (towers T2b): free and for life. Refused (false) for an
+## unknown record, one already evolved, below level 3, or whose branch has no
+## evolution. Whether the player owns the required item or card is checked by the
+## caller ([method EvolutionRules.status]).
+func evolve(record: TowerRecord) -> bool:
+	if not _records.has(record) or record.evolved or record.level < TowerRecord.MAX_LEVEL:
+		return false
+	var def: TowerDef = _stats.def_of(record.kind)
+	if def == null or not def.has_evolution(record.branch):
+		return false
+	record.evolved = true
+	changed.emit()
+	return true
 
 
 ## Every owned tower, placed or not, in purchase order.

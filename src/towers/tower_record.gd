@@ -1,6 +1,6 @@
 ## One tower owned by the player (towers T1). It lives in the [TowerReserve]
 ## for the whole run, whether it sits on the map or in the reserve, and keeps
-## its level and branch for life.
+## its level, branch and evolution for life.
 class_name TowerRecord
 extends RefCounted
 
@@ -20,3 +20,6 @@ var placed: bool = false
 ## True for a gift tower: it does not raise the price of the next ones.
 ## Named [code]is_free[/code] because [code]free[/code] is a method of Object.
 var is_free: bool = false
+## True once the tower has evolved (towers T2b): for life, reserve included; it keeps
+## its branch and its level 3 bonuses.
+var evolved: bool = false

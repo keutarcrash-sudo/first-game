@@ -44,6 +44,8 @@ const EFFECT_NUMBER_KEYS := {
 	"upgrade_cost_mult": ["value"],
 	"free_tower": [],
 	"unlock_tower": [],
+	# Towers T2b: no effect alone; owning the card lets a tower evolve (EvolutionRules).
+	"evolution_key": [],
 	"tier3_fire_rate_bonus": ["value"],
 	"gold_per_kill_mult": ["value"],
 	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
@@ -124,7 +126,7 @@ func has_card(card_id: String) -> bool:
 ## [code]null[/code] with an error naming the faulty key. [param rules],
 ## [param specs] and [param abilities] are only read when the card names a combo,
 ## a specialization or an ability; [param towers] when it has an
-## [code]unlock_tower[/code] effect (null then refuses it).
+## [code]unlock_tower[/code] effect or a [code]requires_tower[/code] (null then refuses it).
 static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog, towers: TowerStats) -> CardDef:
 	if not raw is Dictionary:
 		push_error("CardCatalog: 'cards[%d]' in '%s' must be an object." % [index, path])
@@ -178,6 +180,11 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 		push_error("CardCatalog: key 'cards[%d].min_wave' in '%s' must be a number of at least 1 (got %s)." % [index, path, min_wave])
 		return null
 	card.min_wave = int(min_wave)
+	var tower_id: Variant = raw.get("requires_tower", "")
+	if not tower_id is String or (not (tower_id as String).is_empty() and (towers == null or towers.def_of(StringName(tower_id as String)) == null)):
+		push_error("CardCatalog: key 'cards[%d].requires_tower' in '%s' must be the id of a tower in towers.json (got %s)." % [index, path, tower_id])
+		return null
+	card.requires_tower = tower_id
 	if not raw.get("effects") is Array or (raw["effects"] as Array).is_empty():
 		push_error("CardCatalog: key 'cards[%d].effects' in '%s' must be a non-empty list." % [index, path])
 		return null

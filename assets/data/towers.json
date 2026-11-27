@@ -38,13 +38,15 @@
 					"burn_dps": 8.0,
 					"card_duration_mult": 1.5,
 					"l3_explosion_radius": 80.0,
-					"l3_explosion_damage": 15.0
+					"l3_explosion_damage": 15.0,
+					"evolution": { "name": "Volcan", "requires_item": "poudre_noire", "lava_radius": 60.0, "lava_duration": 3.0, "lava_dps": 10.0 }
 				},
 				"perforant": {
 					"label": "Perforant",
 					"pierce_total": 3,
 					"l3_shots": 2,
-					"l3_spread_degrees": 8.0
+					"l3_spread_degrees": 8.0,
+					"evolution": { "name": "Canon de siège", "requires_item": "lunette", "pierce_total": 999, "damage_mult": 1.5, "range_mult": 1.5 }
 				}
 			}
 		},
@@ -64,13 +66,15 @@
 					"label": "Blizzard",
 					"range_mult": 1.4,
 					"dwell": 1.0,
-					"l3_wet_duration": 3.0
+					"l3_wet_duration": 3.0,
+					"evolution": { "name": "Cœur de l'hiver", "requires_card": "gel_mordant", "pulse_interval": 4.0, "pulse_freeze": 1.5 }
 				},
 				"eclats": {
 					"label": "Éclats",
 					"shard_radius": 70.0,
 					"shard_damage": 12.0,
-					"l3_shard_freeze": 0.6
+					"l3_shard_freeze": 0.6,
+					"evolution": { "name": "Avalanche", "requires_card": "zero_absolu", "shard_hops": 3, "hop_range": 120.0 }
 				}
 			}
 		},
@@ -94,14 +98,16 @@
 					"label": "Surtension",
 					"jumps": 6,
 					"wet_mult": 3.0,
-					"l3_jumps": 10
+					"l3_jumps": 10,
+					"evolution": { "name": "Orage", "requires_card": "condensateur", "second_bolt": 1 }
 				},
 				"arc": {
 					"label": "Arc",
 					"range": 300.0,
 					"stun": 0.3,
 					"l3_stun": 0.6,
-					"l3_damage_mult": 1.5
+					"l3_damage_mult": 1.5,
+					"evolution": { "name": "Champ magnétique", "requires_item": "bottes", "pull_speed": 50.0, "pull_stop": 40.0 }
 				}
 			}
 		},
@@ -124,13 +130,15 @@
 					"label": "Napalm",
 					"burn_dps": 10.0,
 					"burn_duration": 4.0,
-					"l3_stack_max": 2.0
+					"l3_stack_max": 2.0,
+					"evolution": { "name": "Dragon", "requires_card": "reservoir_sous_pression", "angle_degrees": 360.0 }
 				},
 				"souffle": {
 					"label": "Souffle",
 					"angle_degrees": 100.0,
 					"push_speed": 60.0,
-					"l3_range": 200.0
+					"l3_range": 200.0,
+					"evolution": { "name": "Fournaise", "requires_card": "combustion", "blast_radius": 80.0, "blast_damage": 15.0, "burn_dps": 6.0, "burn_duration": 2.0 }
 				}
 			}
 		},
@@ -156,7 +164,8 @@
 					"bomblets": 4,
 					"l3_bomblets": 8,
 					"bomblet_damage": 10.0,
-					"bomblet_radius": 50.0
+					"bomblet_radius": 50.0,
+					"evolution": { "name": "Bombardement", "requires_card": "artillerie_lourde", "shells": 3, "spread": 40.0 }
 				},
 				"sismique": {
 					"label": "Sismique",
@@ -164,7 +173,8 @@
 					"crater_slow": 0.6,
 					"l3_crater_duration": 5.0,
 					"l3_crater_slow": 0.4,
-					"crater_radius": 90.0
+					"crater_radius": 90.0,
+					"evolution": { "name": "Tremblement", "requires_item": "bouclier_cristal", "impact_stun": 0.5 }
 				}
 			}
 		},
@@ -183,12 +193,14 @@
 				"cadence": {
 					"label": "Cadence",
 					"rate_bonus": 0.3,
-					"l3_rate_bonus": 0.5
+					"l3_rate_bonus": 0.5,
+					"evolution": { "name": "Surrégime", "requires_item": "gachette", "rate_mult": 2.0 }
 				},
 				"catalyseur": {
 					"label": "Catalyseur",
 					"state_bonus": 0.5,
-					"l3_state_bonus": 1.0
+					"l3_state_bonus": 1.0,
+					"evolution": { "name": "Nexus", "requires_item": "plans_ingenieur", "share_burn_dps": 4.0, "share_burn_duration": 2.0, "share_slow": 0.7, "share_slow_duration": 1.0, "share_wet": 2.0, "share_stun": 0.2 }
 				}
 			}
 		}

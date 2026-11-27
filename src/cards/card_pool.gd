@@ -4,7 +4,8 @@
 ## by default are only drawn once the skill tree unlocks them (story 007). Cards
 ## of a specialization are only drawn when it is the chosen one (story 008).
 ## A card is not drawn before its [member CardDef.min_wave], and a « Plans » card
-## not once its tower is unlocked (towers T2a §6). Pure logic, no scene tree. Buying a reroll is up to the caller.
+## not once its tower is unlocked (towers T2a §6); a card with a
+## [member CardDef.requires_tower] only once that tower is unlocked (towers T2b §7). Pure logic, no scene tree. Buying a reroll is up to the caller.
 class_name CardPool
 extends RefCounted
 
@@ -114,6 +115,8 @@ func _available(wave: int) -> Array[CardDef]:
 			continue
 		var tower: StringName = card.unlocked_tower()
 		if tower != &"" and _modifiers.is_tower_unlocked(tower):
+			continue
+		if not card.requires_tower.is_empty() and not _modifiers.is_tower_unlocked(StringName(card.requires_tower)):
 			continue
 		if not card.requires_ability.is_empty() and not _is_ability_unlocked.call(card.requires_ability):
 			continue
