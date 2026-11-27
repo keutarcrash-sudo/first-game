@@ -105,6 +105,46 @@ const builders = {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.035, 8, 32), toonMat("#19e3ff")); ring.rotation.x = Math.PI / 2; ring.position.y = 0.12; ice.add(ring);
     scene.add(ice);
   },
+  // Tesla : fut sombre, bobine de trois anneaux jaunes, sphere au sommet. Ne tourne pas.
+  teslaTop(scene, baseY) {
+    const t = new THREE.Group(); t.position.y = baseY;
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 0.95, 12), toonMat("#2a1a5e")); core.position.y = 0.47; t.add(core);
+    [0.16, 0.36, 0.56].forEach((y, i) => { const r = new THREE.Mesh(new THREE.TorusGeometry(0.24 - i * 0.04, 0.05, 8, 24), toonMat("#ffe23b")); r.rotation.x = Math.PI / 2; r.position.y = y; t.add(r); });
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), toonMat("#fff6a0")); ball.position.y = 1.14; t.add(ball);
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.035, 8, 28), toonMat("#ffe23b")); halo.rotation.x = Math.PI / 2.4; halo.position.y = 1.14; t.add(halo);
+    scene.add(t);
+  },
+  // Lance-flammes : tourelle, reservoir rouge a l'arriere, buse evasee vers +Z (tourne avec la direction).
+  flameNozzle(scene, baseY) {
+    const t = new THREE.Group(); t.position.y = baseY;
+    const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.26, 12), toonMat("#2a1a5e")); turret.position.y = 0.13; t.add(turret);
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.5, 12), toonMat("#ff3b3b")); tank.position.set(0, 0.5, -0.16); t.add(tank);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), toonMat("#ff3b3b")); cap.position.set(0, 0.75, -0.16); t.add(cap);
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.62, 10), toonMat("#ff2bd6")); pipe.rotation.x = Math.PI / 2; pipe.position.set(0, 0.36, 0.3); t.add(pipe);
+    const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.13, 0.26, 12, 1, true), toonMat("#ff2bd6")); bell.material.side = THREE.DoubleSide; bell.rotation.x = Math.PI / 2; bell.position.set(0, 0.36, 0.7); t.add(bell);
+    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), toonMat("#ffe23b")); flame.position.set(0, 0.36, 0.8); t.add(flame);
+    scene.add(t); return t;
+  },
+  // Mortier : affut, tube court et large incline vers +Z (tourne avec la direction).
+  mortarTube(scene, baseY) {
+    const t = new THREE.Group(); t.position.y = baseY;
+    const mount = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.22, 0.62), toonMat("#2a1a5e")); mount.position.y = 0.11; t.add(mount);
+    const tube = new THREE.Group(); tube.position.y = 0.28; tube.rotation.x = 0.55; t.add(tube);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.34, 0.62, 16), toonMat("#9dff3b")); body.position.y = 0.26; tube.add(body);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.06, 8, 24), toonMat("#2f8a1a")); lip.rotation.x = Math.PI / 2; lip.position.y = 0.57; tube.add(lip);
+    const bore = new THREE.Mesh(new THREE.CircleGeometry(0.25, 16), toonMat("#10081e")); bore.rotation.x = -Math.PI / 2; bore.position.y = 0.575; tube.add(bore);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.335, 0.045, 8, 24), toonMat("#2f8a1a")); band.rotation.x = Math.PI / 2; band.position.y = 0.12; tube.add(band);
+    scene.add(t); return t;
+  },
+  // Amplificateur : antenne a deux disques, cristal magenta au sommet. Ne tourne pas.
+  amplifierTop(scene, baseY) {
+    const t = new THREE.Group(); t.position.y = baseY;
+    const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.32, 0.16, 6), toonMat("#2a1a5e")); foot.position.y = 0.08; t.add(foot);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.75, 8), toonMat("#fff1d0")); mast.position.y = 0.5; t.add(mast);
+    [[0.32, 0.3], [0.58, 0.22]].forEach(([y, r]) => { const d = new THREE.Mesh(new THREE.TorusGeometry(r, 0.04, 8, 24), toonMat("#ff2bd6")); d.rotation.x = Math.PI / 2; d.position.y = y; t.add(d); });
+    const c = gem(0.9, 0.27, "#ff8ef0", "#ff2bd6"); c.position.y = 1.02; t.add(c);
+    scene.add(t);
+  },
 };
 
 // Direction k : l'objet regarde vers l'angle ecran k*45 deg (0 = droite, 2 = bas). Le modele regarde +Z.
@@ -208,7 +248,10 @@ async function bakeProp(item, common, kenneyImg) {
     toonify(r); r.position.y = y; s.add(r); if (p.rotates) rot.push(r);
     y = new THREE.Box3().setFromObject(r).max.y;
   }
-  if (item.builder) builders[item.builder](s, y);
+  if (item.builder) {
+    const b = builders[item.builder](s, y); // un constructeur peut renvoyer le groupe qui tourne selon la direction
+    if (b && item.builder_rotates) rot.push(b);
+  }
   const setDir = (k) => rot.forEach((r) => { r.rotation.y = rotationFor(k); });
   if (item.animations) return bakeSynthetic(item, common, s, setDir);
   const cam = makeCamera(common, item.half_size, fitShift(common, s, item.half_size, setDir));

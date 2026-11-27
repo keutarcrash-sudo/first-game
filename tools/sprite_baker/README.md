@@ -27,7 +27,7 @@ par element dans `items` :
 - `kind: "character"` (Quaternius) : `model`, `palette` (materiau -> couleur), `animations`
   (nom court -> nom du pack, nombre d'images, boucle), `half_size` (demi-largeur du champ en unites monde).
 - `kind: "prop"` (Kenney + sur mesure) : `parts` (GLB empiles, palette `kenney_palettes`, `rotates`
-  pour la piece qui tourne selon la direction), `builder` (`frostTop`, `crystalCart`, dans `page.html`),
+  pour la piece qui tourne selon la direction), `builder` (`frostTop`, `crystalCart`, `teslaTop`, `flameNozzle`, `mortarTube`, `amplifierTop`, dans `page.html` ; `builder_rotates: true` fait tourner le groupe renvoye par le constructeur selon la direction),
   `directions` (8 ou 1). Un prop sans squelette peut avoir `animations` synthetiques : chaque entree
   `{ synth, frames, loop }` (`spin_bob` = tour sur soi + oscillation, `shake` = secousse, `shrink_spin` = rapetisse
   en tournant, `end_scale`) anime un groupe autour du modele (`scale` agrandit le tout) ; voir `bakeSynthetic` dans `page.html`.

@@ -125,6 +125,48 @@
       "directions": 1,
       "half_size": 1.2
     },
+    "tesla": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-round-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-round-middle-a.glb", "palette": "purple" }
+      ],
+      "builder": "teslaTop",
+      "directions": 1,
+      "half_size": 1.35
+    },
+    "flamethrower": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-square-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-square-middle-a.glb", "palette": "purple" }
+      ],
+      "builder": "flameNozzle",
+      "builder_rotates": true,
+      "directions": 8,
+      "half_size": 1.25
+    },
+    "mortar": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-round-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-round-middle-a.glb", "palette": "purple" }
+      ],
+      "builder": "mortarTube",
+      "builder_rotates": true,
+      "directions": 8,
+      "half_size": 1.25
+    },
+    "amplifier": {
+      "kind": "prop",
+      "parts": [
+        { "model": "kenney/tower-square-bottom-a.glb", "palette": "purple" },
+        { "model": "kenney/tower-square-middle-a.glb", "palette": "purple" }
+      ],
+      "builder": "amplifierTop",
+      "directions": 1,
+      "half_size": 1.35
+    },
     "crystal_cart": {
       "kind": "prop",
       "parts": [],
