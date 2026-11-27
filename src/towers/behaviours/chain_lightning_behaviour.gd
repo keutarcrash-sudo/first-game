@@ -9,6 +9,12 @@
 ## [code]take_damage(..., &"cannon")[/code] (cyan numbers). The amplifier bonuses
 ## ([member TowerBehaviour.TowerContext.amp_at]) are read at every bolt: damage, interval
 ## and stun duration. The bolt is drawn as a neon broken line for [constant BOLT_SECONDS].
+## Towers T2b, Orage (evolved Surtension): after the chain, [code]second_bolt[/code] more
+## bolt(s) start from the last enemy struck, with the same damage and bounces, on enemies not
+## struck yet; a second bolt never relaunches itself and each one uses one effect of the
+## [ChainLimiter]. Champ magnétique (evolved Arc): every physics frame, the enemies in range
+## are pulled toward the tower ([method Enemy.pull_towards], [code]pull_speed[/code], stopping
+## at [code]pull_stop[/code]), stunned ones included.
 class_name ChainLightningBehaviour
 extends TowerBehaviour
 
@@ -21,6 +27,8 @@ const BOLT_GLOW := Color(0.45, 0.7, 1.0, 0.45)
 const BOLT_CORE := Color(0.9, 0.97, 1.0, 0.95)
 const BOLT_GLOW_WIDTH := 7.0
 const BOLT_CORE_WIDTH := 2.0
+const SURTENSION := &"surtension"
+const ARC := &"arc"
 
 var _tower: Tower
 var _def: TowerDef
@@ -49,6 +57,8 @@ func physics_tick(delta: float) -> void:
 	if _bolt_left > 0.0:
 		_bolt_left -= delta
 		_tower.queue_redraw()  # Also once after it ends, to clear it.
+	if _is_evolved(ARC):
+		_pull_enemies()
 	_cooldown = maxf(_cooldown - delta, 0.0)
 	if _cooldown > 0.0:
 		return
@@ -75,25 +85,48 @@ func draw(canvas: CanvasItem) -> void:
 	canvas.draw_polyline(local, BOLT_CORE, BOLT_CORE_WIDTH, true)
 
 
-## Strikes [param first] then bounces, never twice on the same enemy, and keeps the line to draw.
+## Strikes [param first] then bounces, never twice on the same enemy, then (Orage) relaunches
+## from the last enemy struck, and keeps the line to draw.
 func _strike_chain(first: Enemy, amp: Dictionary) -> void:
 	var damage: float = _number("damage", 0.0) * _number("damage_mult", 1.0) \
 		* _ctx.modifiers.damage_multiplier() * (1.0 + float(amp["damage"]))
 	var wet_mult: float = _number("wet_mult", 1.0)
 	var stun: float = _number("stun", 0.0) * (1.0 + float(amp["state"]))
-	var jumps: int = int(_number("jumps", 0.0))
+	var strikes: int = int(_number("jumps", 0.0)) + 1
 	var jump_range: float = _number("jump_range", 0.0)
-	var struck: Dictionary = {}  # Instance ids of the enemies this bolt already hit.
-	var from: Vector2 = _tower.global_position
-	var points := PackedVector2Array()
-	points.append(from)
+	var struck: Dictionary = {}  # Instance ids of the enemies these bolts already hit.
+	_bolt = PackedVector2Array()  # Built in place by _run_bolt: a packed array argument would be a copy.
+	_bolt.append(_tower.global_position)
+	var last: Vector2 = _run_bolt(_tower.global_position, first, strikes, damage, wet_mult, stun, jump_range, struck)
+	if _is_evolved(SURTENSION):
+		for i: int in int(_evolution_number(SURTENSION, "second_bolt")):
+			var next: Enemy = _nearest_enemy(last, jump_range, struck)
+			if next == null:
+				break
+			var limiter: ChainLimiter = _ctx.chain_limiter
+			if limiter != null and not limiter.try_consume(Engine.get_process_frames()):
+				break
+			# The line goes on from the last enemy struck, so the polyline stays connected.
+			last = _run_bolt(last, next, strikes, damage, wet_mult, stun, jump_range, struck)
+	var direction: Vector2 = _tower.global_position.direction_to(first.global_position) if is_instance_valid(first) else Vector2.ZERO
+	if direction != Vector2.ZERO:
+		_tower.set_facing(direction.angle())
+	_bolt_left = BOLT_SECONDS
+	_tower.queue_redraw()
+
+
+## One bolt from [param from]: strikes [param first], then bounces to the nearest enemy not in
+## [param struck] within [param jump_range], [param strikes] strikes in all. Adds every enemy
+## struck to [param struck] and the broken line to [member _bolt]; returns the position of the
+## last enemy struck.
+func _run_bolt(from: Vector2, first: Enemy, strikes: int, damage: float, wet_mult: float, stun: float, jump_range: float, struck: Dictionary) -> Vector2:
 	var enemy: Enemy = first
-	var strikes_left: int = jumps + 1
+	var strikes_left: int = strikes
 	while enemy != null and strikes_left > 0:
 		strikes_left -= 1
 		struck[enemy.get_instance_id()] = true
 		var at: Vector2 = enemy.global_position
-		points.append_array(_broken_segment(from, at))  # Packed arrays are copied, not shared.
+		_bolt.append_array(_broken_segment(from, at))
 		from = at
 		var dealt: float = damage * (wet_mult if enemy.has_state(&"wet") else 1.0)
 		enemy.take_damage(dealt, false, &"cannon")
@@ -101,12 +134,30 @@ func _strike_chain(first: Enemy, amp: Dictionary) -> void:
 			enemy.stun(stun)  # Ignored on an enemy that just died.
 		if strikes_left > 0:
 			enemy = _nearest_enemy(at, jump_range, struck)
-	var direction: Vector2 = _tower.global_position.direction_to(first.global_position) if is_instance_valid(first) else Vector2.ZERO
-	if direction != Vector2.ZERO:
-		_tower.set_facing(direction.angle())
-	_bolt = points
-	_bolt_left = BOLT_SECONDS
-	_tower.queue_redraw()
+	return from
+
+
+## Champ magnétique: pulls every living enemy within range toward the tower.
+func _pull_enemies() -> void:
+	var speed: float = _evolution_number(ARC, "pull_speed")
+	var stop: float = _evolution_number(ARC, "pull_stop")
+	var origin: Vector2 = _tower.global_position
+	var range_sq: float = _tower.attack_range * _tower.attack_range
+	var enemies: Node2D = _ctx.enemies
+	for i: int in enemies.get_child_count():
+		var enemy := enemies.get_child(i) as Enemy
+		if enemy != null and not enemy.is_queued_for_deletion() and origin.distance_squared_to(enemy.global_position) <= range_sq:
+			enemy.pull_towards(origin, speed, stop)
+
+
+## True for an evolved level 3 tower of [param branch] (towers T2b).
+func _is_evolved(branch: StringName) -> bool:
+	return _record.evolved and _record.level >= TowerRecord.MAX_LEVEL and _record.branch == branch
+
+
+## Number [param key] of the evolution of [param branch] (required and validated by [constant TowerStats.EVOLUTION_KEYS]).
+func _evolution_number(branch: StringName, key: String) -> float:
+	return float(_def.value(key, branch, _record.level, true))
 
 
 ## The points of a jagged line from [param from] (left out) to [param to] (included).

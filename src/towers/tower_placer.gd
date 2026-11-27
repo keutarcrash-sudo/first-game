@@ -139,6 +139,12 @@ func records_by_id() -> Dictionary:
 	return _records
 
 
+## The placed [Tower] node of record id [param id], or null when it is not placed (read by
+## [TowerEffects] for the Fournaise range, towers T2b).
+func tower_of(id: int) -> Tower:
+	return _tower_nodes.get(id) as Tower
+
+
 ## Makes the next valid click place [param record], a tower waiting in the reserve,
 ## for free. Ignored if the record is already placed.
 func select_record(record: TowerRecord) -> void:

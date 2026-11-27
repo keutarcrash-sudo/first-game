@@ -12,11 +12,19 @@
 ## death blast goes off (no cannon burn); an evolved Éclats frost tower (Avalanche) makes
 ## its death shard hop [code]shard_hops[/code] times to the nearest enemy not yet hit within
 ## [code]hop_range[/code]. Each pool and each hop uses one effect of the [ChainLimiter].
+## Fournaise (evolved Souffle flamethrower): an enemy that dies burning (from any fire) within
+## the range of such a placed tower bursts into flames: [code]blast_damage[/code] and a burn
+## ([code]burn_dps[/code] for [code]burn_duration[/code] s, burner id -1) on the enemies within
+## [code]blast_radius[/code]; one burst per death, however many Fournaise cover it, one effect
+## of the [ChainLimiter]. It adds to the card Brasier éternel ([CardEffects]), which is separate.
 class_name TowerEffects
 extends Node
 
 const INCENDIAIRE := &"incendiaire"
 const ECLATS := &"eclats"
+const SOUFFLE := &"souffle"
+const FURNACE_WORD := "FOUF !"
+const FURNACE_COLOR := Color(1.0, 0.4, 0.1)
 const VISUAL_RADIUS_RATIO := 0.5  # The burst is drawn at half the effect radius: a small one.
 const EXPLOSION_WORD := "BOUM !"
 const EXPLOSION_COLOR := Color(1.0, 0.55, 0.15)
@@ -34,6 +42,7 @@ var _limiter: ChainLimiter
 var _amp_of: Callable  # Record id -> amplifier bonuses at that tower; unset = none.
 var _ground: Node2D  # Layer of the lava pools; null = the enemies' parent.
 var _state: GameState  # The lava pools vanish when its phase leaves COMBAT; may be null.
+var _tower_of: Callable  # Record id -> placed Tower node or null (Fournaise range); unset = no Fournaise.
 
 
 ## Watches every enemy added under [param enemies_parent]. [param stats] gives the branch values
@@ -63,6 +72,13 @@ func set_amp_source(amp_of: Callable) -> void:
 func set_ground(ground: Node2D, state: GameState) -> void:
 	_ground = ground
 	_state = state
+
+
+## Gives the placed towers: [param tower_of] is called with a tower record id and returns its
+## [Tower] node, or null when it is not placed ([method TowerPlacer.tower_of]). Needed by the
+## Fournaise, whose range is that of the tower.
+func set_tower_source(tower_of: Callable) -> void:
+	_tower_of = tower_of
 
 
 func _on_enemy_added(node: Node) -> void:
@@ -95,6 +111,9 @@ func _on_enemy_died(at: Vector2, was_burning: bool, was_frozen: bool, enemy: Ene
 		var cannon: TowerRecord = _record_with(enemy.last_burner_id(), INCENDIAIRE, TowerRecord.MAX_LEVEL)
 		if cannon != null:
 			_explode.call_deferred(at, cannon.id, cannon.kind, cannon.evolved)
+		var furnace: TowerRecord = _furnace_covering(at)
+		if furnace != null:
+			_furnace_blast.call_deferred(at, furnace.id, furnace.kind)
 	if was_frozen:
 		var frost: TowerRecord = _record_with(enemy.last_freezer_id(), ECLATS, 2)
 		if frost != null:
@@ -121,6 +140,46 @@ func _explode(at: Vector2, cannon_id: int, kind: StringName, volcano: bool) -> v
 		enemy.take_damage(damage, false, &"area")
 		if not enemy.is_queued_for_deletion():
 			enemy.apply_burn(duration, dps, cannon_id)
+
+
+## The record of a placed evolved level 3 Souffle flamethrower whose range covers [param at]
+## (the first one found), or null.
+func _furnace_covering(at: Vector2) -> TowerRecord:
+	if not _tower_of.is_valid() or not _records.is_valid():
+		return null
+	var records: Dictionary = _records.call()
+	for id: int in records:
+		var record := records[id] as TowerRecord
+		if record == null or not record.evolved or record.branch != SOUFFLE or record.level < TowerRecord.MAX_LEVEL:
+			continue
+		if _stats.def_of(record.kind) == null:
+			continue
+		var tower := _tower_of.call(id) as Tower
+		if tower != null and tower.global_position.distance_squared_to(at) <= tower.attack_range * tower.attack_range:
+			return record
+	return null
+
+
+## Fournaise (towers T2b): the flame burst of an enemy that died burning at [param at], if the
+## cap allows one more effect this frame. The burn uses burner id -1 (the last cannon burner
+## is kept); its duration takes the amplifier [code]state[/code] bonus at that tower.
+func _furnace_blast(at: Vector2, furnace_id: int, kind: StringName) -> void:
+	if not _limiter.try_consume(Engine.get_process_frames()):
+		return
+	var radius: float = _evolution_value(kind, SOUFFLE, "blast_radius")
+	var damage: float = _evolution_value(kind, SOUFFLE, "blast_damage") * _modifiers.damage_multiplier()
+	var dps: float = _evolution_value(kind, SOUFFLE, "burn_dps")
+	var duration: float = _evolution_value(kind, SOUFFLE, "burn_duration")
+	if _amp_of.is_valid():
+		duration *= 1.0 + float((_amp_of.call(furnace_id) as Dictionary)["state"])
+	_show(at, FURNACE_WORD, FURNACE_COLOR, radius)
+	for enemy: Enemy in _living_enemies_near(at, radius):
+		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		# Hit first, then burn: only an enemy already burning sets off a new burst when killed here.
+		enemy.take_damage(damage, false, &"area")
+		if not enemy.is_queued_for_deletion():
+			enemy.apply_burn(duration, dps, -1)
 
 
 func _shatter(at: Vector2, frost_id: int, kind: StringName, freezes: bool, avalanche: bool) -> void:

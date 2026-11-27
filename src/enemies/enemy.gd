@@ -76,6 +76,7 @@ var _push_left := 0.0  # Seconds of push remaining (étape 3a, Vague).
 var _push_velocity := Vector2.ZERO  # Pixels per second added to the walk while pushed.
 var _push_bounds := Rect2()  # Global rect the pushed enemy stays in; no area = unbounded.
 var _along_velocity := Vector2.ZERO  # Strongest continuous push asked for since the last physics step (Souffle).
+var _pull_velocity := Vector2.ZERO  # Sum of the pulls asked for since the last physics step (Champ magnétique).
 var _stun_left := 0.0  # Seconds of « étourdi » remaining (towers T2a): no walk, no strike, no shot.
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
@@ -226,6 +227,13 @@ func _physics_process(delta: float) -> void:
 			if _artillery != null:
 				global_position = _artillery.clamp_to_field(global_position, _radius)
 		_along_velocity = Vector2.ZERO
+	if _pull_velocity != Vector2.ZERO:
+		# Asked for during the last frame only; it moves a stunned enemy too, never a frozen one.
+		if _frozen_left <= 0.0:
+			global_position += _pull_velocity * delta
+			if _artillery != null:
+				global_position = _artillery.clamp_to_field(global_position, _radius)
+		_pull_velocity = Vector2.ZERO
 	# The crystal moves, so the target is read again every frame.
 	var target: Vector2 = _crystal.global_position
 	var fusing: bool = _kamikaze != null and _kamikaze.is_fusing()
@@ -550,6 +558,21 @@ func push_along(direction: Vector2, speed: float) -> void:
 	var velocity: Vector2 = direction.normalized() * speed
 	if velocity.length_squared() > _along_velocity.length_squared():
 		_along_velocity = velocity
+
+
+## Pulls the enemy toward [param point] (world position) at [param speed] pixels per second
+## during the next physics step only (towers T2b, Champ magnétique): towers call it every
+## physics frame while the enemy is in their zone. Unlike [method push_along], the pulls add
+## up, on top of the walk and of the other pushes. Works on a stunned enemy, ignored on a
+## frozen one, and does nothing within [param stop_distance] pixels of [param point]. An
+## artillery stays inside its field.
+func pull_towards(point: Vector2, speed: float, stop_distance: float) -> void:
+	if is_queued_for_deletion() or _frozen_left > 0.0 or speed <= 0.0:
+		return
+	var offset: Vector2 = point - global_position
+	if offset.length_squared() <= stop_distance * stop_distance:
+		return
+	_pull_velocity += offset.normalized() * speed
 
 
 ## Counts the time spent in the frost zones asked for since the last step ([method apply_chill])

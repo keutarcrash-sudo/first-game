@@ -10,6 +10,9 @@
 ## The amplifier bonuses ([member TowerBehaviour.TowerContext.amp_at]) are read every frame:
 ## dps x (1 + rate) x (1 + damage), burn duration x (1 + state). « Balles lourdes » multiplies
 ## the dps and « Surcharge » speeds it up at level 3 (dps / its interval factor).
+## Towers T2b, Dragon (evolved Napalm): the cone opens to the evolution's
+## [code]angle_degrees[/code] (360): the fire burns all around the tower, without aiming, and
+## is drawn as a ring. Fournaise (evolved Souffle) is a death effect: see [TowerEffects].
 class_name FlameConeBehaviour
 extends TowerBehaviour
 
@@ -18,6 +21,10 @@ const FLAME_OUTER := Color(1.0, 0.45, 0.1, 0.22)
 const FLAME_INNER := Color(1.0, 0.85, 0.35, 0.3)
 const FLAME_INNER_RATIO := 0.6  # The bright core reaches this fraction of the range.
 const FLICKER := 0.12  # Random variation of the drawn reach, as a fraction of the range.
+const NAPALM := &"napalm"
+const ALL_AROUND_EPSILON := 0.001  # Radians: a half angle this close to PI covers the full circle.
+const RING_POINTS := 32  # Points of the Dragon ring.
+const RING_INNER_RATIO := 0.35  # The Dragon ring's hole, as a fraction of the reach.
 
 var _tower: Tower
 var _def: TowerDef
@@ -52,11 +59,14 @@ func physics_tick(delta: float) -> void:
 		if was_active:
 			_tower.queue_redraw()  # Clears the cone.
 		return
-	var direction: Vector2 = _tower.global_position.direction_to(target.global_position)
-	if direction != Vector2.ZERO:
-		_direction = direction
-	_tower.set_facing(_direction.angle())
-	_half_angle = deg_to_rad(_number("angle_degrees", 0.0)) * 0.5
+	var degrees: Variant = _def.value("angle_degrees", _record.branch, _record.level, _is_dragon())
+	_half_angle = deg_to_rad(0.0 if degrees == null else float(degrees)) * 0.5
+	var all_around: bool = _is_all_around()
+	if not all_around:  # Dragon: no aiming, the fire burns all around.
+		var direction: Vector2 = _tower.global_position.direction_to(target.global_position)
+		if direction != Vector2.ZERO:
+			_direction = direction
+		_tower.set_facing(_direction.angle())
 	var amp: Dictionary = _ctx.amp_at.call(_tower.global_position, _record.id)
 	var modifiers: PlayerModifiers = _ctx.modifiers
 	var dps: float = _number("dps", 0.0) * modifiers.damage_multiplier() \
@@ -81,7 +91,7 @@ func physics_tick(delta: float) -> void:
 		if distance_sq > range_sq:
 			continue
 		# An enemy on the tower itself is inside; otherwise within the half angle of the axis.
-		if distance_sq > 0.0 and offset.normalized().dot(_direction) < cos_half:
+		if not all_around and distance_sq > 0.0 and offset.normalized().dot(_direction) < cos_half:
 			continue
 		inside.append(enemy)
 	for enemy: Enemy in inside:
@@ -96,11 +106,15 @@ func physics_tick(delta: float) -> void:
 	_tower.queue_redraw()
 
 
-## The cone while it fires: a flickering outer fan and a brighter core.
+## The cone while it fires: a flickering outer fan and a brighter core (Dragon: a ring).
 func draw(canvas: CanvasItem) -> void:
 	if not _active:
 		return
 	var reach: float = _tower.attack_range * (1.0 - randf() * FLICKER)
+	if _is_all_around():
+		_draw_ring(canvas, reach * RING_INNER_RATIO, reach, FLAME_OUTER)
+		_draw_ring(canvas, reach * RING_INNER_RATIO, reach * FLAME_INNER_RATIO, FLAME_INNER)
+		return
 	_draw_fan(canvas, reach, _half_angle, FLAME_OUTER)
 	_draw_fan(canvas, reach * FLAME_INNER_RATIO, _half_angle * FLAME_INNER_RATIO, FLAME_INNER)
 
@@ -115,6 +129,23 @@ func _draw_fan(canvas: CanvasItem, reach: float, half_angle: float, color: Color
 		var angle: float = axis - half_angle + 2.0 * half_angle * float(i) / float(CONE_POINTS)
 		points.append(Vector2.from_angle(angle) * reach)
 	canvas.draw_colored_polygon(points, color)
+
+
+## A flame ring around the tower from [param inner] to [param outer] pixels.
+func _draw_ring(canvas: CanvasItem, inner: float, outer: float, color: Color) -> void:
+	if outer <= inner:
+		return
+	canvas.draw_arc(Vector2.ZERO, (inner + outer) * 0.5, 0.0, TAU, RING_POINTS, color, outer - inner)
+
+
+## True when the fire covers the full circle (Dragon): no aiming, no angle test, drawn as a ring.
+func _is_all_around() -> bool:
+	return _half_angle >= PI - ALL_AROUND_EPSILON
+
+
+## True for a Dragon: an evolved level 3 Napalm flamethrower (towers T2b).
+func _is_dragon() -> bool:
+	return _record.evolved and _record.level >= TowerRecord.MAX_LEVEL and _record.branch == NAPALM
 
 
 ## The designated enemy when it is within this tower's range, else null.
