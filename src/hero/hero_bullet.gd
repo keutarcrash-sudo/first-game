@@ -28,6 +28,7 @@ var _hit_ids: Dictionary = {}  # Instance ids of the targets already hit.
 var _archer: ArcherWeapon
 var _guaranteed_crit := false
 var _wet_duration := 0.0
+var _shared_states: Array = []  # Nexus states set at each hit (towers T2b, NexusRules.shared_states).
 var _color := COLOR
 var _on_crit: Callable  # Called (deferred) on each critical hit; invalid = none (Tir en rafale).
 
@@ -53,6 +54,12 @@ func set_burn(duration: float, damage_per_second: float, burner_id: int = -1) ->
 ## at impact (story 009). Call before adding the bullet to the tree.
 func set_wet(duration: float) -> void:
 	_wet_duration = duration
+
+
+## Makes each hit also set the Nexus shared states [param states] (towers T2b, built by
+## [method NexusRules.shared_states]). Call before adding the bullet to the tree.
+func set_shared_states(states: Array) -> void:
+	_shared_states = states
 
 
 ## Sets the colour the projectile is drawn with (default [constant COLOR]).
@@ -147,6 +154,8 @@ func _on_hit(target: Node2D) -> void:
 			enemy.apply_burn(_burn_duration, _burn_damage_per_second, _burner_id)
 		if enemy != null and _wet_duration > 0.0:
 			enemy.apply_wet(_wet_duration)
+		if enemy != null and not _shared_states.is_empty():
+			NexusRules.apply_states(enemy, _shared_states)
 		if enemy != null and crit:
 			enemy.apply_mark(_archer.mark_duration())
 	_hits_left -= 1

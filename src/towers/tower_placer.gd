@@ -360,11 +360,15 @@ func amp_of_tower(id: int) -> Dictionary:
 
 ## The amplifier bonuses at [param at] ([member TowerBehaviour.TowerContext.amp_at]): the
 ## strongest per type ([AmplifierRules]) of the placed amplifiers whose range covers it,
-## the amplifier of record id [param self_id] left out.
+## the amplifier of record id [param self_id] left out. Towers T2b: when a Nexus covers it,
+## also [code]"shared"[/code], the light states of the other towers boosted by the Nexus
+## amplifiers covering it ([method NexusRules.shared_states]; the tower of [param self_id]
+## gives none of its own).
 func _amp_at(at: Vector2, self_id: int) -> Dictionary:
 	if _amplifier_count <= 0:
 		return AmplifierRules.neutral()
 	var boosts: Array[Dictionary] = []
+	var nexuses: Array[Tower] = []
 	for id: int in _tower_nodes:
 		if id == self_id:
 			continue
@@ -374,4 +378,32 @@ func _amp_at(at: Vector2, self_id: int) -> Dictionary:
 			continue
 		if tower.global_position.distance_squared_to(at) <= tower.attack_range * tower.attack_range:
 			boosts.append(amplifier.boost())
-	return AmplifierRules.combine(boosts)
+			if amplifier.is_nexus():
+				nexuses.append(tower)
+	var result: Dictionary = AmplifierRules.combine(boosts)
+	if not nexuses.is_empty():
+		var shared: Array[Dictionary] = _nexus_shared(nexuses, self_id)
+		if not shared.is_empty():
+			result["shared"] = shared
+	return result
+
+
+## The states shared with the tower of record id [param self_id] by the Nexus towers
+## [param nexuses]: every non-amplifier tower within one of their ranges counts.
+func _nexus_shared(nexuses: Array[Tower], self_id: int) -> Array[Dictionary]:
+	var boosted: Array[Dictionary] = []
+	for id: int in _tower_nodes:
+		if id == self_id:
+			continue
+		var tower: Tower = _tower_nodes[id]
+		if tower.behaviour() is AmplifierBehaviour:
+			continue
+		var record: TowerRecord = _records.get(id) as TowerRecord
+		if record == null:
+			continue
+		for nexus: Tower in nexuses:
+			if nexus.global_position.distance_squared_to(tower.global_position) <= nexus.attack_range * nexus.attack_range:
+				boosted.append({"id": record.kind, "branch": record.branch, "level": record.level, "evolved": record.evolved, "record": id})
+				break
+	var values: Dictionary = (nexuses[0].behaviour() as AmplifierBehaviour).nexus_values()
+	return NexusRules.shared_states(boosted, values, self_id)

@@ -6,8 +6,14 @@
 ## Catalyseur (level 2+): the states the towers around set last +[code]state_bonus[/code].
 ## Branch and level are read live. Drawn as a pulsing ring with small links to the
 ## boosted towers (not to other amplifiers: an amplifier is never amplified).
+## Towers T2b, Surrégime (evolved Cadence): the rate bonus x [code]rate_mult[/code]. Nexus
+## (evolved Catalyseur): the towers it boosts share their light states ([NexusRules], built
+## by the [TowerPlacer] from [method nexus_values]).
 class_name AmplifierBehaviour
 extends TowerBehaviour
+
+const CADENCE := &"cadence"
+const CATALYSEUR := &"catalyseur"
 
 const PULSE_SPEED := 3.0  # Radians per second of the ring pulse.
 const RING_COLOR := Color(0.85, 0.45, 1.0)
@@ -41,7 +47,26 @@ func range_now() -> float:
 ## The bonuses this amplifier gives right now: [code]{ "damage", "rate", "state" }[/code]
 ## (0 for a bonus its branch and level do not give).
 func boost() -> Dictionary:
-	return {"damage": _number("damage_bonus"), "rate": _number("rate_bonus"), "state": _number("state_bonus")}
+	var rate: float = _number("rate_bonus")
+	if _is_evolved(CADENCE):
+		rate *= _number("rate_mult")  # Surrégime.
+	return {"damage": _number("damage_bonus"), "rate": rate, "state": _number("state_bonus")}
+
+
+## True for a Nexus (evolved level 3 Catalyseur, towers T2b).
+func is_nexus() -> bool:
+	return _is_evolved(CATALYSEUR)
+
+
+## The Nexus evolution values ([constant NexusRules.KEYS]) when this amplifier is a Nexus,
+## else empty.
+func nexus_values() -> Dictionary:
+	var values: Dictionary = {}
+	if not is_nexus():
+		return values
+	for key: String in NexusRules.KEYS:
+		values[key] = _def.value(key, CATALYSEUR, _record.level, true)
+	return values
 
 
 ## Advances the pulse; the ring and the links are redrawn every frame.
@@ -68,8 +93,13 @@ func draw(canvas: CanvasItem) -> void:
 		canvas.draw_line(Vector2.ZERO, _tower.to_local(other.global_position), LINK_COLOR, LINK_WIDTH, true)
 
 
-## Value [param key] for this tower's branch and level ([method TowerDef.value]), 0 when
-## neither has it. Required keys are validated by [TowerStats].
+## True for an evolved level 3 amplifier of [param branch] (towers T2b).
+func _is_evolved(branch: StringName) -> bool:
+	return _record.evolved and _record.level >= TowerRecord.MAX_LEVEL and _record.branch == branch
+
+
+## Value [param key] for this tower's branch, level and evolution ([method TowerDef.value]), 0
+## when none has it. Required keys are validated by [TowerStats].
 func _number(key: String) -> float:
-	var value: Variant = _def.value(key, _record.branch, _record.level)
+	var value: Variant = _def.value(key, _record.branch, _record.level, _record.evolved)
 	return 0.0 if value == null else float(value)

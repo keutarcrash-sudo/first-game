@@ -81,6 +81,8 @@ var _stun_left := 0.0  # Seconds of « étourdi » remaining (towers T2a): no wa
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
+var _timed_slow_factor := 1.0  # Speed fraction of the timed slow (Nexus, towers T2b).
+var _timed_slow_left := 0.0  # Seconds of the timed slow remaining.
 var _crystal: Crystal
 var _touch_distance_sq: float
 var _contact_damage: float
@@ -177,6 +179,11 @@ func _physics_process(delta: float) -> void:
 	# tower refreshes it, it ends here, together with the blue tint.
 	if _wet_left > 0.0 and _modifiers != null and _modifiers.has_flag(&"wet_slow"):
 		apply_slow(_modifiers.flag_value(&"wet_slow", "factor"))  # Marée montante; the strongest slow wins.
+	if _timed_slow_left > 0.0:
+		apply_slow(_timed_slow_factor)  # Nexus: the strongest slow wins.
+		_timed_slow_left -= delta
+		if _timed_slow_left <= 0.0:
+			_timed_slow_factor = 1.0
 	var was_slowed: bool = is_slowed()
 	_slow_factor = _requested_slow_factor
 	_requested_slow_factor = 1.0
@@ -340,6 +347,17 @@ func radius() -> float:
 ## enemy is in range; several callers do not stack, the lowest factor wins.
 func apply_slow(factor: float) -> void:
 	_requested_slow_factor = minf(_requested_slow_factor, factor)
+
+
+## Slows the enemy to [param factor] of its speed for [param duration] seconds (towers T2b,
+## Nexus), counted down by the physics step; it joins the per-frame slows of
+## [method apply_slow] (the lowest factor wins). While one runs, the lower factor and the
+## longer time left are kept.
+func apply_timed_slow(factor: float, duration: float) -> void:
+	if is_queued_for_deletion() or duration <= 0.0:
+		return
+	_timed_slow_factor = minf(_timed_slow_factor, factor) if _timed_slow_left > 0.0 else factor
+	_timed_slow_left = maxf(_timed_slow_left, duration)
 
 
 ## Asks for the frost towers' freeze for the next physics step only: towers call it every

@@ -47,6 +47,10 @@ var bomblet_radius: float
 var crater_duration: float = 0.0
 var crater_slow: float = 1.0
 var crater_radius: float
+## Tremblement (towers T2b): seconds of stun of every enemy of the main blast (0: none).
+var impact_stun: float = 0.0
+## Nexus (towers T2b): states set on every enemy of the main blast ([method NexusRules.apply_states]).
+var shared_states: Array = []
 
 var _time := 0.0
 var _landed := false
@@ -119,6 +123,10 @@ func _explode(center: Vector2) -> void:
 			continue  # Killed earlier in this loop.
 		var slowed: bool = enemy.has_state(&"slowed") or enemy.has_state(&"frozen")
 		enemy.take_damage(damage * (slowed_mult if slowed else 1.0), false, &"cannon")
+		if impact_stun > 0.0 and is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
+			enemy.stun(impact_stun)
+		if not shared_states.is_empty():
+			NexusRules.apply_states(enemy, shared_states)
 	if bomblets > 0:
 		var turn: float = randf() * TAU
 		for i: int in bomblets:

@@ -25,6 +25,9 @@ const NAPALM := &"napalm"
 const ALL_AROUND_EPSILON := 0.001  # Radians: a half angle this close to PI covers the full circle.
 const RING_POINTS := 32  # Points of the Dragon ring.
 const RING_INNER_RATIO := 0.35  # The Dragon ring's hole, as a fraction of the reach.
+## Seconds between two « hits » of the continuous fire for the Nexus shared states (towers
+## T2b): applied every frame, a 0.2 s stun would lock every enemy in the cone.
+const SHARE_INTERVAL := 1.0
 
 var _tower: Tower
 var _def: TowerDef
@@ -33,6 +36,7 @@ var _ctx: TowerBehaviour.TowerContext
 var _active := false  # The cone is firing this frame.
 var _direction := Vector2.RIGHT  # Axis of the cone, world space.
 var _half_angle := 0.0  # Radians.
+var _share_left := 0.0  # Seconds until the fire sets the Nexus shared states again.
 
 
 ## See [method TowerBehaviour.setup].
@@ -77,6 +81,10 @@ func physics_tick(delta: float) -> void:
 	var burn_duration: float = _number("burn_duration", 0.0) * (1.0 + float(amp["state"]))  # Catalyseur.
 	var stack_max: float = _number("stack_max", 1.0)  # Only Napalm level 3 has it (l3_stack_max).
 	var push_speed: float = _number("push_speed", 0.0)  # Only Souffle has it.
+	_share_left = maxf(_share_left - delta, 0.0)
+	var share: bool = amp.has("shared") and _share_left <= 0.0  # Nexus (towers T2b).
+	if share:
+		_share_left = SHARE_INTERVAL
 	var cos_half: float = cos(_half_angle)
 	var range_sq: float = _tower.attack_range * _tower.attack_range
 	var origin: Vector2 = _tower.global_position
@@ -103,6 +111,8 @@ func physics_tick(delta: float) -> void:
 		enemy.apply_burn(burn_duration, burn_dps, -1, stack_max)
 		if push_speed > 0.0:
 			enemy.push_along(_direction, push_speed)
+		if share:
+			NexusRules.apply_amp(enemy, amp)
 	_tower.queue_redraw()
 
 

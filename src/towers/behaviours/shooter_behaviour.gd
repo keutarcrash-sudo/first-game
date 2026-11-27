@@ -129,6 +129,9 @@ func _fire_shell(direction: Vector2, branch: StringName, amp: Dictionary) -> voi
 		bullet.set_pierce(int(_evolution_number("pierce_total")))
 	elif branch == PERFORANT:
 		bullet.set_pierce(int(_branch_number(PERFORANT, "pierce_total")))
+	var shared: Variant = amp.get("shared")
+	if shared is Array:
+		bullet.set_shared_states(shared as Array)  # Nexus (towers T2b).
 	_ctx.bullets.add_child(bullet)
 	bullet.global_position = _tower.global_position
 

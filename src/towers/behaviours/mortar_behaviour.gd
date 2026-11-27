@@ -9,8 +9,16 @@
 ## Amplifier bonuses at the shot: damage x (1 + damage), interval / (1 + rate), crater
 ## lifetime x (1 + state). « Balles lourdes » multiplies the damage, « Surcharge » shortens
 ## the interval at level 3.
+## Towers T2b, Bombardement (evolved Grappe): [code]shells[/code] shells per shot, on as many
+## different enemies of the ring as possible; the extra ones fall within [code]spread[/code]
+## px of the target. Every shell past the first counts against the [ChainLimiter] (dropped past
+## the cap). Tremblement (evolved Sismique): every impact stuns for [code]impact_stun[/code] s
+## x (1 + state). Nexus: every enemy of a main blast also gets the shared states ([NexusRules]).
 class_name MortarBehaviour
 extends TowerBehaviour
+
+const GRAPPE := &"grappe"
+const SISMIQUE := &"sismique"
 
 var _tower: Tower
 var _def: TowerDef
@@ -44,6 +52,8 @@ func physics_tick(delta: float) -> void:
 		return
 	var amp: Dictionary = _ctx.amp_at.call(_tower.global_position, _record.id)
 	_fire(target.global_position, amp)
+	if _is_evolved(GRAPPE):
+		_bombard(target, amp)
 	_cooldown = _number("interval", 1.0) / (1.0 + float(amp["rate"]))
 	if _record.level >= TowerRecord.MAX_LEVEL:
 		_cooldown *= _ctx.modifiers.tier3_fire_rate_factor()  # « Surcharge ».
@@ -72,7 +82,30 @@ func _fire(at: Vector2, amp: Dictionary) -> void:
 	shell.crater_duration = _number("crater_duration", 0.0) * (1.0 + float(amp["state"]))  # Sismique only; Catalyseur.
 	shell.crater_slow = _number("crater_slow", 1.0)
 	shell.crater_radius = _number("crater_radius", 0.0)
+	if _is_evolved(SISMIQUE):
+		shell.impact_stun = _evolution_number(SISMIQUE, "impact_stun") * (1.0 + float(amp["state"]))  # Tremblement; Catalyseur.
+	var shared: Variant = amp.get("shared")
+	if shared is Array:
+		shell.shared_states = shared as Array  # Nexus.
 	_ctx.bullets.add_child(shell)
+
+
+## Bombardement: the shells past the first, on the other enemies of the ring nearest to
+## [param target] (each a different one), else within the spread around [param target].
+func _bombard(target: Enemy, amp: Dictionary) -> void:
+	var extra: int = int(_evolution_number(GRAPPE, "shells")) - 1
+	var spread: float = _evolution_number(GRAPPE, "spread")
+	var others: Array[Enemy] = _others_in_ring(target)
+	var limiter: ChainLimiter = _ctx.chain_limiter
+	for i: int in extra:
+		if limiter != null and not limiter.try_consume(Engine.get_process_frames()):
+			break  # Past the cap: the rest are dropped.
+		var at: Vector2
+		if i < others.size():
+			at = others[i].global_position
+		else:
+			at = target.global_position + Vector2.from_angle(randf() * TAU) * randf() * spread
+		_fire(at, amp)
 
 
 ## The designated enemy when it stands in this tower's firing ring, else null.
@@ -97,6 +130,32 @@ func _nearest_in_ring() -> Enemy:
 			nearest_sq = distance_sq
 			nearest = enemy
 	return nearest
+
+
+## The living enemies of the firing ring other than [param target], nearest to it first.
+func _others_in_ring(target: Enemy) -> Array[Enemy]:
+	var found: Array[Enemy] = []
+	var enemies: Node2D = _ctx.enemies
+	for i: int in enemies.get_child_count():
+		var enemy := enemies.get_child(i) as Enemy
+		if enemy == null or enemy == target or enemy.is_queued_for_deletion() or not _in_ring(enemy.global_position):
+			continue
+		found.append(enemy)
+	var from: Vector2 = target.global_position
+	found.sort_custom(func(a: Enemy, b: Enemy) -> bool:
+		return a.global_position.distance_squared_to(from) < b.global_position.distance_squared_to(from))
+	return found
+
+
+## True for an evolved level 3 mortar of [param branch] (towers T2b).
+func _is_evolved(branch: StringName) -> bool:
+	return _record.evolved and _record.level >= TowerRecord.MAX_LEVEL and _record.branch == branch
+
+
+## Number [param key] of the evolution of [param branch] (required and validated by
+## [constant TowerStats.EVOLUTION_KEYS]).
+func _evolution_number(branch: StringName, key: String) -> float:
+	return float(_def.value(key, branch, _record.level, true))
 
 
 ## True when [param at] is between the minimum range and the range of the tower.

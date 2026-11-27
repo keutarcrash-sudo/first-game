@@ -97,7 +97,7 @@ func _strike_chain(first: Enemy, amp: Dictionary) -> void:
 	var struck: Dictionary = {}  # Instance ids of the enemies these bolts already hit.
 	_bolt = PackedVector2Array()  # Built in place by _run_bolt: a packed array argument would be a copy.
 	_bolt.append(_tower.global_position)
-	var last: Vector2 = _run_bolt(_tower.global_position, first, strikes, damage, wet_mult, stun, jump_range, struck)
+	var last: Vector2 = _run_bolt(_tower.global_position, first, strikes, damage, wet_mult, stun, jump_range, struck, amp)
 	if _is_evolved(SURTENSION):
 		for i: int in int(_evolution_number(SURTENSION, "second_bolt")):
 			var next: Enemy = _nearest_enemy(last, jump_range, struck)
@@ -107,7 +107,7 @@ func _strike_chain(first: Enemy, amp: Dictionary) -> void:
 			if limiter != null and not limiter.try_consume(Engine.get_process_frames()):
 				break
 			# The line goes on from the last enemy struck, so the polyline stays connected.
-			last = _run_bolt(last, next, strikes, damage, wet_mult, stun, jump_range, struck)
+			last = _run_bolt(last, next, strikes, damage, wet_mult, stun, jump_range, struck, amp)
 	var direction: Vector2 = _tower.global_position.direction_to(first.global_position) if is_instance_valid(first) else Vector2.ZERO
 	if direction != Vector2.ZERO:
 		_tower.set_facing(direction.angle())
@@ -118,8 +118,8 @@ func _strike_chain(first: Enemy, amp: Dictionary) -> void:
 ## One bolt from [param from]: strikes [param first], then bounces to the nearest enemy not in
 ## [param struck] within [param jump_range], [param strikes] strikes in all. Adds every enemy
 ## struck to [param struck] and the broken line to [member _bolt]; returns the position of the
-## last enemy struck.
-func _run_bolt(from: Vector2, first: Enemy, strikes: int, damage: float, wet_mult: float, stun: float, jump_range: float, struck: Dictionary) -> Vector2:
+## last enemy struck. Each strike also sets the Nexus states of [param amp] (towers T2b).
+func _run_bolt(from: Vector2, first: Enemy, strikes: int, damage: float, wet_mult: float, stun: float, jump_range: float, struck: Dictionary, amp: Dictionary) -> Vector2:
 	var enemy: Enemy = first
 	var strikes_left: int = strikes
 	while enemy != null and strikes_left > 0:
@@ -132,6 +132,7 @@ func _run_bolt(from: Vector2, first: Enemy, strikes: int, damage: float, wet_mul
 		enemy.take_damage(dealt, false, &"cannon")
 		if stun > 0.0 and is_instance_valid(enemy):
 			enemy.stun(stun)  # Ignored on an enemy that just died.
+		NexusRules.apply_amp(enemy, amp)  # Ignored on an enemy that just died.
 		if strikes_left > 0:
 			enemy = _nearest_enemy(at, jump_range, struck)
 	return from
