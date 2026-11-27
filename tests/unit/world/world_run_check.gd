@@ -53,8 +53,12 @@ func _run() -> String:
 		return "from the start, all of column 0 is reachable"
 	if run.undo_move():
 		return "nothing to undo before any move"
+	if run.choices_before_last_move() != 0:
+		return "no choice count before any move"
 	if not run.move_to(1):
 		return "moving into column 0 before an undo"
+	if run.choices_before_last_move() != 2 or run.node != 1 or run.column != 0:
+		return "choices_before_last_move counts the start's two places and leaves the position"
 	if not run.undo_move() or run.column != -1 or run.node != -1 or not run.visited.is_empty():
 		return "undo_move puts the player back at the start"
 	if run.undo_move():

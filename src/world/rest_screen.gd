@@ -49,13 +49,15 @@ func _ready() -> void:
 ## Opens the screen: the hero choice heals [param hero_heal] hit points (already
 ## computed from the hero's maximum), the crystal choice repairs [param crystal_heal].
 ## [param hero_full] / [param crystal_full]: that target is at its maximum, its
-## choice is disabled; both full shows « Retour à la carte ». The screen must be in the tree.
-func open(hero_heal: float, crystal_heal: float, hero_full: bool, crystal_full: bool) -> void:
+## choice is disabled; both full shows « Retour à la carte », or « Continuer » when
+## [param can_go_back] is false (no other place to pick). The screen must be in the tree.
+func open(hero_heal: float, crystal_heal: float, hero_full: bool, crystal_full: bool, can_go_back: bool = true) -> void:
 	_hero_button.text = "Soigner le héros\n%s" % (FULL_TEXT if hero_full else "+%d PV" % roundi(hero_heal))
 	_hero_button.disabled = hero_full
 	_crystal_button.text = "Réparer le cristal\n%s" % (FULL_TEXT if crystal_full else "+%d PV" % roundi(crystal_heal))
 	_crystal_button.disabled = crystal_full
 	_back_button.visible = hero_full and crystal_full
+	_back_button.text = "Retour à la carte" if can_go_back else "Continuer"
 	visible = true
 
 

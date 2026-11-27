@@ -524,7 +524,7 @@ func _on_place_chosen(index: int) -> void:
 		_open_treasure()
 	else:
 		var health: HeroHealth = _hero.health()
-		_rest_screen.open(health.max_hp * _item_catalog.rest_hero_heal_fraction, _item_catalog.rest_crystal_heal, health.current >= health.max_hp, _crystal_full())
+		_rest_screen.open(health.max_hp * _item_catalog.rest_hero_heal_fraction, _item_catalog.rest_crystal_heal, health.current >= health.max_hp, _crystal_full(), _world_run.choices_before_last_move() > 1)
 
 
 ## Free items to pick one from; none left: the fallback gold and its banner instead.
@@ -598,6 +598,9 @@ func _on_rest_crystal_chosen() -> void:
 ## undone and the same choice is shown again.
 func _on_rest_back_requested() -> void:
 	if _state.phase != GameState.Phase.PLACE:
+		return
+	if _world_run.choices_before_last_move() <= 1:
+		_end_place()  # No other place to pick: « Continuer » goes on to the build phase.
 		return
 	if not _world_run.undo_move():
 		_end_place()  # Never expected: leave the place rather than stay stuck on a hidden screen.
