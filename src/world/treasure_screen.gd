@@ -25,7 +25,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	var column: VBoxContainer = ItemCard.build_overlay(self, "Trésor : choisis un objet")
+	var column: VBoxContainer = ItemCard.build_overlay(self, "Trésor : choisis ta récompense")
 	_row = ItemCard.make_row()
 	column.add_child(_row)
 
