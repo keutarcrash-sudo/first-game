@@ -78,7 +78,7 @@ func physics_tick(delta: float) -> void:
 		if enemy == null or _tower.global_position.distance_squared_to(enemy.global_position) > range_sq:
 			continue
 		if heart and _pulse_left <= 0.0:
-			enemy.force_freeze(pulse_freeze)  # Whatever the refreeze cooldown (spec §7bis).
+			enemy.force_freeze(pulse_freeze, _record.id)  # Whatever the refreeze cooldown (spec §7bis); keeps this tower as freezer.
 			pulsed = true
 		enemy.apply_slow(slow_factor)
 		enemy.apply_chill(dwell, chill_duration, stats.freeze_cooldown, _record.id)

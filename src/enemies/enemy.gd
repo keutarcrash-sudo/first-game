@@ -513,11 +513,11 @@ func freeze_from(duration: float, cooldown: float, tower_id: int) -> bool:
 ## freeze already running is only extended, never shortened. The cooldown that
 ## follows the freeze is left unchanged. A new freeze (not an extension) forgets the
 ## tower that froze last: [method last_freezer_id] becomes -1.
-func force_freeze(duration: float) -> void:
+func force_freeze(duration: float, tower_id: int = -1) -> void:
 	if is_queued_for_deletion():
 		return
-	if _frozen_left <= 0.0:
-		_last_freezer_id = -1
+	if _frozen_left <= 0.0 or tower_id >= 0:
+		_last_freezer_id = tower_id  # A tower pulse (Cœur de l'hiver) keeps its id for its level 3 effects.
 	_frozen_left = maxf(_frozen_left, duration)
 	_freeze_cooldown_left = 0.0
 	_push_left = 0.0
