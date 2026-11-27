@@ -7,6 +7,8 @@
 ## at once. Incendiaire (level 2+): its own burn, tagged with the record id. Perforant:
 ## shells hit [code]pierce_total[/code] enemies (level 2+), [code]l3_shots[/code] shells spread
 ## over [code]l3_spread_degrees[/code] at level 3. Level 3 fires faster with « Surcharge ».
+## Towers T2a: the amplifier bonuses at the tower ([member TowerBehaviour.TowerContext.amp_at])
+## are read at every shot: damage x (1 + damage), interval / (1 + rate), burn duration x (1 + state).
 class_name ShooterBehaviour
 extends TowerBehaviour
 
@@ -43,8 +45,9 @@ func physics_tick(delta: float) -> void:
 		target = _find_nearest_enemy()
 	if target == null:
 		return
-	_fire(target)
-	_cooldown = _number("fire_interval") * _ctx.modifiers.cannon_interval_factor()
+	var amp: Dictionary = _ctx.amp_at.call(_tower.global_position, _record.id)
+	_fire(target, amp)
+	_cooldown = _number("fire_interval") * _ctx.modifiers.cannon_interval_factor() / (1.0 + float(amp["rate"]))
 	if _record.level >= TowerRecord.MAX_LEVEL:
 		_cooldown *= _ctx.modifiers.tier3_fire_rate_factor()  # « Surcharge ».
 
@@ -75,7 +78,8 @@ func _find_nearest_enemy() -> Enemy:
 	return nearest
 
 
-func _fire(target: Enemy) -> void:
+## Fires at [param target] with the amplifier bonuses [param amp].
+func _fire(target: Enemy, amp: Dictionary) -> void:
 	var direction: Vector2 = _tower.global_position.direction_to(target.global_position)
 	if direction == Vector2.ZERO:  # An enemy walking over the tower.
 		direction = Vector2.RIGHT
@@ -89,15 +93,17 @@ func _fire(target: Enemy) -> void:
 	for i: int in shots:
 		# Spread evenly around the aim: 2 shells of 8 degrees = -4 and +4.
 		var offset: float = 0.0 if shots == 1 else spread * (float(i) / float(shots - 1) - 0.5)
-		_fire_shell(direction.rotated(offset), branch)
+		_fire_shell(direction.rotated(offset), branch, amp)
 
 
-## One shell along [param direction], set up for this tower's [param branch] (&"" below level 2).
-func _fire_shell(direction: Vector2, branch: StringName) -> void:
+## One shell along [param direction], set up for this tower's [param branch] (&"" below level 2),
+## its damage x (1 + damage) and its burn duration x (1 + state) of the amplifier bonuses [param amp].
+func _fire_shell(direction: Vector2, branch: StringName, amp: Dictionary) -> void:
 	var modifiers: PlayerModifiers = _ctx.modifiers
+	var state_factor: float = 1.0 + float(amp["state"])  # Catalyseur.
 	var bullet := HeroBullet.new()
 	bullet.configure(
-		_number("damage") * modifiers.damage_multiplier(), _number("bullet_speed"), _number("bullet_max_range"),
+		_number("damage") * modifiers.damage_multiplier() * (1.0 + float(amp["damage"])), _number("bullet_speed"), _number("bullet_max_range"),
 		_number("bullet_radius"), direction, _ctx.arena_rect
 	)
 	bullet.set_proc_source(&"cannon", _ctx.rules)
@@ -106,9 +112,9 @@ func _fire_shell(direction: Vector2, branch: StringName) -> void:
 		var duration: float = _branch_number(INCENDIAIRE, "burn_duration")
 		if modifiers.burn_duration() > 0.0:
 			duration *= _branch_number(INCENDIAIRE, "card_duration_mult")
-		bullet.set_burn(duration, _branch_number(INCENDIAIRE, "burn_dps"), _record.id)
+		bullet.set_burn(duration * state_factor, _branch_number(INCENDIAIRE, "burn_dps"), _record.id)
 	else:
-		bullet.set_burn(modifiers.burn_duration(), modifiers.burn_damage_per_second(), _record.id)
+		bullet.set_burn(modifiers.burn_duration() * state_factor, modifiers.burn_damage_per_second(), _record.id)
 	if branch == PERFORANT:
 		bullet.set_pierce(int(_branch_number(PERFORANT, "pierce_total")))
 	_ctx.bullets.add_child(bullet)

@@ -45,6 +45,11 @@ func set_visual(sheet: SpriteSheet, height_px: float) -> void:
 	_sprite.play(&"idle")
 
 
+## What this tower does, or [code]null[/code] for an unknown behaviour.
+func behaviour() -> TowerBehaviour:
+	return _behaviour
+
+
 ## Turns the tower image toward [param angle] (radians, as [method Vector2.angle]).
 func set_facing(angle: float) -> void:
 	if _sprite != null:

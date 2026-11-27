@@ -67,6 +67,7 @@ func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crys
 	_ctx.rules = rules
 	_ctx.modifiers = modifiers
 	_ctx.designator = designator
+	_ctx.amp_at = _amp_at
 	var unlocked: Array[StringName] = modifiers.unlocked_towers()
 	_kind = unlocked[0] if not unlocked.is_empty() else stats.defs()[0].id
 	_refresh_preview_behaviour()
@@ -77,6 +78,11 @@ func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crys
 ## Gives every tower the chain-effect cap of the [TowerEffects] ([member TowerBehaviour.TowerContext.chain_limiter]).
 func set_chain_limiter(limiter: ChainLimiter) -> void:
 	_ctx.chain_limiter = limiter
+
+
+## Gives every tower the floating damage numbers node ([member TowerBehaviour.TowerContext.damage_numbers]); may be null.
+func set_damage_numbers(numbers: Node) -> void:
+	_ctx.damage_numbers = numbers
 
 
 ## Gives the placer the tower images, tower id (StringName) -> [SpriteSheet], used for the
@@ -322,3 +328,29 @@ func _place(record: TowerRecord, spot: Vector2) -> void:
 	tower.position = spot
 	_towers.add_child(tower)
 	_tower_nodes[record.id] = tower
+
+
+## The amplifier bonuses at the placed tower of record id [param id] (itself left out), or
+## none when it is not placed (read by [TowerEffects]).
+func amp_of_tower(id: int) -> Dictionary:
+	var tower: Tower = _tower_nodes.get(id) as Tower
+	if tower == null:
+		return AmplifierRules.neutral()
+	return _amp_at(tower.global_position, id)
+
+
+## The amplifier bonuses at [param at] ([member TowerBehaviour.TowerContext.amp_at]): the
+## strongest per type ([AmplifierRules]) of the placed amplifiers whose range covers it,
+## the amplifier of record id [param self_id] left out.
+func _amp_at(at: Vector2, self_id: int) -> Dictionary:
+	var boosts: Array[Dictionary] = []
+	for id: int in _tower_nodes:
+		if id == self_id:
+			continue
+		var tower: Tower = _tower_nodes[id]
+		var amplifier := tower.behaviour() as AmplifierBehaviour
+		if amplifier == null:
+			continue
+		if tower.global_position.distance_squared_to(at) <= tower.attack_range * tower.attack_range:
+			boosts.append(amplifier.boost())
+	return AmplifierRules.combine(boosts)

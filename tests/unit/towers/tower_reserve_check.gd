@@ -48,7 +48,7 @@ func _run() -> String:
 		return "value falls back to the base value"
 	if not is_equal_approx(float(cannon_def.value("range", &"", 1)), 250.0):
 		return "value reads the base range"
-	if stats.def_of(&"tesla") != null:
+	if stats.def_of(&"laser") != null:
 		return "unknown tower is null"
 	var failed: String = _run_prices(stats)
 	if failed.is_empty():
@@ -80,7 +80,7 @@ func _run_prices(stats: TowerStats) -> String:
 	var none: Array[StringName] = []
 	if reserve.least_owned_kind(none) != &"":
 		return "least_owned_kind is empty when nothing is unlocked"
-	if reserve.buy(&"tesla", RICH, 1.0) != null or reserve.add_free(&"tesla") != null:
+	if reserve.buy(&"laser", RICH, 1.0) != null or reserve.add_free(&"laser") != null:
 		return "unknown kind refused"
 	var discounted := TowerReserve.new(stats)
 	for expected: int in [40, 60, 80]:
@@ -179,7 +179,7 @@ func _run_invalid() -> String:
 	if TowerStats.from_data(no_value, "no_value") != null:
 		return "missing behaviour value refused"
 	var bad_unlock: Dictionary = (base as Dictionary).duplicate(true)
-	bad_unlock["starting_unlocked"] = ["cannon", "tesla"]
+	bad_unlock["starting_unlocked"] = ["cannon", "laser"]
 	if TowerStats.from_data(bad_unlock, "bad_unlock") != null:
 		return "unknown starting tower refused"
 	var dup_branch: Dictionary = (base as Dictionary).duplicate(true)

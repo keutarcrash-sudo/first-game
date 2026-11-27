@@ -29,17 +29,18 @@ class TowerContext:
 	var chain_limiter: ChainLimiter
 	## Node of the damage numbers; may be null (the enemies show their own hits).
 	var damage_numbers: Node
-	## Called with a world position, returns the amplifier bonuses there
-	## (Dictionary [code]damage[/code], [code]rate[/code], [code]state[/code]).
-	## Neutral until the amplifier exists.
+	## Called with a world position and the [TowerRecord] id of the asking tower, returns
+	## the amplifier bonuses there, that amplifier left out ([AmplifierRules]: Dictionary
+	## [code]damage[/code], [code]rate[/code], [code]state[/code]). Neutral until the
+	## [TowerPlacer] sets it.
 	var amp_at: Callable
 
 	func _init() -> void:
 		amp_at = neutral_amp
 
 	## Bonuses of no amplifier: all zero.
-	func neutral_amp(_at: Vector2) -> Dictionary:
-		return {"damage": 0.0, "rate": 0.0, "state": 0.0}
+	func neutral_amp(_at: Vector2, _self_id: int) -> Dictionary:
+		return AmplifierRules.neutral()
 
 
 ## The behaviour of id [param behaviour], or [code]null[/code] (after an error) if unknown.
@@ -49,6 +50,10 @@ static func create(behaviour: StringName) -> TowerBehaviour:
 			return ShooterBehaviour.new()
 		&"frost_aura":
 			return FrostAuraBehaviour.new()
+		&"chain_lightning":
+			return ChainLightningBehaviour.new()
+		&"amplifier":
+			return AmplifierBehaviour.new()
 	push_error("TowerBehaviour: unknown behaviour '%s'." % behaviour)
 	return null
 

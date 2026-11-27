@@ -23,6 +23,8 @@ const TOWER_META_KEYS := ["label", "behaviour", "base_cost", "range", "radius", 
 const BEHAVIOUR_KEYS := {
 	"shooter": ["damage", "fire_interval", "bullet_speed", "bullet_radius", "bullet_max_range"],
 	"frost_aura": ["slow_factor"],
+	"chain_lightning": ["interval", "damage", "jumps", "jump_range", "wet_mult"],
+	"amplifier": ["damage_bonus"],
 }
 ## Branches and keys a behaviour's code reads: behaviour -> branch id -> keys
 ## ([code]label[/code] is a string, the others positive numbers).
@@ -34,6 +36,14 @@ const BRANCH_KEYS := {
 	"frost_aura": {
 		"blizzard": ["label", "range_mult", "dwell", "l3_wet_duration"],
 		"eclats": ["label", "shard_radius", "shard_damage", "l3_shard_freeze"],
+	},
+	"chain_lightning": {
+		"surtension": ["label", "jumps", "wet_mult", "l3_jumps"],
+		"arc": ["label", "range", "stun", "l3_stun", "l3_damage_mult"],
+	},
+	"amplifier": {
+		"cadence": ["label", "rate_bonus", "l3_rate_bonus"],
+		"catalyseur": ["label", "state_bonus", "l3_state_bonus"],
 	},
 }
 ## Number of upgrade costs: level 1 -> 2, then level 2 -> 3.

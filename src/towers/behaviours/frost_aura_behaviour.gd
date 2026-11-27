@@ -52,7 +52,10 @@ func physics_tick(_delta: float) -> void:
 	var water_duration: float = modifiers.freeze_duration()
 	var water_cooldown: float = modifiers.freeze_cooldown()
 	var dwell: float = _blizzard_number("dwell") if blizzard else stats.freeze_dwell
-	var chill_duration: float = stats.freeze_duration + modifiers.freeze_duration_bonus()
+	# Catalyseur: the freeze and the Blizzard wet this tower sets last longer (not the dwell or the cooldown).
+	var amp: Dictionary = _ctx.amp_at.call(_tower.global_position, _record.id)
+	var state_factor: float = 1.0 + float(amp["state"])
+	var chill_duration: float = (stats.freeze_duration + modifiers.freeze_duration_bonus()) * state_factor
 	var range_sq: float = _tower.attack_range * _tower.attack_range
 	var enemies: Node2D = _ctx.enemies
 	_still_frozen.clear()
@@ -68,7 +71,7 @@ func physics_tick(_delta: float) -> void:
 			var key: int = enemy.get_instance_id()
 			_still_frozen[key] = true
 			if not _wetted.has(key):  # Once per freeze, when it is first seen.
-				enemy.apply_wet(_blizzard_number("l3_wet_duration"))
+				enemy.apply_wet(_blizzard_number("l3_wet_duration") * state_factor)
 	var previous: Dictionary = _wetted
 	_wetted = _still_frozen
 	_still_frozen = previous

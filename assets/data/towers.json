@@ -73,6 +73,61 @@
 					"l3_shard_freeze": 0.6
 				}
 			}
+		},
+		"tesla": {
+			"label": "Tesla",
+			"behaviour": "chain_lightning",
+			"base_cost": 70,
+			"range": 220.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/tesla",
+			"height_px": 110.0,
+			"color": [0.55, 0.6, 1.0],
+			"icon_color": [0.6, 0.7, 1.0],
+			"interval": 1.2,
+			"damage": 12.0,
+			"jumps": 3,
+			"jump_range": 120.0,
+			"wet_mult": 2.0,
+			"branches": {
+				"surtension": {
+					"label": "Surtension",
+					"jumps": 6,
+					"wet_mult": 3.0,
+					"l3_jumps": 10
+				},
+				"arc": {
+					"label": "Arc",
+					"range": 300.0,
+					"stun": 0.3,
+					"l3_stun": 0.6,
+					"l3_damage_mult": 1.5
+				}
+			}
+		},
+		"amplifier": {
+			"label": "Amplificateur",
+			"behaviour": "amplifier",
+			"base_cost": 90,
+			"range": 160.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/amplifier",
+			"height_px": 110.0,
+			"color": [0.85, 0.4, 1.0],
+			"icon_color": [0.9, 0.5, 1.0],
+			"damage_bonus": 0.25,
+			"branches": {
+				"cadence": {
+					"label": "Cadence",
+					"rate_bonus": 0.3,
+					"l3_rate_bonus": 0.5
+				},
+				"catalyseur": {
+					"label": "Catalyseur",
+					"state_bonus": 0.5,
+					"l3_state_bonus": 1.0
+				}
+			}
 		}
 	},
 	"starting_unlocked": ["cannon", "frost"]

@@ -24,6 +24,7 @@ var _stats: TowerStats
 var _modifiers: PlayerModifiers
 var _records: Callable
 var _limiter: ChainLimiter
+var _amp_of: Callable  # Record id -> amplifier bonuses at that tower; unset = none.
 
 
 ## Watches every enemy added under [param enemies_parent]. [param stats] gives the branch values
@@ -39,6 +40,13 @@ func setup(enemies_parent: Node2D, stats: TowerStats, modifiers: PlayerModifiers
 	enemies_parent.child_entered_tree.connect(_on_enemy_added)
 	for child: Node in enemies_parent.get_children():
 		_on_enemy_added(child)
+
+
+## Gives the amplifier bonuses: [param amp_of] is called with a tower record id and returns
+## the bonuses at that placed tower ([method TowerPlacer.amp_of_tower]). The Éclats level 3
+## freeze lasts x (1 + [code]state[/code]) (Catalyseur).
+func set_amp_source(amp_of: Callable) -> void:
+	_amp_of = amp_of
 
 
 func _on_enemy_added(node: Node) -> void:
@@ -102,6 +110,8 @@ func _shatter(at: Vector2, frost_id: int, kind: StringName, freezes: bool) -> vo
 	var radius: float = _value(kind, ECLATS, "shard_radius")
 	var damage: float = _value(kind, ECLATS, "shard_damage") * _modifiers.damage_multiplier()
 	var freeze: float = _value(kind, ECLATS, "l3_shard_freeze") + _modifiers.freeze_duration_bonus()
+	if _amp_of.is_valid():
+		freeze *= 1.0 + float((_amp_of.call(frost_id) as Dictionary)["state"])
 	_show(at, SHARD_WORD, SHARD_COLOR, radius)
 	for enemy: Enemy in _living_enemies_near(at, radius):
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():

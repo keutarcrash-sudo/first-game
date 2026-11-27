@@ -213,8 +213,9 @@ func _ready() -> void:
 	# Floating damage numbers are optional: a missing or invalid damage_numbers.json
 	# (error already logged) only leaves the hits without numbers.
 	var damage_number_model: DamageNumberModel = DamageNumberModel.load_from_file(DAMAGE_NUMBERS_PATH)
+	var damage_numbers: DamageNumbers = null
 	if damage_number_model != null:
-		var damage_numbers := DamageNumbers.new()
+		damage_numbers = DamageNumbers.new()
 		damage_numbers.name = "DamageNumbers"
 		add_child(damage_numbers)
 		damage_numbers.setup(damage_number_model, _state)
@@ -263,6 +264,8 @@ func _ready() -> void:
 	add_child(tower_effects)
 	tower_effects.setup(_enemies, towers, modifiers, _placer.records_by_id)
 	_placer.set_chain_limiter(tower_effects.limiter())
+	_placer.set_damage_numbers(damage_numbers)
+	tower_effects.set_amp_source(_placer.amp_of_tower)
 	_hud.bind_tower_build(towers, modifiers, _reserve, _placer, _state)
 	_hud.tower_kind_chosen.connect(_placer.select_purchase)
 	_hud.reserve_record_chosen.connect(_placer.select_record)
