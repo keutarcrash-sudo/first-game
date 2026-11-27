@@ -68,6 +68,21 @@ func move_to(index: int) -> bool:
 ## [code]false[/code] and changes nothing when there is no move to undo.
 ## Only valid right after a [method move_to] (a new one replaces the saved
 ## position); an undo or [method start_world] consumes it.
+## Number of places reachable from where the player stood before the last
+## [method move_to] (1 when that move was the only way forward; 0 when nothing to undo).
+func choices_before_last_move() -> int:
+	if not _can_undo:
+		return 0
+	var here_column: int = column
+	var here_node: int = node
+	column = _previous_column
+	node = _previous_node
+	var count: int = reachable().size()
+	column = here_column
+	node = here_node
+	return count
+
+
 func undo_move() -> bool:
 	if not _can_undo:
 		return false
