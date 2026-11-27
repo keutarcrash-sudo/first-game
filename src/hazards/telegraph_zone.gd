@@ -1,4 +1,5 @@
-## Announced attack (étape 4, spec §6.3): a translucent red circle on the ground that
+## Announced attack (étape 4, spec §6.3): a translucent circle on the ground (red by default,
+## cyan for a friendly shot such as the mortar's, towers T2a) that
 ## fills from the centre to the edge over [code]duration[/code] seconds, then emits
 ## [signal impacted] and frees itself. The owner of the attack decides what the impact
 ## does (damage, flash, onomatopoeia) by listening to the signal. The zone frees itself
@@ -10,8 +11,8 @@ extends Node2D
 ## Emitted once when the announcement completes, with the global centre of the zone.
 signal impacted(center: Vector2)
 
-const FILL_COLOR := Color(1.0, 0.2, 0.3, 0.25)
-const OUTLINE_COLOR := Color(1.0, 0.25, 0.35)
+const OUTLINE_COLOR := Color(1.0, 0.25, 0.35)  # Default colour: an enemy attack.
+const FILL_ALPHA := 0.25  # The fill is the outline colour at this opacity.
 const BACK_OUTLINE_COLOR := Color(0.0, 0.0, 0.0)
 const OUTLINE_WIDTH := 3.0
 const BACK_OUTLINE_WIDTH := 5.0
@@ -23,6 +24,7 @@ var _time := 0.0
 var _state: GameState
 var _follow: Node2D
 var _done := false
+var _color := OUTLINE_COLOR
 
 
 ## True when a body of [param body_radius] at [param body_pos] touches the disc of
@@ -39,13 +41,15 @@ static func hits_point(center: Vector2, radius: float, point: Vector2) -> bool:
 ## Configures the zone: disc of [param radius] pixels announced for [param duration]
 ## seconds. It frees itself without impact as soon as [param state]'s phase is not COMBAT.
 ## If [param follow] is given, the zone follows its global position while that node is
-## valid; once it is gone the zone stays at its last position. Call before adding to the
-## tree, then set global_position (unless following).
-func setup(radius: float, duration: float, state: GameState, follow: Node2D = null) -> void:
+## valid; once it is gone the zone stays at its last position. [param color] is the outline
+## colour (the fill uses it translucent); the default red marks an enemy attack. Call before
+## adding to the tree, then set global_position (unless following).
+func setup(radius: float, duration: float, state: GameState, follow: Node2D = null, color: Color = OUTLINE_COLOR) -> void:
 	_radius = radius
 	_duration = duration
 	_state = state
 	_follow = follow
+	_color = color
 
 
 ## Frees the zone without emitting [signal impacted].
@@ -72,6 +76,6 @@ func _physics_process(delta: float) -> void:
 
 func _draw() -> void:
 	var progress: float = 1.0 if _duration <= 0.0 else clampf(_time / _duration, 0.0, 1.0)
-	draw_circle(Vector2.ZERO, _radius * progress, FILL_COLOR)
+	draw_circle(Vector2.ZERO, _radius * progress, Color(_color, FILL_ALPHA))
 	draw_arc(Vector2.ZERO, _radius, 0.0, TAU, ARC_POINTS, BACK_OUTLINE_COLOR, BACK_OUTLINE_WIDTH)
-	draw_arc(Vector2.ZERO, _radius, 0.0, TAU, ARC_POINTS, OUTLINE_COLOR, OUTLINE_WIDTH)
+	draw_arc(Vector2.ZERO, _radius, 0.0, TAU, ARC_POINTS, _color, OUTLINE_WIDTH)

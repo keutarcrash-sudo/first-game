@@ -5,8 +5,11 @@ class_name DamageNumberModel
 extends RefCounted
 
 ## Sources whose damage is summed per enemy and shown once per group interval.
-const GROUPED_SOURCES: Array[StringName] = [&"burn", &"area"]
-const COLOR_KEYS: Array[String] = ["hero", "cannon", "burn", "crit"]
+## &"tower_dot" is the towers' continuous damage (flamethrower cone, towers T2a), shown in its own colour.
+const GROUPED_SOURCES: Array[StringName] = [&"burn", &"area", &"tower_dot"]
+const COLOR_KEYS: Array[String] = ["hero", "cannon", "burn", "tower_dot", "crit"]
+## Sources drawn in their own colour; any other source uses the hero colour.
+const OWN_COLOR_SOURCES: Array[StringName] = [&"cannon", &"burn", &"tower_dot"]
 
 ## When false, [method report] creates nothing.
 var enabled: bool = true
@@ -86,7 +89,7 @@ func set_rng(rng: RandomNumberGenerator) -> void:
 
 
 ## Reports [param amount] damage dealt to enemy [param key] at [param position].
-## Hero, cannon and critical hits show at once; burn and area damage is summed per
+## Hero, cannon and critical hits show at once; burn, area and tower_dot damage is summed per
 ## enemy and source until [method advance] (or [method flush]) shows it.
 func report(key: int, position: Vector2, amount: float, source: StringName, crit: bool, now: float) -> void:
 	if not enabled:
@@ -175,7 +178,7 @@ func alpha(age: float) -> float:
 
 func _spawn(position: Vector2, amount: float, source: StringName, crit: bool, now: float) -> void:
 	var shown: int = maxi(roundi(amount), 1)
-	var color_key: StringName = &"crit" if crit else (source if source == &"cannon" or source == &"burn" else &"hero")
+	var color_key: StringName = &"crit" if crit else (source if OWN_COLOR_SOURCES.has(source) else &"hero")
 	var jitter := Vector2(
 		_rng.randf_range(-jitter_px, jitter_px),
 		_rng.randf_range(-jitter_px, jitter_px) * 0.5)

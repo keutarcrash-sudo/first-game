@@ -36,6 +36,10 @@ const FROZEN_TINT := Color(0.88, 0.97, 1.0)  # Whitish ice look, wins over every
 const FROZEN_TINT_AMOUNT := 0.85
 const FROZEN_OUTLINE_COLOR := Color(0.75, 0.95, 1.0)
 const FROZEN_OUTLINE_WIDTH := 7.0  # Thick outline, clearly wider than the other rings.
+const STUNNED_COLOR := Color(0.85, 0.7, 1.0)  # Little stars over the head while stunned (towers T2a, Tesla Arc).
+const STUNNED_STAR_RADIUS := 3.0
+const STUNNED_STAR_COUNT := 3
+const STUNNED_STAR_SPREAD := 0.6  # Radians between two stars, on the top of the state ring.
 const FUSE_TINT := Color(1.0, 0.1, 0.1)  # Kamikaze blink while its fuse burns.
 const FUSE_TINT_AMOUNT := 0.8
 const RING_HEIGHT_RATIO := 0.32  # With a sprite, state rings have radius height_px x this, around the silhouette centre.
@@ -49,6 +53,8 @@ var _hit_left := 0.0  # Seconds of hit pose remaining (visual only).
 var _burn_left := 0.0  # Seconds of burning remaining.
 var _burn_damage_per_second := 0.0
 var _burn_full_duration := 0.0  # Duration given by the last apply_burn call.
+var _burn_stack_base := 0.0  # Base damage per second of the stacking burn in effect (Napalm level 3); 0 = none.
+var _burn_stacks := 0.0  # Its multiplier so far, from 1 up to its stack_max.
 var _modifiers: PlayerModifiers  # Card bonuses (Combustion, Marée montante); null = none.
 var _damage_numbers: DamageNumbers  # Floating damage numbers; null = none shown.
 var _mark_left := 0.0  # Seconds of « marqué » remaining (story 008).
@@ -69,6 +75,8 @@ var _last_burner_id := -1  # Id of the last cannon whose shells burnt this enemy
 var _push_left := 0.0  # Seconds of push remaining (étape 3a, Vague).
 var _push_velocity := Vector2.ZERO  # Pixels per second added to the walk while pushed.
 var _push_bounds := Rect2()  # Global rect the pushed enemy stays in; no area = unbounded.
+var _along_velocity := Vector2.ZERO  # Strongest continuous push asked for since the last physics step (Souffle).
+var _stun_left := 0.0  # Seconds of « étourdi » remaining (towers T2a): no walk, no strike, no shot.
 
 var _slow_factor := 1.0  # Speed fraction in effect this frame.
 var _requested_slow_factor := 1.0  # Lowest factor asked for since the last physics step.
@@ -181,6 +189,8 @@ func _physics_process(delta: float) -> void:
 		if is_queued_for_deletion():
 			return
 		if _burn_left <= 0.0:
+			_burn_stacks = 0.0
+			_burn_stack_base = 0.0
 			_refresh_look()
 	if _mark_left > 0.0:
 		_mark_left -= delta
@@ -198,6 +208,10 @@ func _physics_process(delta: float) -> void:
 		if _frozen_left <= 0.0:
 			_freeze_cooldown_left = _freeze_cooldown_after
 			_refresh_look()
+	if _stun_left > 0.0:
+		_stun_left -= delta
+		if _stun_left <= 0.0:
+			_refresh_look()
 	_tick_chill(delta)
 	if _push_left > 0.0:
 		var push_time: float = minf(delta, _push_left)
@@ -205,10 +219,17 @@ func _physics_process(delta: float) -> void:
 		_move_pushed(_push_velocity * push_time)
 		if _artillery != null:
 			global_position = _artillery.clamp_to_field(global_position, _radius)  # A push must not leave the field.
+	if _along_velocity != Vector2.ZERO:
+		# Asked for during the last frame only: it ends here when no tower refreshes it.
+		if _frozen_left <= 0.0 and _stun_left <= 0.0:
+			global_position += _along_velocity * delta
+			if _artillery != null:
+				global_position = _artillery.clamp_to_field(global_position, _radius)
+		_along_velocity = Vector2.ZERO
 	# The crystal moves, so the target is read again every frame.
 	var target: Vector2 = _crystal.global_position
 	var fusing: bool = _kamikaze != null and _kamikaze.is_fusing()
-	if _frozen_left <= 0.0 and not fusing:
+	if _frozen_left <= 0.0 and _stun_left <= 0.0 and not fusing:  # A stunned artillery neither walks nor shoots.
 		if _artillery != null:
 			global_position = _artillery.next_position(global_position, target, _speed * _slow_factor * delta, _radius)
 			_artillery.tick_fire(global_position, delta)
@@ -220,6 +241,8 @@ func _physics_process(delta: float) -> void:
 		_refresh_look()  # The fuse blinks red.
 	if _artillery != null:
 		return  # The artillery never touches the crystal: it shoots from afar.
+	if _stun_left > 0.0:
+		return  # A stunned enemy does not strike (nor light a fuse); a fuse already lit keeps burning.
 	if position.distance_squared_to(target) <= _touch_distance_sq:
 		if _kamikaze != null:
 			_kamikaze.begin_fuse(self)  # Stops and explodes later: no contact damage, no instant free.
@@ -275,6 +298,12 @@ func _draw() -> void:
 		_draw_ring(center, ring_radius, FROZEN_OUTLINE_COLOR, FROZEN_OUTLINE_WIDTH)
 	if _mark_left > 0.0:
 		_draw_ring(center, ring_radius + MARKED_RING_GAP, MARKED_COLOR, MARKED_RING_WIDTH)
+	if _stun_left > 0.0:
+		for i: int in STUNNED_STAR_COUNT:
+			var angle: float = -PI / 2.0 + (i - (STUNNED_STAR_COUNT - 1) / 2.0) * STUNNED_STAR_SPREAD
+			var star_at: Vector2 = center + Vector2.from_angle(angle) * (ring_radius + MARKED_RING_GAP)
+			draw_circle(star_at, STUNNED_STAR_RADIUS + RING_UNDER_WIDTH, Color.BLACK)
+			draw_circle(star_at, STUNNED_STAR_RADIUS, STUNNED_COLOR)
 
 
 ## A ring over a black ring [constant RING_UNDER_WIDTH] pixels wider on each side, so it reads on any background.
@@ -286,7 +315,7 @@ func _draw_ring(center: Vector2, ring_radius: float, color: Color, width: float)
 ## Faces the crystal and goes back from the hit pose to the run animation.
 func _update_visual(target: Vector2) -> void:
 	_sprite.set_facing((target - global_position).angle())
-	_sprite.speed_scale = 0.0 if _frozen_left > 0.0 else 1.0  # A frozen enemy holds its frame.
+	_sprite.speed_scale = 0.0 if _frozen_left > 0.0 or _stun_left > 0.0 else 1.0  # A frozen or stunned enemy holds its frame.
 	if _hit_left > 0.0:
 		_hit_left -= get_physics_process_delta_time()
 		if _hit_left <= 0.0:
@@ -350,22 +379,58 @@ func has_state(state: StringName) -> bool:
 			return _wet_left > 0.0
 		&"frozen":
 			return _frozen_left > 0.0
+		&"stunned":
+			return is_stunned()
 	return false
 
 
+## True while the enemy is stunned ([method stun]).
+func is_stunned() -> bool:
+	return _stun_left > 0.0
+
+
+## Stuns the enemy for at least [param seconds] (towers T2a, Tesla Arc): it does not move,
+## does not strike the crystal and an artillery does not shoot; a kamikaze fuse already lit
+## keeps burning. Keeps the longer of the current and the new stun, and cancels a push in progress.
+func stun(seconds: float) -> void:
+	if is_queued_for_deletion() or seconds <= 0.0:
+		return
+	var was_stunned: bool = is_stunned()
+	_stun_left = maxf(_stun_left, seconds)
+	_push_left = 0.0
+	_along_velocity = Vector2.ZERO
+	if not was_stunned:
+		_refresh_look()
+
+
 ## Sets the enemy on fire for [param duration] seconds, taking [param damage_per_second]
-## per second. A new call refreshes the duration; it never stacks. [param burner_id] is the
+## per second. A burn already running is merged with [method BurnRules.merge]: the stronger
+## damage per second and the longer time left are kept. [param burner_id] is the
 ## id of the cannon whose shell lit it, -1 for any other source (see [method last_burner_id]);
-## -1 keeps the cannon remembered so far, so other fires (hero, Brasier éternel) add to it.
-func apply_burn(duration: float, damage_per_second: float, burner_id: int = -1) -> void:
+## -1 keeps the cannon remembered so far, so other fires (hero, Brasier éternel, flamethrower) add to it.
+## With [param stack_max] above 1 (Napalm level 3) the burn stacks: while the enemy keeps burning
+## from calls with the same [param damage_per_second], the multiplier grows by 1 per second of
+## physics frames spent re-applying it, up to [param stack_max] (see [method BurnRules.stacked_dps]).
+func apply_burn(duration: float, damage_per_second: float, burner_id: int = -1, stack_max: float = 1.0) -> void:
 	if is_queued_for_deletion():
 		return
 	var was_burning: bool = _burn_left > 0.0
 	if burner_id >= 0:
 		_last_burner_id = burner_id
-	_burn_left = duration
-	_burn_damage_per_second = damage_per_second
-	_burn_full_duration = duration
+	var new_dps: float = damage_per_second
+	if stack_max > 1.0:
+		if was_burning and is_equal_approx(_burn_stack_base, damage_per_second):
+			_burn_stacks = minf(_burn_stacks + get_physics_process_delta_time(), stack_max)
+		else:
+			_burn_stack_base = damage_per_second
+			_burn_stacks = 1.0
+		new_dps = BurnRules.stacked_dps(damage_per_second, _burn_stacks, stack_max)
+	var current_dps: float = _burn_damage_per_second if was_burning else 0.0
+	var merged: Vector2 = BurnRules.merge(current_dps, _burn_left, new_dps, duration)
+	if not was_burning or duration >= _burn_left:
+		_burn_full_duration = duration
+	_burn_damage_per_second = merged.x
+	_burn_left = merged.y
 	if not was_burning:
 		_refresh_look()
 
@@ -438,6 +503,7 @@ func freeze_from(duration: float, cooldown: float, tower_id: int) -> bool:
 	_last_freezer_id = tower_id
 	_chill.reset()
 	_push_left = 0.0  # A frozen enemy stops dead, even mid-push.
+	_along_velocity = Vector2.ZERO
 	_refresh_look()
 	return true
 
@@ -459,11 +525,11 @@ func force_freeze(duration: float) -> void:
 
 
 ## Shoves the enemy by [param offset] pixels, spread over [param duration] seconds, on top
-## of its walk (étape 3a, Vague). Does nothing while frozen. A new push replaces the
+## of its walk (étape 3a, Vague). Does nothing while frozen or stunned. A new push replaces the
 ## current one. While pushed, the position stays inside [param bounds] (a global rect)
 ## unless it has no area, in which case it is not limited.
 func push(offset: Vector2, duration: float, bounds: Rect2 = Rect2()) -> void:
-	if is_queued_for_deletion() or _frozen_left > 0.0:
+	if is_queued_for_deletion() or _frozen_left > 0.0 or _stun_left > 0.0:
 		return
 	_push_bounds = bounds
 	if duration <= 0.0:
@@ -472,6 +538,18 @@ func push(offset: Vector2, duration: float, bounds: Rect2 = Rect2()) -> void:
 		return
 	_push_velocity = offset / duration
 	_push_left = duration
+
+
+## Pushes the enemy at [param speed] pixels per second along [param direction] during the next
+## physics step only (towers T2a, Souffle): towers call it every physics frame while the enemy is
+## in their cone. Several callers do not add up, the strongest push wins. Ignored while frozen or
+## stunned. An artillery stays inside its field.
+func push_along(direction: Vector2, speed: float) -> void:
+	if is_queued_for_deletion() or _frozen_left > 0.0 or _stun_left > 0.0 or speed <= 0.0 or direction == Vector2.ZERO:
+		return
+	var velocity: Vector2 = direction.normalized() * speed
+	if velocity.length_squared() > _along_velocity.length_squared():
+		_along_velocity = velocity
 
 
 ## Counts the time spent in the frost zones asked for since the last step ([method apply_chill])
@@ -499,7 +577,7 @@ func _move_pushed(step: Vector2) -> void:
 
 ## Removes [param amount] hit points; the enemy is freed at zero. A lethal
 ## [param heavy] hit (critical, ability) also emits [signal died_heavy]. [param source]
-## (&"hero", &"cannon", &"area") and [param crit] only choose how the damage number looks.
+## (&"hero", &"cannon", &"area", &"tower_dot") and [param crit] only choose how the damage number looks.
 func take_damage(amount: float, heavy: bool = false, source: StringName = &"hero", crit: bool = false) -> void:
 	_damage(amount, true, heavy, false, source, crit)
 

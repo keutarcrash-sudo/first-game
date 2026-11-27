@@ -54,6 +54,16 @@ func _run() -> String:
 	n = m.numbers()
 	if n.size() != 1 or n[0]["text"] != "3" or n[0]["color"] != Color("#ff9a1f"):
 		return "burn group is one orange 3"
+	# Towers' continuous damage: grouped like the burn, cyan like the cannon.
+	var dot: DamageNumberModel = _make()
+	for i: int in 10:
+		dot.report(3, POS, 0.3, &"tower_dot", false, 0.05 * i)
+	if not dot.numbers().is_empty():
+		return "tower_dot shows nothing before the interval"
+	dot.advance(0.5)
+	var dot_n: Array[Dictionary] = dot.numbers()
+	if dot_n.size() != 1 or dot_n[0]["text"] != "3" or dot_n[0]["color"] != Color("#19e3ff"):
+		return "tower_dot group is one cyan 3"
 	m.advance(0.5 + 0.7 + 0.01)
 	if not m.numbers().is_empty():
 		return "number expires after lifetime"

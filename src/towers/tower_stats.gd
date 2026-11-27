@@ -192,8 +192,9 @@ static func _read_towers(data: Dictionary, path: String) -> Array[TowerDef]:
 		push_error("TowerStats: section 'towers' is missing or empty in '%s'." % path)
 		return result
 	var section: Dictionary = data["towers"]
+	var seen_branches: Dictionary = {}  # Branch id -> "towers.<id>" that declared it first.
 	for tower_id: String in section:
-		var def: TowerDef = _read_tower(tower_id, section[tower_id], path)
+		var def: TowerDef = _read_tower(tower_id, section[tower_id], path, seen_branches)
 		if def == null:
 			result.clear()
 			return result
@@ -202,7 +203,8 @@ static func _read_towers(data: Dictionary, path: String) -> Array[TowerDef]:
 
 
 ## Validates tower [param tower_id]; returns [code]null[/code] after printing an error.
-static func _read_tower(tower_id: String, raw: Variant, path: String) -> TowerDef:
+## [param seen_branches] collects the branch ids of the towers read so far (see [method _read_branches]).
+static func _read_tower(tower_id: String, raw: Variant, path: String, seen_branches: Dictionary) -> TowerDef:
 	var where: String = "towers.%s" % tower_id
 	if not raw is Dictionary:
 		push_error("TowerStats: key '%s' in '%s' must be an object." % [where, path])
@@ -257,7 +259,7 @@ static func _read_tower(tower_id: String, raw: Variant, path: String) -> TowerDe
 			push_error("TowerStats: key '%s.icon_color' in '%s' must be an array of 3 numbers in [0, 1]." % [where, path])
 			return null
 		def.icon_color = _to_color(tower["icon_color"])
-	def.branches = _read_branches(tower.get("branches"), where, behaviour, path)
+	def.branches = _read_branches(tower.get("branches"), where, behaviour, path, seen_branches)
 	if def.branches.is_empty():
 		return null
 	return def
@@ -267,14 +269,19 @@ static func _read_tower(tower_id: String, raw: Variant, path: String) -> TowerDe
 ## or an empty dictionary after printing an error. A tower needs at least one branch;
 ## every branch needs a non-empty [code]label[/code] string, and all its other values
 ## must be positive numbers. The branches and keys of [constant BRANCH_KEYS] for
-## [param behaviour] are required.
-static func _read_branches(raw: Variant, where: String, behaviour: String, path: String) -> Dictionary:
+## [param behaviour] are required. A branch id must be unique across all towers:
+## [param seen_branches] (branch id -> tower key) holds those of the towers already read.
+static func _read_branches(raw: Variant, where: String, behaviour: String, path: String, seen_branches: Dictionary) -> Dictionary:
 	if not raw is Dictionary or (raw as Dictionary).is_empty():
 		push_error("TowerStats: key '%s.branches' in '%s' must be a non-empty object." % [where, path])
 		return {}
 	var tower_branches: Dictionary = {}
 	for id: String in raw:
 		var branch_where: String = "%s.branches.%s" % [where, id]
+		if seen_branches.has(id):
+			push_error("TowerStats: key '%s' in '%s' reuses the branch id of '%s.branches.%s'; branch ids must be unique across all towers." % [branch_where, path, seen_branches[id], id])
+			return {}
+		seen_branches[id] = where
 		var values: Variant = (raw as Dictionary)[id]
 		if not values is Dictionary:
 			push_error("TowerStats: key '%s' in '%s' must be an object." % [branch_where, path])

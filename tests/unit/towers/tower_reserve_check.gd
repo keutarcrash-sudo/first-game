@@ -182,6 +182,10 @@ func _run_invalid() -> String:
 	bad_unlock["starting_unlocked"] = ["cannon", "tesla"]
 	if TowerStats.from_data(bad_unlock, "bad_unlock") != null:
 		return "unknown starting tower refused"
+	var dup_branch: Dictionary = (base as Dictionary).duplicate(true)
+	_branches_of(dup_branch, "frost")["incendiaire"] = (_branches_of(dup_branch, "cannon")["incendiaire"] as Dictionary).duplicate(true)
+	if TowerStats.from_data(dup_branch, "dup_branch") != null:
+		return "branch id shared by two towers refused"
 	return ""
 
 

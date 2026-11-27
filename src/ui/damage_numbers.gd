@@ -51,7 +51,7 @@ func _draw() -> void:
 
 
 ## Reports [param amount] damage really removed from [param enemy] (after Combustion).
-## [param source]: &"hero", &"cannon", &"burn" or &"area"; [param crit] shows it in yellow with « ! ».
+## [param source]: &"hero", &"cannon", &"burn", &"area" or &"tower_dot"; [param crit] shows it in yellow with « ! ».
 func report(enemy: Node2D, amount: float, source: StringName, crit: bool) -> void:
 	if _model == null or not _model.enabled or amount <= 0.0:
 		return
