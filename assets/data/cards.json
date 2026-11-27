@@ -1,5 +1,6 @@
 {
 	"offered_per_choice": 3,
+	"treasure_plan_chance": 0.5,
 	"cards": [
 		{
 			"id": "canon_rapide",
@@ -772,6 +773,66 @@
 				{
 					"type": "frozen_vulnerability_bonus",
 					"value": 0.25
+				}
+			]
+		},
+		{
+			"id": "plans_tesla",
+			"rarity": "uncommon",
+			"display_name": "Plans : Tesla",
+			"description": "Débloque la tour Tesla pour la partie : un éclair qui rebondit d'ennemi en ennemi.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"min_wave": 2,
+			"effects": [
+				{
+					"type": "unlock_tower",
+					"tower_id": "tesla"
+				}
+			]
+		},
+		{
+			"id": "plans_lance_flammes",
+			"rarity": "uncommon",
+			"display_name": "Plans : Lance-flammes",
+			"description": "Débloque le Lance-flammes pour la partie : un cône de feu qui brûle les ennemis.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"min_wave": 2,
+			"effects": [
+				{
+					"type": "unlock_tower",
+					"tower_id": "flamethrower"
+				}
+			]
+		},
+		{
+			"id": "plans_mortier",
+			"rarity": "uncommon",
+			"display_name": "Plans : Mortier",
+			"description": "Débloque le Mortier pour la partie : des obus lents qui frappent une zone au loin.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"min_wave": 2,
+			"effects": [
+				{
+					"type": "unlock_tower",
+					"tower_id": "mortar"
+				}
+			]
+		},
+		{
+			"id": "plans_amplificateur",
+			"rarity": "uncommon",
+			"display_name": "Plans : Amplificateur",
+			"description": "Débloque l'Amplificateur pour la partie : il renforce les tours proches.",
+			"combines_with": "",
+			"max_stacks": 1,
+			"min_wave": 2,
+			"effects": [
+				{
+					"type": "unlock_tower",
+					"tower_id": "amplifier"
 				}
 			]
 		}

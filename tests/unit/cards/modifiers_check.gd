@@ -75,6 +75,24 @@ func _run() -> String:
 	surv.take(_card("vampirisme", {"type": "hero_heal_on_kill", "value": 1.0}, &"epic"))
 	if not is_equal_approx(surv.hero_heal_on_kill(), 1.0):
 		return "hero_heal_on_kill"
+	# Towers T2a: a « Plans » card unlocks its tower and says so.
+	var plan_mods := PlayerModifiers.new(null)
+	var starting: Array[StringName] = [&"cannon", &"frost"]
+	plan_mods.set_starting_towers(starting)
+	var unlock_signals: Array[int] = [0]
+	plan_mods.towers_unlocked_changed.connect(func() -> void: unlock_signals[0] += 1)
+	if plan_mods.is_tower_unlocked(&"tesla"):
+		return "tesla_locked_at_start"
+	var plans_tesla: CardDef = _card("plans_tesla", {"type": "unlock_tower", "tower_id": "tesla"}, &"uncommon")
+	if plans_tesla.unlocked_tower() != &"tesla":
+		return "plan_unlocked_tower"
+	plan_mods.take(plans_tesla)
+	if not plan_mods.is_tower_unlocked(&"tesla"):
+		return "plan_unlocks_tower"
+	if unlock_signals[0] != 1:
+		return "plan_emits_towers_unlocked_changed"
+	if plan_mods.unlocked_towers() != [&"cannon", &"frost", &"tesla"]:
+		return "plan_unlock_order"
 	return _run_items()
 
 

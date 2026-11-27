@@ -43,6 +43,7 @@ const EFFECT_NUMBER_KEYS := {
 	"tower_cost_mult": ["value"],
 	"upgrade_cost_mult": ["value"],
 	"free_tower": [],
+	"unlock_tower": [],
 	"tier3_fire_rate_bonus": ["value"],
 	"gold_per_kill_mult": ["value"],
 	# Flags: only stored in PlayerModifiers here; their gameplay reads them elsewhere.
@@ -61,15 +62,19 @@ const ABILITY_VALUE_EFFECTS: Array[String] = ["ability_value_mult", "ability_val
 
 ## How many cards a choice screen offers.
 var offered_per_choice := 3
+## Chance (0 to 1) that a treasure offers a « Plans » card in place of one item,
+## when a plan is still to be obtained (towers T2a §6).
+var treasure_plan_chance := 0.0
 ## All cards, in file order.
 var cards: Array[CardDef] = []
 
 
 ## Reads and validates the JSON file at [param path]. Combo ids used by
 ## [code]unlock_combo[/code] must exist in [param rules], and specialization ids
-## used by [code]requires_spec[/code] in [param specs]. Returns [code]null[/code]
+## used by [code]requires_spec[/code] in [param specs], and tower ids used by
+## [code]unlock_tower[/code] in [param towers]. Returns [code]null[/code]
 ## and prints an error naming the file and the faulty key if anything is wrong.
-static func load_from_file(path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog) -> CardCatalog:
+static func load_from_file(path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog, towers: TowerStats) -> CardCatalog:
 	var text: String = FileAccess.get_file_as_string(path)
 	if text.is_empty():
 		push_error("CardCatalog: cannot read '%s' (%s)." % [path, error_string(FileAccess.get_open_error())])
@@ -84,9 +89,14 @@ static func load_from_file(path: String, rules: ProcRules, specs: Specialization
 		push_error("CardCatalog: key 'offered_per_choice' in '%s' must be a number of at least 1 (got %s)." % [path, offered])
 		return null
 	catalog.offered_per_choice = int(offered)
+	var plan_chance: Variant = data.get("treasure_plan_chance")
+	if not (plan_chance is float or plan_chance is int) or plan_chance < 0 or plan_chance > 1:
+		push_error("CardCatalog: key 'treasure_plan_chance' in '%s' must be a number from 0 to 1 (got %s)." % [path, plan_chance])
+		return null
+	catalog.treasure_plan_chance = float(plan_chance)
 	var seen: Dictionary = {}
 	for i: int in data["cards"].size():
-		var card: CardDef = _parse_card(data["cards"][i], i, path, rules, specs, rarities, abilities)
+		var card: CardDef = _parse_card(data["cards"][i], i, path, rules, specs, rarities, abilities, towers)
 		if card == null:
 			return null
 		if seen.has(card.id):
@@ -110,7 +120,12 @@ func has_card(card_id: String) -> bool:
 	return false
 
 
-static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog) -> CardDef:
+## One card from [param raw] ([code]cards[[param index]][/code] of [param path]), or
+## [code]null[/code] with an error naming the faulty key. [param rules],
+## [param specs] and [param abilities] are only read when the card names a combo,
+## a specialization or an ability; [param towers] when it has an
+## [code]unlock_tower[/code] effect (null then refuses it).
+static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules, specs: SpecializationCatalog, rarities: CardRarities, abilities: AbilityCatalog, towers: TowerStats) -> CardDef:
 	if not raw is Dictionary:
 		push_error("CardCatalog: 'cards[%d]' in '%s' must be an object." % [index, path])
 		return null
@@ -158,12 +173,20 @@ static func _parse_card(raw: Variant, index: int, path: String, rules: ProcRules
 			push_error("CardCatalog: key 'cards[%d].max_stacks' in '%s' must be null or a number of at least 1." % [index, path])
 			return null
 		card.max_stacks = int(max_stacks)
+	var min_wave: Variant = raw.get("min_wave", 1)
+	if not (min_wave is float or min_wave is int) or min_wave < 1:
+		push_error("CardCatalog: key 'cards[%d].min_wave' in '%s' must be a number of at least 1 (got %s)." % [index, path, min_wave])
+		return null
+	card.min_wave = int(min_wave)
 	if not raw.get("effects") is Array or (raw["effects"] as Array).is_empty():
 		push_error("CardCatalog: key 'cards[%d].effects' in '%s' must be a non-empty list." % [index, path])
 		return null
 	for j: int in raw["effects"].size():
 		var effect: Variant = raw["effects"][j]
 		if not _is_effect_valid(effect, "cards[%d].effects[%d]" % [index, j], path, rules, abilities):
+			return null
+		if effect["type"] == "unlock_tower" and (towers == null or towers.def_of(StringName(String(effect["tower_id"]))) == null):
+			push_error("CardCatalog: key 'cards[%d].effects[%d].tower_id' in '%s' must be the id of a tower in towers.json (got %s)." % [index, j, path, effect["tower_id"]])
 			return null
 		card.effects.append(effect)
 	return card
@@ -184,6 +207,10 @@ static func _is_effect_valid(effect: Variant, where: String, path: String, rules
 	if effect["type"] == "unlock_combo":
 		if not effect.get("combo_id") is String or not rules.has_combo(effect["combo_id"]):
 			push_error("CardCatalog: key '%s.combo_id' in '%s' must be the id of a combo in procs.json (got %s)." % [where, path, effect.get("combo_id")])
+			return false
+	if effect["type"] == "unlock_tower":
+		if not effect.get("tower_id") is String or (effect["tower_id"] as String).is_empty():
+			push_error("CardCatalog: key '%s.tower_id' in '%s' must be a non-empty tower id (got %s)." % [where, path, effect.get("tower_id")])
 			return false
 	if ABILITY_EFFECTS.has(effect["type"]):
 		var def: AbilityDef = _find_ability(abilities, str(effect.get("ability_id")))

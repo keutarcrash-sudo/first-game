@@ -4,6 +4,7 @@
 extends SceneTree
 
 const RARITIES_PATH := "res://assets/data/card_rarities.json"
+const TOWERS_PATH := "res://assets/data/towers.json"
 const COPIES := 10  # Cards per rarity in the big catalog.
 
 
@@ -164,7 +165,7 @@ func _run() -> String:
 	var empty_pool: CardPool = _pool([], PlayerModifiers.new(null), rarities, always)
 	if not empty_pool.draw(1).is_empty():
 		return "empty_pool_draw"
-	if empty_pool.can_draw():
+	if empty_pool.can_draw(1):
 		return "empty_pool_can_draw"
 
 	# Wave growth: higher rarities are more frequent on wave 8 than on wave 1.
@@ -183,4 +184,47 @@ func _run() -> String:
 	var share: float = float(commons) / float(total)
 	if share < 0.45 or share > 0.55:
 		return "common_share_%f" % share
+	return _run_plans(rarities, always)
+
+
+## Towers T2a « Plans » cards: min_wave, already unlocked tower, catalog validation.
+func _run_plans(rarities: CardRarities, always: Callable) -> String:
+	var plan: CardDef = _card("plans_tesla", &"uncommon")
+	plan.max_stacks = 1
+	plan.min_wave = 2
+	plan.effects.append({"type": "unlock_tower", "tower_id": "tesla"})
+	var plan_cards: Array[CardDef] = [plan, _card("filler", &"common")]
+	var starting: Array[StringName] = [&"cannon", &"frost"]
+	var mods := PlayerModifiers.new(null)
+	mods.set_starting_towers(starting)
+	var pool: CardPool = _pool(plan_cards, mods, rarities, always)
+	for i: int in 50:
+		for card: CardDef in pool.draw(1):
+			if card.id == "plans_tesla":
+				return "plan_on_wave_1"
+	var wave_2: Array[String] = []
+	for card: CardDef in pool.draw(2):
+		wave_2.append(card.id)
+	if not wave_2.has("plans_tesla"):
+		return "plan_on_wave_2"
+	if pool.plans_left() != [plan]:
+		return "plans_left_before_unlock"
+	mods.unlock_tower(&"tesla")  # As the treasure would, without taking the card.
+	for i: int in 50:
+		for card: CardDef in pool.draw(3):
+			if card.id == "plans_tesla":
+				return "plan_after_tower_unlocked"
+	if not pool.plans_left().is_empty():
+		return "plans_left_after_unlock"
+
+	var towers: TowerStats = TowerStats.load_from_file(TOWERS_PATH)
+	if towers == null:
+		return "load_towers"
+	var raw := {"id": "plans_x", "display_name": "Plans : X", "description": "x", "rarity": "uncommon", "max_stacks": 1, "min_wave": 2, "effects": [{"type": "unlock_tower", "tower_id": "tesla"}]}
+	var parsed: CardDef = CardCatalog._parse_card(raw, 0, "test", null, null, rarities, null, towers)
+	if parsed == null or parsed.min_wave != 2 or parsed.unlocked_tower() != &"tesla":
+		return "catalog_accepts_known_tower"
+	raw["effects"] = [{"type": "unlock_tower", "tower_id": "laser"}]
+	if CardCatalog._parse_card(raw, 0, "test", null, null, rarities, null, towers) != null:
+		return "catalog_refuses_unknown_tower"
 	return ""

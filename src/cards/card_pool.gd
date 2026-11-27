@@ -3,7 +3,8 @@
 ## for each slot (spec « Cartes et lisibilité » §5.1, §5.3, §8bis). Cards locked
 ## by default are only drawn once the skill tree unlocks them (story 007). Cards
 ## of a specialization are only drawn when it is the chosen one (story 008).
-## Pure logic, no scene tree. Buying a reroll is up to the caller.
+## A card is not drawn before its [member CardDef.min_wave], and a « Plans » card
+## not once its tower is unlocked (towers T2a §6). Pure logic, no scene tree. Buying a reroll is up to the caller.
 class_name CardPool
 extends RefCounted
 
@@ -50,16 +51,31 @@ func reroll_cost() -> int:
 	return _rarities.reroll_cost(_rerolls_done)
 
 
-## True when at least one card can still be drawn (a reroll is then possible).
-func can_draw() -> bool:
-	return not _available().is_empty()
+## True when at least one card can still be drawn for wave [param wave] (a reroll is then possible).
+func can_draw(wave: int) -> bool:
+	return not _available(wave).is_empty()
+
+
+## The « Plans » cards whose tower is still locked and that the player can take
+## (specialization and stacks respected; [member CardDef.min_wave] is not: a
+## treasure may offer one at any time), in file order (towers T2a §8bis).
+func plans_left() -> Array[CardDef]:
+	var plans: Array[CardDef] = []
+	for card: CardDef in _catalog.cards:
+		var tower: StringName = card.unlocked_tower()
+		if tower == &"" or _modifiers.is_tower_unlocked(tower) or not _modifiers.can_take(card):
+			continue
+		if not card.requires_spec.is_empty() and card.requires_spec != _spec_id:
+			continue
+		plans.append(card)
+	return plans
 
 
 ## Draws a full offer for wave [param wave]: for each slot a rarity is rolled by
 ## weight among the rarities that still have a card, then a card of it. Fewer
 ## cards when fewer are available, empty when none is.
 func draw(wave: int) -> Array[CardDef]:
-	var available: Array[CardDef] = _available()
+	var available: Array[CardDef] = _available(wave)
 	var offer: Array[CardDef] = []
 	for i: int in mini(offer_size(), available.size()):
 		var rarity: StringName = _roll_rarity(available, wave)
@@ -80,8 +96,8 @@ func reroll(wave: int) -> Array[CardDef]:
 	return draw(wave)
 
 
-## The cards the player can take now (spec §5.1).
-func _available() -> Array[CardDef]:
+## The cards the player can take on wave [param wave] (spec §5.1).
+func _available(wave: int) -> Array[CardDef]:
 	var available: Array[CardDef] = []
 	var no_more_legendary: bool = _modifiers.took_legendary()
 	var known: Array[StringName] = _rarities.order()
@@ -93,6 +109,11 @@ func _available() -> Array[CardDef]:
 		if not card.requires_spec.is_empty() and card.requires_spec != _spec_id:
 			continue
 		if not _modifiers.can_take(card):
+			continue
+		if card.min_wave > wave:
+			continue
+		var tower: StringName = card.unlocked_tower()
+		if tower != &"" and _modifiers.is_tower_unlocked(tower):
 			continue
 		if not card.requires_ability.is_empty() and not _is_ability_unlocked.call(card.requires_ability):
 			continue

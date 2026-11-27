@@ -24,6 +24,17 @@ var requires_ability := ""
 var requires_card := ""
 ## Maximum number of times the card can be taken; -1 means unlimited.
 var max_stacks := -1
+## First wave (the one about to be played) on which the card can be offered (towers T2a: plans from wave 2).
+var min_wave := 1
 ## Effects applied each time the card is taken: dictionaries with a "type" key
 ## (see [PlayerModifiers]) and the values of that type.
 var effects: Array[Dictionary] = []
+
+
+## Id of the tower an [code]unlock_tower[/code] effect of the card unlocks (a
+## « Plans » card, towers T2a); [code]&""[/code] when the card unlocks none.
+func unlocked_tower() -> StringName:
+	for effect: Dictionary in effects:
+		if String(effect.get("type", "")) == "unlock_tower":
+			return StringName(String(effect.get("tower_id", "")))
+	return &""

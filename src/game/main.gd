@@ -105,7 +105,7 @@ func _ready() -> void:
 	_specs = null if rules == null else SpecializationCatalog.load_from_file(SPECS_PATH, rules)
 	_ability_catalog = null if _specs == null else AbilityCatalog.load_from_file(ABILITIES_PATH, _specs)
 	_rarities = CardRarities.load_from_file(RARITIES_PATH)
-	_catalog = null if _ability_catalog == null or _rarities == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs, _rarities, _ability_catalog)
+	_catalog = null if _ability_catalog == null or _rarities == null or towers == null else CardCatalog.load_from_file(CARDS_PATH, rules, _specs, _rarities, _ability_catalog, towers)
 	_skill_tree = null if _catalog == null else SkillTree.load_from_file(SKILL_TREE_PATH, _catalog, _specs)
 	_visuals = VisualStats.load_from_file(VISUALS_PATH)
 	var impact_stats: ImpactStats = ImpactStats.load_from_file(IMPACT_PATH)
@@ -377,13 +377,13 @@ func _present_offer(drawn: Array[CardDef]) -> bool:
 	if offer.is_empty():
 		return false
 	var cost: int = _card_pool.reroll_cost()
-	_card_screen.show_cards(offer, cost, _state.gold >= cost, _card_pool.can_draw())
+	_card_screen.show_cards(offer, cost, _state.gold >= cost, _card_pool.can_draw(_choice_wave()))
 	return true
 
 
 ## Pays for a reroll and replaces the offer; refused when the gold is short.
 func _on_reroll_requested() -> void:
-	if _state.phase != GameState.Phase.CARD_CHOICE or not _card_pool.can_draw():
+	if _state.phase != GameState.Phase.CARD_CHOICE or not _card_pool.can_draw(_choice_wave()):
 		return
 	if not _state.spend_gold(_card_pool.reroll_cost()):
 		return
@@ -494,6 +494,7 @@ func _build_world_screens() -> void:
 	add_child(_treasure_screen)
 	_treasure_screen.setup(_rarities)
 	_treasure_screen.item_chosen.connect(_on_treasure_item_chosen)
+	_treasure_screen.plan_chosen.connect(_on_treasure_plan_chosen)
 	_rest_screen = RestScreen.new()
 	add_child(_rest_screen)
 	_rest_screen.hero_chosen.connect(_on_rest_hero_chosen)
@@ -527,14 +528,28 @@ func _on_place_chosen(index: int) -> void:
 
 
 ## Free items to pick one from; none left: the fallback gold and its banner instead.
+## While a « Plans » card is still to be obtained, one may take the place of an
+## item (towers T2a §8bis: at most one plan per treasure).
 func _open_treasure() -> void:
 	var items: Array[ItemDef] = _item_pool.draw(_item_catalog.treasure_slots, _choice_wave())
-	if items.is_empty():
+	var plan: CardDef = _treasure_plan()
+	if plan != null and items.size() >= _item_catalog.treasure_slots:
+		items.pop_back()
+	if items.is_empty() and plan == null:
 		_state.add_gold(_item_catalog.treasure_fallback_gold)
 		_hud.show_banner(TREASURE_GOLD_BANNER % _item_catalog.treasure_fallback_gold)
 		_end_place()
 		return
-	_treasure_screen.open(items)
+	_treasure_screen.open(items, plan)
+
+
+## A « Plans » card still to be obtained, picked at random, with the chance
+## [member CardCatalog.treasure_plan_chance]; [code]null[/code] otherwise.
+func _treasure_plan() -> CardDef:
+	var plans: Array[CardDef] = _card_pool.plans_left()
+	if plans.is_empty() or _rng.randf() >= _catalog.treasure_plan_chance:
+		return null
+	return plans[_rng.randi_range(0, plans.size() - 1)]
 
 
 func _crystal_full() -> bool:
@@ -557,6 +572,13 @@ func _on_repair_requested() -> void:
 
 func _on_treasure_item_chosen(item: ItemDef) -> void:
 	_modifiers.take_item(item)
+	_end_place()
+
+
+## A plan taken at the treasure is taken as its card: the tower is unlocked and the
+## card is never drawn again ([method CardPool.plans_left], max_stacks 1).
+func _on_treasure_plan_chosen(plan: CardDef) -> void:
+	_modifiers.take(plan)
 	_end_place()
 
 
