@@ -1,7 +1,7 @@
 ## Flame cone behaviour, the flamethrower (towers T2a, spec §5.2): every physics frame, a
 ## cone of fire of [code]range[/code] and [code]angle_degrees[/code] points at the designated
 ## enemy when in range, else at the nearest one. Every enemy inside takes [code]dps[/code]
-## damage per second (through [code]take_damage(..., &"tower_dot")[/code]: cyan, grouped
+## damage per second (through [code]take_dot_damage(..., &"tower_dot")[/code]: cyan, grouped
 ## numbers) and is set burning ([code]burn_dps[/code] for [code]burn_duration[/code] s) with
 ## burner id -1, so the last cannon burner is kept (Incendiaire combo). Napalm (level 2+): a
 ## stronger, longer burn; level 3 lets it stack up to [code]l3_stack_max[/code]. Souffle
@@ -87,7 +87,7 @@ func physics_tick(delta: float) -> void:
 	for enemy: Enemy in inside:
 		if not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
 			continue
-		enemy.take_damage(dps * delta, false, &"tower_dot")
+		enemy.take_dot_damage(dps * delta, &"tower_dot")
 		if enemy.is_queued_for_deletion():
 			continue
 		enemy.apply_burn(burn_duration, burn_dps, -1, stack_max)

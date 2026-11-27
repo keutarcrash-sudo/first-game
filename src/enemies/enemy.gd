@@ -582,6 +582,12 @@ func take_damage(amount: float, heavy: bool = false, source: StringName = &"hero
 	_damage(amount, true, heavy, false, source, crit)
 
 
+## Continuous damage (flame cone): like [method take_damage] but without replaying the
+## hit pose every frame, so the enemy keeps walking while it burns.
+func take_dot_damage(amount: float, source: StringName = &"tower_dot") -> void:
+	_damage(amount, false, false, false, source, false)
+
+
 ## Shared by [method take_damage] and the burn (which must not replay the hit pose every frame).
 ## [param burn_tick]: the burn's own damage, amplified by Combustion even if the burn ends this very tick.
 ## Combustion (+value on every source while burning) multiplies with the combos already in [param amount],
