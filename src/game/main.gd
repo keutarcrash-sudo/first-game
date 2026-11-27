@@ -265,6 +265,7 @@ func _ready() -> void:
 	tower_effects.setup(_enemies, towers, modifiers, _placer.records_by_id)
 	_placer.set_chain_limiter(tower_effects.limiter())
 	_placer.set_damage_numbers(damage_numbers)
+	_placer.set_ground(hazards)
 	tower_effects.set_amp_source(_placer.amp_of_tower)
 	_hud.bind_tower_build(towers, modifiers, _reserve, _placer, _state)
 	_hud.tower_kind_chosen.connect(_placer.select_purchase)

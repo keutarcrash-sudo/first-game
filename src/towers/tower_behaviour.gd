@@ -29,6 +29,12 @@ class TowerContext:
 	var chain_limiter: ChainLimiter
 	## Node of the damage numbers; may be null (the enemies show their own hits).
 	var damage_numbers: Node
+	## Game state: the mortar shells, announcements and craters vanish when the phase leaves COMBAT.
+	var state: GameState
+	## Ground layer under the characters (the hazards node) holding the mortar announcements
+	## and craters; the wave end cancels the announcements found there. May be null: the
+	## [member bullets] node is used instead.
+	var ground: Node2D
 	## Called with a world position and the [TowerRecord] id of the asking tower, returns
 	## the amplifier bonuses there, that amplifier left out ([AmplifierRules]: Dictionary
 	## [code]damage[/code], [code]rate[/code], [code]state[/code]). Neutral until the
@@ -52,6 +58,10 @@ static func create(behaviour: StringName) -> TowerBehaviour:
 			return FrostAuraBehaviour.new()
 		&"chain_lightning":
 			return ChainLightningBehaviour.new()
+		&"flame_cone":
+			return FlameConeBehaviour.new()
+		&"mortar":
+			return MortarBehaviour.new()
 		&"amplifier":
 			return AmplifierBehaviour.new()
 	push_error("TowerBehaviour: unknown behaviour '%s'." % behaviour)

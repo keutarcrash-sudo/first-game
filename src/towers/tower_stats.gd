@@ -24,6 +24,8 @@ const BEHAVIOUR_KEYS := {
 	"shooter": ["damage", "fire_interval", "bullet_speed", "bullet_radius", "bullet_max_range"],
 	"frost_aura": ["slow_factor"],
 	"chain_lightning": ["interval", "damage", "jumps", "jump_range", "wet_mult"],
+	"flame_cone": ["angle_degrees", "dps", "burn_dps", "burn_duration"],
+	"mortar": ["min_range", "interval", "flight", "damage", "blast_radius", "slowed_mult"],
 	"amplifier": ["damage_bonus"],
 }
 ## Branches and keys a behaviour's code reads: behaviour -> branch id -> keys
@@ -40,6 +42,14 @@ const BRANCH_KEYS := {
 	"chain_lightning": {
 		"surtension": ["label", "jumps", "wet_mult", "l3_jumps"],
 		"arc": ["label", "range", "stun", "l3_stun", "l3_damage_mult"],
+	},
+	"flame_cone": {
+		"napalm": ["label", "burn_dps", "burn_duration", "l3_stack_max"],
+		"souffle": ["label", "angle_degrees", "push_speed", "l3_range"],
+	},
+	"mortar": {
+		"grappe": ["label", "bomblets", "l3_bomblets", "bomblet_damage", "bomblet_radius"],
+		"sismique": ["label", "crater_duration", "crater_slow", "l3_crater_duration", "l3_crater_slow", "crater_radius"],
 	},
 	"amplifier": {
 		"cadence": ["label", "rate_bonus", "l3_rate_bonus"],

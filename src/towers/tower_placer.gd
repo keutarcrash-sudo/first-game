@@ -44,6 +44,7 @@ var _sheet_errors_reported: Dictionary = {}  # Tower ids whose missing sheet was
 var _reserve: TowerReserve
 var _records: Dictionary = {}  # id -> TowerRecord of the placed towers (read by TowerEffects).
 var _tower_nodes: Dictionary = {}  # id -> Tower node of the placed towers.
+var _amplifier_count: int = 0  # Placed towers whose behaviour is an amplifier (none: _amp_at returns neutral at once).
 var _selected_record: TowerRecord  # Reserve tower placed by the next click; null = buy _kind.
 var _panel_open: bool = false  # A field click then only dismisses the upgrade panel.
 
@@ -67,6 +68,7 @@ func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crys
 	_ctx.rules = rules
 	_ctx.modifiers = modifiers
 	_ctx.designator = designator
+	_ctx.state = state
 	_ctx.amp_at = _amp_at
 	var unlocked: Array[StringName] = modifiers.unlocked_towers()
 	_kind = unlocked[0] if not unlocked.is_empty() else stats.defs()[0].id
@@ -78,6 +80,12 @@ func setup(stats: TowerStats, state: GameState, field_rect: Rect2, crystal: Crys
 ## Gives every tower the chain-effect cap of the [TowerEffects] ([member TowerBehaviour.TowerContext.chain_limiter]).
 func set_chain_limiter(limiter: ChainLimiter) -> void:
 	_ctx.chain_limiter = limiter
+
+
+## Gives every tower the ground layer (the hazards node, under the characters) for the mortar
+## announcements and craters ([member TowerBehaviour.TowerContext.ground]).
+func set_ground(ground: Node2D) -> void:
+	_ctx.ground = ground
 
 
 ## Gives every tower the floating damage numbers node ([member TowerBehaviour.TowerContext.damage_numbers]); may be null.
@@ -105,6 +113,7 @@ func return_all_towers() -> void:
 		child.queue_free()
 	_records.clear()
 	_tower_nodes.clear()
+	_amplifier_count = 0
 	_reserve.return_all()
 	_select_next_waiting(_kind)  # The next build starts with a free reserve tower when one waits.
 
@@ -115,6 +124,8 @@ func pick_up(record: TowerRecord) -> void:
 	if not _records.has(record.id):
 		return
 	var tower: Node = _tower_nodes[record.id]
+	if tower is Tower and (tower as Tower).behaviour() is AmplifierBehaviour:
+		_amplifier_count -= 1
 	_towers.remove_child(tower)  # Out of the spot checks at once, not at the end of the frame.
 	tower.queue_free()
 	_records.erase(record.id)
@@ -328,6 +339,8 @@ func _place(record: TowerRecord, spot: Vector2) -> void:
 	tower.position = spot
 	_towers.add_child(tower)
 	_tower_nodes[record.id] = tower
+	if tower.behaviour() is AmplifierBehaviour:
+		_amplifier_count += 1
 
 
 ## The amplifier bonuses at the placed tower of record id [param id] (itself left out), or
@@ -343,6 +356,8 @@ func amp_of_tower(id: int) -> Dictionary:
 ## strongest per type ([AmplifierRules]) of the placed amplifiers whose range covers it,
 ## the amplifier of record id [param self_id] left out.
 func _amp_at(at: Vector2, self_id: int) -> Dictionary:
+	if _amplifier_count <= 0:
+		return AmplifierRules.neutral()
 	var boosts: Array[Dictionary] = []
 	for id: int in _tower_nodes:
 		if id == self_id:

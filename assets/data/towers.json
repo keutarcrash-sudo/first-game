@@ -105,6 +105,69 @@
 				}
 			}
 		},
+		"flamethrower": {
+			"label": "Lance-flammes",
+			"behaviour": "flame_cone",
+			"base_cost": 60,
+			"range": 140.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/flamethrower",
+			"height_px": 110.0,
+			"color": [1.0, 0.45, 0.15],
+			"icon_color": [1.0, 0.5, 0.2],
+			"angle_degrees": 60.0,
+			"dps": 4.0,
+			"burn_dps": 6.0,
+			"burn_duration": 2.0,
+			"branches": {
+				"napalm": {
+					"label": "Napalm",
+					"burn_dps": 10.0,
+					"burn_duration": 4.0,
+					"l3_stack_max": 2.0
+				},
+				"souffle": {
+					"label": "Souffle",
+					"angle_degrees": 100.0,
+					"push_speed": 60.0,
+					"l3_range": 200.0
+				}
+			}
+		},
+		"mortar": {
+			"label": "Mortier",
+			"behaviour": "mortar",
+			"base_cost": 80,
+			"min_range": 120.0,
+			"range": 450.0,
+			"radius": 18.0,
+			"sheet": "res://assets/sprites/mortar",
+			"height_px": 110.0,
+			"color": [0.75, 0.7, 0.55],
+			"icon_color": [0.85, 0.8, 0.6],
+			"interval": 3.0,
+			"flight": 1.0,
+			"damage": 25.0,
+			"blast_radius": 90.0,
+			"slowed_mult": 1.5,
+			"branches": {
+				"grappe": {
+					"label": "Grappe",
+					"bomblets": 4,
+					"l3_bomblets": 8,
+					"bomblet_damage": 10.0,
+					"bomblet_radius": 50.0
+				},
+				"sismique": {
+					"label": "Sismique",
+					"crater_duration": 3.0,
+					"crater_slow": 0.6,
+					"l3_crater_duration": 5.0,
+					"l3_crater_slow": 0.4,
+					"crater_radius": 90.0
+				}
+			}
+		},
 		"amplifier": {
 			"label": "Amplificateur",
 			"behaviour": "amplifier",
