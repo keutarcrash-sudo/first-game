@@ -50,7 +50,7 @@ Le T2b pose la mécanique d'évolution, sur laquelle s'appuieront les fusions du
 | Lance-flammes, Souffle | carte **Combustion** *(feu)* | **Fournaise** | un ennemi en feu qui meurt dans sa zone enflamme ses voisins (rayon 80) |
 | Mortier, Grappe | carte **Artillerie lourde** *(nouvelle)* | **Bombardement** | 3 obus par tir, sur 3 cibles différentes si possible |
 | Mortier, Sismique | objet **Bouclier de cristal** | **Tremblement** | chaque impact étourdit 0,5 s |
-| Amplificateur, Cadence | objet **Gâchette** | **Surrégime** | son bonus de cadence est doublé |
+| Amplificateur, Cadence | objet **Gâchette légère** | **Surrégime** | son bonus de cadence est doublé |
 | Amplificateur, Catalyseur | objet **Plans d'ingénieur** | **Nexus** | chaque tir d'une tour boostée pose aussi les états que posent les autres tours boostées (brûlure, gel, trempé, étourdissement, ralentissement) |
 
 Toutes les valeurs sont dans les données.
@@ -75,6 +75,46 @@ Toutes les valeurs sont dans les données.
 | Artillerie lourde | rare, ×1 | aucun effet seul ; permet l'évolution Bombardement | seulement si le mortier est débloqué |
 
 Elles sont ouvertes à tous les héros, et leur description dit clairement à quoi elles servent.
+
+## 7bis. Précisions (relecture du design)
+
+- **Volcan** *(choix de Claude)* : les obus du canon n'explosent pas. C'est l'**explosion de mort de l'Incendiaire niveau 3** qui laisse la flaque de lave.
+  - La lave inflige des dégâts continus (chiffres cyan regroupés).
+  - Elle ne pose **pas** de brûlure de canon, pour ne pas relancer des explosions sans fin.
+  - Les flaques passent par le plafond par image.
+- **Cœur de l'hiver** *(choix de Claude)* : son gel d'onde **ignore le temps d'attente avant de regeler**, sinon une onde sur deux raterait. Le gel normal de la glace garde ses règles.
+- **Avalanche** *(choix de Claude)* :
+  - L'éclat de mort de la branche Éclats fait en plus **3 sauts** à la façon de la Tesla, vers l'ennemi le plus proche pas encore touché.
+  - Chaque saut inflige les dégâts d'éclat et compte dans le plafond par image.
+- **Orage** *(choix de Claude)* :
+  - Le second éclair part du **dernier ennemi touché**, avec les mêmes dégâts et le même nombre de rebonds.
+  - Il ne touche que des ennemis nouveaux, ne se relance pas lui-même, et compte dans le plafond.
+- **Champ magnétique** *(choix de Claude)* :
+  - L'aspiration (environ 50 px/s) agit **aussi sur les ennemis étourdis**, mais pas sur les gelés : l'Arc étourdit puis aspire, c'est le combo voulu.
+  - Elle s'arrête à 40 px de la tour, pour que les ennemis ne tremblent pas dessus.
+  - Elle s'ajoute aux autres poussées au lieu de les remplacer.
+- **Dragon** *(choix de Claude)* : le feu est un anneau tout autour de la tour, sans visée ; il est dessiné en anneau.
+- **Fournaise** *(choix de Claude)* :
+  - Un ennemi en feu qui meurt **dans la portée** de cette tour explose en flammes : 15 dégâts et une brûlure dans un rayon de 80.
+  - Si le joueur possède aussi Brasier éternel, les deux effets s'ajoutent.
+  - Le tout compte dans le plafond par image.
+- **Bombardement** *(choix de Claude)* :
+  - 3 obus, sur 3 ennemis différents si possible ; sinon, les obus en trop tombent près de la même cible (±40 px).
+  - Chaque obus garde tous ses effets.
+  - Les petites explosions passent par le plafond par image.
+- **Nexus** *(choix de Claude)*. Pour rester lisible, chaque tir d'une tour boostée pose **une version légère** des états des autres tours boostées, avec des valeurs fixées dans les données :
+
+  | Tour boostée | État partagé |
+  |---|---|
+  | canon Incendiaire ou lance-flammes | brûlure légère, 4 dégâts par seconde pendant 2 s |
+  | glace | ralentissement de 30 % pendant 1 s ; jamais de gel direct, qui sauterait le temps de présence dans la zone |
+  | glace Blizzard niveau 3 | trempé 2 s |
+  | Tesla Arc ou mortier Tremblement | étourdissement 0,2 s |
+- **Nouvelles cartes** *(choix de Claude)* : un type d'effet « clé d'évolution », sans effet seul, et un champ « tour requise » pour qu'elles n'apparaissent que si la tour est débloquée.
+- **Évolutions réservées à un héros** *(réponse du projet)* : Lunette, Zéro absolu et Combustion sont déjà réservés à leur héros. Le message du panneau prend le héros de là.
+- **Noms** *(réponse du projet)* : l'objet s'appelle « Gâchette légère ».
+- **Barre de réserve** *(choix de Claude)* : une tour évoluée y porte une **étoile dorée**, et son nom complet s'affiche au survol.
+- **Plafond par image** *(choix de Claude)* : il couvre désormais aussi les éclairs relancés, les sauts d'éclats, les flaques de lave, les explosions de la Fournaise et les obus du Bombardement.
 
 ## 8. Approche
 
@@ -105,4 +145,4 @@ Une autre façon, des classes de tours séparées pour chaque évolution, dupliq
 
 ## 11. Questions ouvertes
 
-Aucune.
+Aucune (points de relecture tranchés au §7bis).
