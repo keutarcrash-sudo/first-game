@@ -9,11 +9,15 @@
 ## over [code]l3_spread_degrees[/code] at level 3. Level 3 fires faster with « Surcharge ».
 ## Towers T2a: the amplifier bonuses at the tower ([member TowerBehaviour.TowerContext.amp_at])
 ## are read at every shot: damage x (1 + damage), interval / (1 + rate), burn duration x (1 + state).
+## Towers T2b, Canon de siège (evolved Perforant): shells hit [code]pierce_total[/code] enemies
+## (all of them), damage x [code]damage_mult[/code], range and shell reach x [code]range_mult[/code],
+## shells drawn [constant SIEGE_SHELL_SCALE] times bigger. Volcan acts at death ([TowerEffects]).
 class_name ShooterBehaviour
 extends TowerBehaviour
 
 const INCENDIAIRE := &"incendiaire"
 const PERFORANT := &"perforant"
+const SIEGE_SHELL_SCALE := 2.0  # Look of the Canon de siège shells: radius x 2 ("obus géants").
 
 var _tower: Tower
 var _def: TowerDef
@@ -32,7 +36,8 @@ func setup(tower: Tower, def: TowerDef, record: TowerRecord, ctx: TowerBehaviour
 
 ## Range with the card and item bonuses.
 func range_now() -> float:
-	return _def.range * _ctx.modifiers.tower_range_factor()
+	var siege_factor: float = _evolution_number("range_mult") if _is_siege() else 1.0
+	return _def.range * _ctx.modifiers.tower_range_factor() * siege_factor
 
 
 ## Counts the cooldown down and fires when it is over and an enemy is in range.
@@ -101,11 +106,16 @@ func _fire(target: Enemy, amp: Dictionary) -> void:
 func _fire_shell(direction: Vector2, branch: StringName, amp: Dictionary) -> void:
 	var modifiers: PlayerModifiers = _ctx.modifiers
 	var state_factor: float = 1.0 + float(amp["state"])  # Catalyseur.
+	var siege: bool = _is_siege()
+	var damage: float = _number("damage") * modifiers.damage_multiplier() * (1.0 + float(amp["damage"]))
+	var max_range: float = _number("bullet_max_range")
+	var radius: float = _number("bullet_radius")
+	if siege:
+		damage *= _evolution_number("damage_mult")
+		max_range *= _evolution_number("range_mult")
+		radius *= SIEGE_SHELL_SCALE
 	var bullet := HeroBullet.new()
-	bullet.configure(
-		_number("damage") * modifiers.damage_multiplier() * (1.0 + float(amp["damage"])), _number("bullet_speed"), _number("bullet_max_range"),
-		_number("bullet_radius"), direction, _ctx.arena_rect
-	)
+	bullet.configure(damage, _number("bullet_speed"), max_range, radius, direction, _ctx.arena_rect)
 	bullet.set_proc_source(&"cannon", _ctx.rules)
 	if branch == INCENDIAIRE:
 		# The branch's own burn; « Munitions incendiaires » makes it last longer.
@@ -115,7 +125,9 @@ func _fire_shell(direction: Vector2, branch: StringName, amp: Dictionary) -> voi
 		bullet.set_burn(duration * state_factor, _branch_number(INCENDIAIRE, "burn_dps"), _record.id)
 	else:
 		bullet.set_burn(modifiers.burn_duration() * state_factor, modifiers.burn_damage_per_second(), _record.id)
-	if branch == PERFORANT:
+	if siege:
+		bullet.set_pierce(int(_evolution_number("pierce_total")))
+	elif branch == PERFORANT:
 		bullet.set_pierce(int(_branch_number(PERFORANT, "pierce_total")))
 	_ctx.bullets.add_child(bullet)
 	bullet.global_position = _tower.global_position
@@ -129,3 +141,13 @@ func _number(key: String) -> float:
 ## Number [param key] of branch [param branch] (required and validated by [constant TowerStats.BRANCH_KEYS]).
 func _branch_number(branch: StringName, key: String) -> float:
 	return float(_def.branch_value(branch, key))
+
+
+## True for a Canon de siège: an evolved level 3 Perforant cannon (towers T2b).
+func _is_siege() -> bool:
+	return _record.evolved and _record.level >= TowerRecord.MAX_LEVEL and _record.branch == PERFORANT
+
+
+## Number [param key] of the Perforant evolution (required and validated by [constant TowerStats.EVOLUTION_KEYS]).
+func _evolution_number(key: String) -> float:
+	return float(_def.value(key, PERFORANT, _record.level, true))

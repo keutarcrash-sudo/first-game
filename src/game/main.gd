@@ -269,6 +269,7 @@ func _ready() -> void:
 	_placer.set_damage_numbers(damage_numbers)
 	_placer.set_ground(hazards)
 	tower_effects.set_amp_source(_placer.amp_of_tower)
+	tower_effects.set_ground(hazards, _state)  # Volcan lava pools (towers T2b).
 	_hud.bind_tower_build(towers, modifiers, _reserve, _placer, _state)
 	_hud.tower_kind_chosen.connect(_placer.select_purchase)
 	_hud.reserve_record_chosen.connect(_placer.select_record)
